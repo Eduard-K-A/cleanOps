@@ -1,44 +1,128 @@
-"use client";
-import { useForm } from 'react-hook-form';
-import { useRouter } from 'next/navigation';
-import { api } from '@root/lib/api';
-import toast from 'react-hot-toast';
+"use client"
 
+import React, { useState } from 'react'
+
+type RoomType = 'Bedroom' | 'Bathroom' | 'Kitchen' | 'Living Room' | 'Office'
 
 export default function OrderPage() {
-  const { register, handleSubmit } = useForm();
-  const router = useRouter();
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [rooms, setRooms] = useState<number>(1)
+  const [selectedTypes, setSelectedTypes] = useState<RoomType[]>([])
+  const [notes, setNotes] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
 
-  const onSubmit = async (data: any) => {
+  const allTypes: RoomType[] = ['Bedroom', 'Bathroom', 'Kitchen', 'Living Room', 'Office']
+
+  function toggleType(t: RoomType) {
+    setSelectedTypes((s) => (s.includes(t) ? s.filter((x) => x !== t) : [...s, t]))
+  }
+
+  function validate() {
+    if (!name.trim()) return 'Please enter your name.'
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRe.test(email)) return 'Please enter a valid email.'
+    if (!rooms || rooms < 1) return 'Please enter at least 1 room.'
+    if (selectedTypes.length === 0) return 'Select at least one room type to clean.'
+    return null
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setSuccess(null)
+    const v = validate()
+    if (v) return setError(v)
+
+    setLoading(true)
     try {
-      // Hardcoding price for demo: $50.00
-      const payload = { ...data, amount: 5000 }; 
-      const res = await api.post('/orders', payload);
-      
-      // Redirect to payment with details
-      router.push(`/payment?clientSecret=${res.data.clientSecret}&amount=5000`);
-    } catch (e) {
-      toast.error("Failed to create order");
+      // Replace with real API call. Here we simulate success.
+      await new Promise((r) => setTimeout(r, 700))
+      setSuccess('Order created — we will contact you shortly.')
+    } catch (err) {
+      setError('Failed to create order. Try again.')
+    } finally {
+      setLoading(false)
     }
-  };
+  }
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-black shadow-lg rounded-lg border border-blue-100">
-      <h2 className="text-2xl font-bold text-blue-900 mb-6">Book a Cleaning</h2>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <input {...register('name')} placeholder="Full Name" className="w-full p-2 border rounded" required />
-        <input {...register('email')} type="email" placeholder="Email" className="w-full p-2 border rounded" required />
-        <select {...register('serviceType')} className="w-full p-2 border rounded">
-          <option value="Home Cleaning">Home Cleaning ($50)</option>
-          <option value="Office Cleaning">Office Cleaning ($50)</option>
-          <option value="Deep Cleaning">Deep Cleaning ($50)</option>
-        </select>
-        <input {...register('date')} type="datetime-local" className="w-full p-2 border rounded" required />
-        <textarea {...register('address')} placeholder="Address" className="w-full p-2 border rounded" required />
-        <button type="submit" className="w-full bg-green-500 hover:bg-green-600 text-white p-3 rounded font-bold">
-          Proceed to Payment
-        </button>
-      </form>
-    </div>
-  );
+    <main style={styles.page}>
+      <div style={styles.card}>
+        <header style={styles.header}>
+          <h1 style={styles.title}>Request a Cleaning</h1>
+          <p style={styles.subtitle}>Tell us how many rooms and which types you'd like cleaned.</p>
+        </header>
+
+        {error && <div role="alert" style={styles.error}>{error}</div>}
+        {success && <div role="status" style={styles.success}>{success}</div>}
+
+        <form onSubmit={handleSubmit} style={styles.form}>
+          <label style={styles.label}>
+            Full name
+            <input style={styles.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" />
+          </label>
+
+          <label style={styles.label}>
+            Email
+            <input style={styles.input} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" type="email" />
+          </label>
+
+          <label style={styles.label}>
+            How many rooms?
+            <input style={styles.number} type="number" min={1} value={rooms} onChange={(e) => setRooms(Number(e.target.value))} />
+          </label>
+
+          <fieldset style={styles.fieldset}>
+            <legend style={styles.legend}>Types of rooms to clean</legend>
+            <div style={styles.typeGrid}>
+              {allTypes.map((t) => (
+                <label key={t} style={styles.typeCard}>
+                  <input type="checkbox" checked={selectedTypes.includes(t)} onChange={() => toggleType(t)} />
+                  <span style={{ marginLeft: 8 }}>{t}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <label style={styles.label}>
+            Notes (optional)
+            <textarea style={{ ...styles.input, minHeight: 88 }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any special instructions" />
+          </label>
+
+          <div style={styles.summary}>
+            <div>Rooms: <strong>{rooms}</strong></div>
+            <div>Types: <strong>{selectedTypes.join(', ') || '—'}</strong></div>
+          </div>
+
+          <div style={styles.actions}>
+            <button type="submit" style={styles.submit} disabled={loading}>{loading ? 'Creating…' : 'Create Order'}</button>
+          </div>
+        </form>
+      </div>
+    </main>
+  )
+}
+
+const styles: { [k: string]: React.CSSProperties } = {
+  page: { maxWidth: 1100, margin: '28px auto', padding: '0 20px' },
+  card: { background: 'white', padding: 20, borderRadius: 12, boxShadow: '0 8px 30px rgba(15,23,42,0.06)' },
+  header: { marginBottom: 12 },
+  title: { margin: 0, fontSize: 22, fontWeight: 700 },
+  subtitle: { marginTop: 6, color: '#6b7280' },
+  form: { display: 'flex', flexDirection: 'column', gap: 12 },
+  label: { display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14, color: '#111827' },
+  input: { height: 44, padding: '8px 12px', borderRadius: 8, border: '1px solid #e6eef6', fontSize: 15 },
+  number: { width: 120, height: 44, padding: '8px 12px', borderRadius: 8, border: '1px solid #e6eef6', fontSize: 15 },
+  fieldset: { border: 'none', padding: 0, margin: 0 },
+  legend: { fontSize: 14, fontWeight: 600, marginBottom: 6 },
+  typeGrid: { display: 'flex', gap: 10, flexWrap: 'wrap' },
+  typeCard: { display: 'flex', alignItems: 'center', padding: '8px 10px', borderRadius: 8, background: '#f8fafc', cursor: 'pointer', fontSize: 14 },
+  summary: { marginTop: 6, padding: 10, borderRadius: 8, background: '#f1f5f9', display: 'flex', gap: 14 },
+  actions: { marginTop: 8, display: 'flex', gap: 8 },
+  submit: { padding: '10px 14px', background: '#0ea5e9', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
+  error: { padding: 10, borderRadius: 8, background: '#fff1f2', color: '#b91c1c' },
+  success: { padding: 10, borderRadius: 8, background: '#ecfdf5', color: '#065f46' }
 }
