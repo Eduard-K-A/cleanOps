@@ -2,8 +2,10 @@
 
 import React, { useState } from 'react'
 import { styles } from './styles'
+import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -36,7 +38,8 @@ export default function LoginPage() {
     try {
       // Placeholder for real auth call
       await new Promise((res) => setTimeout(res, 800))
-      setSuccess('Signed in successfully (UI demo).')
+      // navigate to customer dashboard on successful sign-in
+      router.push('/customer/dashboard')
     } catch (err) {
       setError('Failed to sign in. Please try again.')
     } finally {
