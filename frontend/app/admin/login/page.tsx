@@ -3,6 +3,8 @@
 import React, { useState } from 'react'
 import { styles } from './styles'
 import { useRouter } from 'next/navigation'
+import axios from 'axios'
+import toast from 'react-hot-toast'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -31,17 +33,58 @@ export default function LoginPage() {
     const validationError = validate()
     if (validationError) {
       setError(validationError)
+      toast.error(validationError)
       return
     }
 
     setLoading(true)
     try {
-      // Placeholder for real auth call
-      await new Promise((res) => setTimeout(res, 800))
-      // navigate to customer dashboard on successful sign-in
-      router.push('/customer/dashboard')
-    } catch (err) {
-      setError('Failed to sign in. Please try again.')
+      // Make login request to backend
+      const response = await axios.post(
+        'http://localhost:5000/api/auth/login',
+        {
+          email,
+          password
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      )
+
+      // Success
+      const successMessage = response.data.message || 'Login successful!'
+      setSuccess(successMessage)
+      toast.success(successMessage)
+
+      // Store user data in localStorage
+      if (response.data.user) {
+        localStorage.setItem('user', JSON.stringify(response.data.user))
+      }
+
+      // Redirect to customer dashboard after a short delay
+      setTimeout(() => {
+        router.push('/customer/dashboard')
+      }, 1000)
+    } catch (err: any) {
+      // Handle errors
+      let errorMessage = 'Failed to sign in. Please try again.'
+
+      // Check for backend validation or authentication errors
+      if (err.response?.status === 401) {
+        // 401 Unauthorized - Invalid credentials
+        errorMessage = err.response.data?.error || 'Invalid email or password'
+      } else if (err.response?.status === 400) {
+        // 400 Bad Request - Validation error
+        errorMessage = err.response.data?.error || 'Invalid input'
+      } else if (err.message === 'Network Error') {
+        errorMessage = 'Cannot connect to server. Make sure the backend is running.'
+      }
+
+      setError(errorMessage)
+      toast.error(errorMessage)
+      console.error('Login error:', err)
     } finally {
       setLoading(false)
     }
