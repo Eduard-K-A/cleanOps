@@ -116,7 +116,12 @@ export default function LoginPage() {
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
 
-        <p style={styles.footerNote}>By signing in you agree to company policies.</p>
+        <p style={styles.footerNote}>
+          Don't have an account?{' '}
+          <a href="/admin/signup" style={{ ...styles.forgot, cursor: 'pointer' }}>
+            Sign up
+          </a>
+        </p>
       </form>
     </main>
   )
