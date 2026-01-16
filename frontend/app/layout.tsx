@@ -4,7 +4,6 @@ import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { AuthProvider } from "@/lib/authContext";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,11 +31,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <ProtectedRoute>
-            <Navbar />
-            <div style={{ minHeight: 'calc(100vh - 160px)' }}>{children}</div>
-            <Footer />
-          </ProtectedRoute>
+          <Navbar />
+          <div style={{ minHeight: 'calc(100vh - 160px)' }}>{children}</div>
+          <Footer />
         </AuthProvider>
       </body>
     </html>
