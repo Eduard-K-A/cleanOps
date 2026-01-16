@@ -8,25 +8,19 @@ async function register(req, res) {
   try {
     const { username, password, email } = req.body;
 
-    // Validation: Check if username and password are provided
-    if (!username || !password) {
-      return res.status(400).json({
-        error: 'Username and password are required'
-      });
-    }
-
-    // Validation: Check if email is provided
-    if (!email) {
-      return res.status(400).json({
-        error: 'Email is required'
-      });
-    }
-
-    // Check if user already exists
-    const existingUser = userModel.findByUsername(username);
-    if (existingUser) {
+    // Check if user already exists by username
+    const existingByUsername = userModel.findByUsername(username);
+    if (existingByUsername) {
       return res.status(409).json({
         error: 'Username already exists'
+      });
+    }
+
+    // Check if user already exists by email
+    const existingByEmail = userModel.findByEmail(email);
+    if (existingByEmail) {
+      return res.status(409).json({
+        error: 'Email already exists'
       });
     }
 
