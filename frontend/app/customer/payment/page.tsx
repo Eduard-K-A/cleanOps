@@ -4,6 +4,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useState, Suspense } from 'react';
 import toast from 'react-hot-toast';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -78,8 +79,10 @@ function PaymentLoadingFallback() {
 
 export default function PaymentPage() {
   return (
-    <Suspense fallback={<PaymentLoadingFallback />}>
-      <PaymentContent />
-    </Suspense>
+    <ProtectedRoute>
+      <Suspense fallback={<PaymentLoadingFallback />}>
+        <PaymentContent />
+      </Suspense>
+    </ProtectedRoute>
   );
 }
