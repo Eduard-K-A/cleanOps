@@ -40,6 +40,16 @@ function findByUsername(username) {
 }
 
 /**
+ * Find a user by email
+ * @param {string} email
+ * @returns {object|null} User object or null if not found
+ */
+function findByEmail(email) {
+  const users = getAllUsers();
+  return users.find(u => u.email === email) || null;
+}
+
+/**
  * Find a user by ID
  * @param {string} id
  * @returns {object|null} User object or null if not found
@@ -84,6 +94,7 @@ async function create(userData) {
 
 module.exports = {
   findByUsername,
+  findByEmail,
   findById,
   create,
   getAllUsers
