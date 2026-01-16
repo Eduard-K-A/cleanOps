@@ -32,7 +32,7 @@ export default function RootLayout({
       >
         <AuthProvider>
           <Navbar />
-          <div style={{ minHeight: 'calc(100vh - 160px)' }}>{children}</div>
+          <div className="min-h-main-content">{children}</div>
           <Footer />
         </AuthProvider>
       </body>
