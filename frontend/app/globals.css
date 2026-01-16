@@ -1,2 +1,8 @@
 @import "tailwindcss";
 
+@layer utilities {
+  .min-h-main-content {
+    min-height: calc(100vh - 160px);
+  }
+}
+
