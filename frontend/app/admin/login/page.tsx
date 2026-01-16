@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useState } from 'react'
-import { styles } from './styles'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/authContext'
 import axios from 'axios'
@@ -95,23 +94,23 @@ export default function LoginPage() {
   }
 
   return (
-    <main style={styles.page}>
-      <form style={styles.card} onSubmit={handleSubmit} aria-describedby={error ? 'error-msg' : undefined}>
-        <h1 style={styles.title}>Admin sign in</h1>
+    <main className="min-h-screen flex items-center justify-center px-6 py-8 bg-linear-to-b from-slate-100 to-white">
+      <form className="w-full max-w-md p-7 rounded-2xl shadow-lg bg-white flex flex-col gap-3" onSubmit={handleSubmit} aria-describedby={error ? 'error-msg' : undefined}>
+        <h1 className="m-0 text-xl font-semibold">Admin sign in</h1>
 
         {error && (
-          <div id="error-msg" role="alert" style={styles.error}>
+          <div id="error-msg" role="alert" className="bg-red-50 text-red-700 px-3 py-2 rounded-lg text-sm">
             {error}
           </div>
         )}
 
         {success && (
-          <div role="status" style={styles.success}>
+          <div role="status" className="bg-emerald-50 text-emerald-700 px-3 py-2 rounded-lg text-sm">
             {success}
           </div>
         )}
 
-        <label style={styles.label} htmlFor="email">
+        <label className="flex flex-col gap-2 text-sm text-gray-900" htmlFor="email">
           Email
           <input
             id="email"
@@ -122,14 +121,14 @@ export default function LoginPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={styles.input}
+            className="h-11 px-3 py-2 rounded-lg border border-gray-300 outline-none text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
             aria-invalid={!!error && error.toLowerCase().includes('email')}
           />
         </label>
 
-        <label style={styles.label} htmlFor="password">
+        <label className="flex flex-col gap-2 text-sm text-gray-900" htmlFor="password">
           Password
-          <div style={styles.passwordRow}>
+          <div className="flex items-center gap-2">
             <input
               id="password"
               name="password"
@@ -138,34 +137,34 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              style={{ ...styles.input, marginRight: 8 }}
+              className="flex-1 h-11 px-3 py-2 rounded-lg border border-gray-300 outline-none text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
               aria-invalid={!!error && error.toLowerCase().includes('password')}
             />
             <button
               type="button"
               onClick={() => setShowPassword((s) => !s)}
               aria-pressed={showPassword}
-              style={styles.toggle}
+              className="h-9 px-2.5 rounded-lg border border-gray-300 bg-white cursor-pointer text-sm hover:bg-gray-50 transition-colors"
             >
               {showPassword ? 'Hide' : 'Show'}
             </button>
           </div>
         </label>
 
-        <div style={styles.rowBetween}>
-          <label style={styles.checkboxLabel}>
-            <input type="checkbox" style={styles.checkbox} /> Remember me
+        <div className="flex justify-between items-center mt-1">
+          <label className="text-xs text-gray-600 flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" className="w-4 h-4" /> Remember me
           </label>
-          <a href="#" style={styles.forgot}>Forgot?</a>
+          <a href="#" className="text-xs text-blue-600 no-underline hover:underline">Forgot?</a>
         </div>
 
-        <button type="submit" style={styles.submit} disabled={loading}>
+        <button type="submit" className="mt-1.5 h-12 rounded-xl border-0 bg-sky-500 text-white font-semibold cursor-pointer hover:bg-sky-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed" disabled={loading}>
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
 
-        <p style={styles.footerNote}>
+        <p className="m-0 text-xs text-gray-500 text-center mt-1.5">
           Don't have an account?{' '}
-          <a href="/admin/signup" style={{ ...styles.forgot, cursor: 'pointer' }}>
+          <a href="/admin/signup" className="text-blue-600 no-underline hover:underline cursor-pointer">
             Sign up
           </a>
         </p>
