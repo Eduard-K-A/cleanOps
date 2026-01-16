@@ -28,6 +28,29 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# environment variables - local only
+.env.local
+.env.*.local
+
+# backend files - should never be bundled with frontend
+../backend/
+../../backend/
+backend/
+**/backend/**
+
+# build artifacts
+.turbo/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
