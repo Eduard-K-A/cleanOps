@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-import { styles } from './styles'
 
 interface SignupFormData {
   username: string
@@ -81,21 +80,20 @@ export default function SignupPage() {
   }
 
   return (
-    <main style={styles.page}>
-      <form style={styles.card} onSubmit={handleSubmit(onSubmit)}>
-        <h1 style={styles.title}>Create Account</h1>
+    <main className="min-h-screen flex items-center justify-center px-6 py-8 bg-linear-to-b from-slate-100 to-white">
+      <form className="w-full max-w-md p-7 rounded-2xl shadow-lg bg-white flex flex-col gap-3" onSubmit={handleSubmit(onSubmit)}>
+        <h1 className="m-0 text-xl font-semibold">Create Account</h1>
 
         {/* Username Field */}
-        <label style={styles.label} htmlFor="username">
+        <label className="flex flex-col gap-2 text-sm text-gray-900" htmlFor="username">
           Username
           <input
             id="username"
             type="text"
             placeholder="Enter username"
-            style={{
-              ...styles.input,
-              borderColor: errors.username ? '#dc2626' : '#e5e7eb'
-            }}
+            className={`h-11 px-3 py-2 rounded-lg border outline-none text-sm focus:ring-1 focus:ring-sky-500 transition-colors ${
+              errors.username ? 'border-red-600 focus:border-red-600' : 'border-gray-300 focus:border-sky-500'
+            }`}
             aria-invalid={!!errors.username}
             {...register('username', {
               required: 'Username is required',
@@ -114,23 +112,22 @@ export default function SignupPage() {
             })}
           />
           {errors.username && (
-            <span style={{ color: '#dc2626', fontSize: 12 }}>
+            <span className="text-red-600 text-xs">
               {errors.username.message}
             </span>
           )}
         </label>
 
         {/* Email Field */}
-        <label style={styles.label} htmlFor="email">
+        <label className="flex flex-col gap-2 text-sm text-gray-900" htmlFor="email">
           Email
           <input
             id="email"
             type="email"
             placeholder="Enter your email"
-            style={{
-              ...styles.input,
-              borderColor: errors.email ? '#dc2626' : '#e5e7eb'
-            }}
+            className={`h-11 px-3 py-2 rounded-lg border outline-none text-sm focus:ring-1 focus:ring-sky-500 transition-colors ${
+              errors.email ? 'border-red-600 focus:border-red-600' : 'border-gray-300 focus:border-sky-500'
+            }`}
             aria-invalid={!!errors.email}
             {...register('email', {
               required: 'Email is required',
@@ -141,26 +138,23 @@ export default function SignupPage() {
             })}
           />
           {errors.email && (
-            <span style={{ color: '#dc2626', fontSize: 12 }}>
+            <span className="text-red-600 text-xs">
               {errors.email.message}
             </span>
           )}
         </label>
 
         {/* Password Field */}
-        <label style={styles.label} htmlFor="password">
+        <label className="flex flex-col gap-2 text-sm text-gray-900" htmlFor="password">
           Password
-          <div style={styles.passwordRow}>
+          <div className="flex items-center gap-2">
             <input
               id="password"
               type={showPassword ? 'text' : 'password'}
               placeholder="Enter password"
-              style={{
-                ...styles.input,
-                marginRight: 8,
-                borderColor: errors.password ? '#dc2626' : '#e5e7eb',
-                flex: 1
-              }}
+              className={`flex-1 h-11 px-3 py-2 rounded-lg border outline-none text-sm focus:ring-1 focus:ring-sky-500 transition-colors ${
+                errors.password ? 'border-red-600 focus:border-red-600' : 'border-gray-300 focus:border-sky-500'
+              }`}
               aria-invalid={!!errors.password}
               {...register('password', {
                 required: 'Password is required',
@@ -174,32 +168,29 @@ export default function SignupPage() {
               type="button"
               onClick={() => setShowPassword((s) => !s)}
               aria-pressed={showPassword}
-              style={styles.toggle}
+              className="h-9 px-2.5 rounded-lg border border-gray-300 bg-white cursor-pointer text-sm hover:bg-gray-50 transition-colors"
             >
               {showPassword ? 'Hide' : 'Show'}
             </button>
           </div>
           {errors.password && (
-            <span style={{ color: '#dc2626', fontSize: 12 }}>
+            <span className="text-red-600 text-xs">
               {errors.password.message}
             </span>
           )}
         </label>
 
         {/* Confirm Password Field */}
-        <label style={styles.label} htmlFor="confirmPassword">
+        <label className="flex flex-col gap-2 text-sm text-gray-900" htmlFor="confirmPassword">
           Confirm Password
-          <div style={styles.passwordRow}>
+          <div className="flex items-center gap-2">
             <input
               id="confirmPassword"
               type={showConfirmPassword ? 'text' : 'password'}
               placeholder="Confirm password"
-              style={{
-                ...styles.input,
-                marginRight: 8,
-                borderColor: errors.confirmPassword ? '#dc2626' : '#e5e7eb',
-                flex: 1
-              }}
+              className={`flex-1 h-11 px-3 py-2 rounded-lg border outline-none text-sm focus:ring-1 focus:ring-sky-500 transition-colors ${
+                errors.confirmPassword ? 'border-red-600 focus:border-red-600' : 'border-gray-300 focus:border-sky-500'
+              }`}
               aria-invalid={!!errors.confirmPassword}
               {...register('confirmPassword', {
                 required: 'Please confirm your password',
@@ -211,13 +202,13 @@ export default function SignupPage() {
               type="button"
               onClick={() => setShowConfirmPassword((s) => !s)}
               aria-pressed={showConfirmPassword}
-              style={styles.toggle}
+              className="h-9 px-2.5 rounded-lg border border-gray-300 bg-white cursor-pointer text-sm hover:bg-gray-50 transition-colors"
             >
               {showConfirmPassword ? 'Hide' : 'Show'}
             </button>
           </div>
           {errors.confirmPassword && (
-            <span style={{ color: '#dc2626', fontSize: 12 }}>
+            <span className="text-red-600 text-xs">
               {errors.confirmPassword.message}
             </span>
           )}
@@ -225,19 +216,17 @@ export default function SignupPage() {
 
         <button
           type="submit"
-          style={{
-            ...styles.submit,
-            opacity: isSubmitting ? 0.7 : 1,
-            cursor: isSubmitting ? 'not-allowed' : 'pointer'
-          }}
+          className={`mt-1.5 h-12 rounded-xl border-0 bg-sky-500 text-white font-semibold cursor-pointer hover:bg-sky-600 transition-colors ${
+            isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
+          }`}
           disabled={isSubmitting}
         >
           {isSubmitting ? 'Creating Account…' : 'Sign Up'}
         </button>
 
-        <p style={styles.footerNote}>
+        <p className="m-0 text-xs text-gray-500 text-center mt-1.5">
           Already have an account?{' '}
-          <a href="/admin/login" style={styles.link}>
+          <a href="/admin/login" className="text-blue-600 no-underline hover:underline cursor-pointer">
             Sign in
           </a>
         </p>
