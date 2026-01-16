@@ -3,11 +3,13 @@
 import React, { useState } from 'react'
 import { styles } from './styles'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/authContext'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { setIsLoggedIn, setUser } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -58,9 +60,11 @@ export default function LoginPage() {
       setSuccess(successMessage)
       toast.success(successMessage)
 
-      // Store user data in localStorage
+      // Store user data in localStorage and update context
       if (response.data.user) {
         localStorage.setItem('user', JSON.stringify(response.data.user))
+        setUser(response.data.user)
+        setIsLoggedIn(true)
       }
 
       // Redirect to customer dashboard after a short delay
