@@ -2,7 +2,7 @@
 import { useSearchParams } from 'next/navigation';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import toast from 'react-hot-toast';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -43,11 +43,17 @@ function CheckoutForm() {
   );
 }
 
-export default function PaymentPage() {
+function PaymentContent() {
   const searchParams = useSearchParams();
   const clientSecret = searchParams.get('clientSecret');
 
-  if (!clientSecret) return <div>Invalid Payment Session</div>;
+  if (!clientSecret) {
+    return (
+      <div className="max-w-md mx-auto mt-10 p-6 bg-white shadow-lg rounded">
+        <div className="text-center text-red-600 font-semibold">Invalid Payment Session</div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white shadow-lg rounded">
@@ -56,5 +62,24 @@ export default function PaymentPage() {
         <CheckoutForm />
       </Elements>
     </div>
+  );
+}
+
+function PaymentLoadingFallback() {
+  return (
+    <div className="max-w-md mx-auto mt-10 p-6 bg-white shadow-lg rounded">
+      <div className="flex flex-col items-center justify-center gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
+        <p className="text-gray-600 font-medium">Loading payment form...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense fallback={<PaymentLoadingFallback />}>
+      <PaymentContent />
+    </Suspense>
   );
 }
