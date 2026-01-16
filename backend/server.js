@@ -5,6 +5,9 @@ const { LocalStorage } = require('node-localstorage');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { v4: uuidv4 } = require('uuid');
 
+// Import routes
+const authRoutes = require('./routes/authRoutes');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 const localStorage = new LocalStorage('./storage');
@@ -12,6 +15,9 @@ const localStorage = new LocalStorage('./storage');
 // Middleware
 app.use(cors({ origin: 'http://localhost:3000' })); // Allow Frontend
 app.use(express.json());
+
+// Use routes
+app.use('/api/auth', authRoutes);
 
 // --- Database Helper ---
 const DB_KEY = 'orders';
