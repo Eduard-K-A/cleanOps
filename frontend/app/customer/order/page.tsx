@@ -68,82 +68,61 @@ function OrderContent() {
   }
 
   return (
-    <main style={styles.page}>
-      <div style={styles.card}>
-        <header style={styles.header}>
-          <h1 style={styles.title}>Request a Cleaning</h1>
-          <p style={styles.subtitle}>Tell us how many rooms and which types you'd like cleaned.</p>
+    <main className="max-w-5xl mx-auto px-5 py-7">
+      <div className="bg-white p-5 rounded-2xl shadow-md">
+        <header className="mb-3">
+          <h1 className="m-0 text-xl font-bold">Request a Cleaning</h1>
+          <p className="mt-1.5 text-gray-500">Tell us how many rooms and which types you'd like cleaned.</p>
         </header>
 
-        {error && <div role="alert" style={styles.error}>{error}</div>}
-        {success && <div role="status" style={styles.success}>{success}</div>}
+        {error && <div role="alert" className="bg-red-50 text-red-700 px-3 py-2 rounded-lg text-sm">{error}</div>}
+        {success && <div role="status" className="bg-emerald-50 text-emerald-700 px-3 py-2 rounded-lg text-sm">{success}</div>}
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <label style={styles.label}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <label className="flex flex-col gap-2 text-sm text-gray-900">
             Full name
-            <input style={styles.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" />
+            <input className="h-11 px-3 py-2 rounded-lg border border-gray-200 text-base focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" />
           </label>
 
-          <label style={styles.label}>
+          <label className="flex flex-col gap-2 text-sm text-gray-900">
             Email
-            <input style={styles.input} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" type="email" />
+            <input className="h-11 px-3 py-2 rounded-lg border border-gray-200 text-base focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" type="email" />
           </label>
 
-          <label style={styles.label}>
+          <label className="flex flex-col gap-2 text-sm text-gray-900">
             How many rooms?
-            <input style={styles.number} type="number" min={1} value={rooms} onChange={(e) => setRooms(Number(e.target.value))} />
+            <input className="w-32 h-11 px-3 py-2 rounded-lg border border-gray-200 text-base focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none" type="number" min={1} value={rooms} onChange={(e) => setRooms(Number(e.target.value))} />
           </label>
 
-          <fieldset style={styles.fieldset}>
-            <legend style={styles.legend}>Types of rooms to clean</legend>
-            <div style={styles.typeGrid}>
+          <fieldset className="border-0 p-0 m-0">
+            <legend className="text-sm font-semibold mb-1.5">Types of rooms to clean</legend>
+            <div className="flex gap-2.5 flex-wrap">
               {allTypes.map((t) => (
-                <label key={t} style={styles.typeCard}>
+                <label key={t} className="flex items-center p-2 rounded-lg bg-slate-100 cursor-pointer text-sm hover:bg-slate-200 transition-colors">
                   <input type="checkbox" checked={selectedTypes.includes(t)} onChange={() => toggleType(t)} />
-                  <span style={{ marginLeft: 8 }}>{t}</span>
+                  <span className="ml-2">{t}</span>
                 </label>
               ))}
             </div>
           </fieldset>
 
-          <label style={styles.label}>
+          <label className="flex flex-col gap-2 text-sm text-gray-900">
             Notes (optional)
-            <textarea style={{ ...styles.input, minHeight: 88 }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any special instructions" />
+            <textarea className="h-22 px-3 py-2 rounded-lg border border-gray-200 text-base focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none resize-none" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any special instructions" />
           </label>
 
-          <div style={styles.summary}>
+          <div className="mt-1.5 p-2.5 rounded-lg bg-slate-100 flex gap-3.5">
             <div>Rooms: <strong>{rooms}</strong></div>
             <div>Types: <strong>{selectedTypes.join(', ') || '—'}</strong></div>
           </div>
 
-          <div style={styles.actions}>
-            <button type="submit" style={styles.submit} disabled={loading}>{loading ? 'Creating…' : 'Create Order'}</button>
+          <div className="mt-2 flex gap-2">
+            <button type="submit" className="px-3.5 py-2.5 bg-sky-500 text-white rounded-lg cursor-pointer font-semibold hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors" disabled={loading}>{loading ? 'Creating…' : 'Create Order'}</button>
           </div>
         </form>
       </div>
     </main>
   )
-}
-
-const styles: { [k: string]: React.CSSProperties } = {
-  page: { maxWidth: 1100, margin: '28px auto', padding: '0 20px' },
-  card: { background: 'white', padding: 20, borderRadius: 12, boxShadow: '0 8px 30px rgba(15,23,42,0.06)' },
-  header: { marginBottom: 12 },
-  title: { margin: 0, fontSize: 22, fontWeight: 700 },
-  subtitle: { marginTop: 6, color: '#6b7280' },
-  form: { display: 'flex', flexDirection: 'column', gap: 12 },
-  label: { display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14, color: '#111827' },
-  input: { height: 44, padding: '8px 12px', borderRadius: 8, border: '1px solid #e6eef6', fontSize: 15 },
-  number: { width: 120, height: 44, padding: '8px 12px', borderRadius: 8, border: '1px solid #e6eef6', fontSize: 15 },
-  fieldset: { border: 'none', padding: 0, margin: 0 },
-  legend: { fontSize: 14, fontWeight: 600, marginBottom: 6 },
-  typeGrid: { display: 'flex', gap: 10, flexWrap: 'wrap' },
-  typeCard: { display: 'flex', alignItems: 'center', padding: '8px 10px', borderRadius: 8, background: '#f8fafc', cursor: 'pointer', fontSize: 14 },
-  summary: { marginTop: 6, padding: 10, borderRadius: 8, background: '#f1f5f9', display: 'flex', gap: 14 },
-  actions: { marginTop: 8, display: 'flex', gap: 8 },
-  submit: { padding: '10px 14px', background: '#0ea5e9', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
-  error: { padding: 10, borderRadius: 8, background: '#fff1f2', color: '#b91c1c' },
-  success: { padding: 10, borderRadius: 8, background: '#ecfdf5', color: '#065f46' }
 }
 
 export default function OrderPage() {
