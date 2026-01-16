@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+// import HomePage from '';
 
 export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
