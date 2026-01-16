@@ -1,6 +1,9 @@
-import React from 'react'
+'use client'
 
-export default function CustomerDashboardPage() {
+import React from 'react'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
+
+function CustomerDashboardContent() {
   return (
     <main style={styles.page}>
       <div style={styles.header}>
@@ -33,6 +36,14 @@ export default function CustomerDashboardPage() {
         </aside>
       </section>
     </main>
+  )
+}
+
+export default function CustomerDashboardPage() {
+  return (
+    <ProtectedRoute>
+      <CustomerDashboardContent />
+    </ProtectedRoute>
   )
 }
 
