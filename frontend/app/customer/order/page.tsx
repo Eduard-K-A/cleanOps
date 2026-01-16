@@ -38,9 +38,27 @@ export default function OrderPage() {
 
     setLoading(true)
     try {
-      // Replace with real API call. Here we simulate success.
-      await new Promise((r) => setTimeout(r, 700))
+      const response = await fetch('http://localhost:5000/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          email,
+          rooms,
+          selectedTypes,
+          notes
+        })
+      })
+      
+      if (!response.ok) throw new Error('Failed to create order')
+      
+      const data = await response.json()
       setSuccess('Order created — we will contact you shortly.')
+      setName('')
+      setEmail('')
+      setRooms(1)
+      setSelectedTypes([])
+      setNotes('')
     } catch (err) {
       setError('Failed to create order. Try again.')
     } finally {
