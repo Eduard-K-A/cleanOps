@@ -1,10 +1,11 @@
 "use client"
 
 import React, { useState } from 'react'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
 
 type RoomType = 'Bedroom' | 'Bathroom' | 'Kitchen' | 'Living Room' | 'Office'
 
-export default function OrderPage() {
+function OrderContent() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [rooms, setRooms] = useState<number>(1)
@@ -143,4 +144,12 @@ const styles: { [k: string]: React.CSSProperties } = {
   submit: { padding: '10px 14px', background: '#0ea5e9', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
   error: { padding: 10, borderRadius: 8, background: '#fff1f2', color: '#b91c1c' },
   success: { padding: 10, borderRadius: 8, background: '#ecfdf5', color: '#065f46' }
+}
+
+export default function OrderPage() {
+  return (
+    <ProtectedRoute>
+      <OrderContent />
+    </ProtectedRoute>
+  )
 }
