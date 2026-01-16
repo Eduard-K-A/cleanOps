@@ -9,7 +9,9 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['@stripe/react-stripe-js'],
   },
 
-  // Prevent Node.js modules from being bundled in browser/edge runtime
+  // Keep webpack for now to avoid migration issues
+  // Remove or comment out this if you want to enable Turbopack in the future
+  // For Turbopack migration, webpack config should be converted to turbopack config
   webpack: (config, { isServer }) => {
     if (!isServer) {
       // Prevent Node.js modules from being loaded on the client side
@@ -36,6 +38,10 @@ const nextConfig: NextConfig = {
 
     return config;
   },
+
+  // Add empty turbopack config to suppress Turbopack warnings when webpack is active
+  // This acknowledges the presence of webpack config
+  turbopack: {},
 };
 
 export default nextConfig;
