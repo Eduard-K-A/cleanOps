@@ -1,49 +1,49 @@
 'use client'
 
 import { useAuth } from '@/lib/authContext'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
-  requireAuth?: boolean // If true, requires login. If false, public page
 }
 
-export function ProtectedRoute({ children, requireAuth = true }: ProtectedRouteProps) {
+/**
+ * Wrapper component to protect individual pages from unauthorized access.
+ * Redirects unauthenticated users to /admin/login.
+ * 
+ * Usage:
+ * export default function MyPage() {
+ *   return (
+ *     <ProtectedRoute>
+ *       <YourPageContent />
+ *     </ProtectedRoute>
+ *   )
+ * }
+ */
+export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isLoggedIn, mounted } = useAuth()
   const router = useRouter()
-  const pathname = usePathname()
-
-  // Public pages that don't require authentication
-  const publicPages = ['/admin/login', '/admin/signup', '/homepage', '/']
 
   useEffect(() => {
     if (!mounted) return // Wait for hydration
 
-    const isPublicPage = publicPages.includes(pathname)
-
-    // If page requires auth and user is not logged in
-    if (requireAuth && !isLoggedIn && !isPublicPage) {
+    // If user is not logged in, redirect to login
+    if (!isLoggedIn) {
       router.push('/admin/login')
-      return
     }
-
-    // If user is logged in and tries to access login/signup, redirect to homepage
-    if (isLoggedIn && (pathname === '/admin/login' || pathname === '/admin/signup')) {
-      router.push('/homepage')
-      return
-    }
-  }, [isLoggedIn, mounted, pathname, router])
+  }, [isLoggedIn, mounted, router])
 
   // Show nothing while checking auth (prevents flash of content)
   if (!mounted) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>
   }
 
-  // If page requires auth and user is not logged in, show nothing (redirect is happening)
-  if (requireAuth && !isLoggedIn && !publicPages.includes(pathname)) {
+  // If not logged in, show nothing (redirect is happening)
+  if (!isLoggedIn) {
     return <div className="flex items-center justify-center min-h-screen">Redirecting...</div>
   }
 
+  // User is authenticated, show the page
   return <>{children}</>
 }
