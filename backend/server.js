@@ -44,23 +44,16 @@ if (!localStorage.getItem(DB_KEY)) {
 // 1. Create Order & Payment Intent
 app.post('/api/orders', async (req, res) => {
   try {
-    const { name, email, address, serviceType, date, amount } = req.body;
+    const { name, email, rooms, selectedTypes, notes } = req.body;
     
-    // Create Stripe Intent (Capture Method: Manual for authorization only)
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount, // e.g., 5000 = $50.00
-      currency: 'usd',
-      automatic_payment_methods: { enabled: true },
-      capture_method: 'manual', 
-    });
-
     const newOrder = {
       id: uuidv4(),
-      name, email, address, serviceType, date,
-      amount,
+      name,
+      email,
+      rooms,
+      selectedTypes,
+      notes,
       status: 'Pending', // Pending admin approval
-      paymentIntentId: paymentIntent.id,
-      clientSecret: paymentIntent.client_secret,
       createdAt: new Date().toISOString()
     };
 
@@ -68,7 +61,7 @@ app.post('/api/orders', async (req, res) => {
     orders.push(newOrder);
     saveOrders(orders);
 
-    res.json({ orderId: newOrder.id, clientSecret: newOrder.clientSecret });
+    res.json({ orderId: newOrder.id, success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
