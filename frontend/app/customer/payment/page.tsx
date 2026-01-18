@@ -83,7 +83,7 @@ function CheckoutForm() {
           value={cardNumber}
           onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-          maxLength="19"
+          maxLength={19}
           disabled={loading}
         />
       </div>
@@ -99,7 +99,7 @@ function CheckoutForm() {
             value={expiryDate}
             onChange={(e) => setExpiryDate(formatExpiry(e.target.value))}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-            maxLength="5"
+            maxLength={5}
             disabled={loading}
           />
         </div>
@@ -113,7 +113,7 @@ function CheckoutForm() {
             value={cvv}
             onChange={(e) => setCvv(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-            maxLength="4"
+            maxLength={4}
             disabled={loading}
           />
         </div>
