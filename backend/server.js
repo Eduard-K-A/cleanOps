@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { LocalStorage } = require('node-localstorage');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { v4: uuidv4 } = require('uuid');
 
 // Import routes
@@ -30,21 +29,27 @@ if (!localStorage.getItem(DB_KEY)) {
     {
       id: uuidv4(),
       name: 'Demo User',
-      serviceType: 'Home Cleaning',
-      amount: 5000,
+      email: 'demo@example.com',
+      rooms: 3,
+      selectedTypes: ['Bedroom', 'Living Room', 'Kitchen'],
+      notes: 'Sample cleaning request',
       status: 'Pending',
-      paymentIntentId: 'pi_mock_123',
-      date: new Date().toISOString()
+      paymentStatus: 'Authorized',
+      paymentId: 'mock_payment_' + Math.random().toString(36).substr(2, 9),
+      createdAt: new Date().toISOString()
     }
   ]);
 }
 
 // --- Routes ---
 
-// 1. Create Order & Payment Intent
+// 1. Create Order (Mock Payment)
 app.post('/api/orders', async (req, res) => {
   try {
     const { name, email, rooms, selectedTypes, notes } = req.body;
+    
+    // Mock payment authorization - always succeeds
+    const paymentId = 'mock_payment_' + Math.random().toString(36).substr(2, 9);
     
     const newOrder = {
       id: uuidv4(),
@@ -54,6 +59,8 @@ app.post('/api/orders', async (req, res) => {
       selectedTypes,
       notes,
       status: 'Pending', // Pending admin approval
+      paymentStatus: 'Authorized', // Mock payment is always authorized
+      paymentId,
       createdAt: new Date().toISOString()
     };
 
@@ -61,7 +68,7 @@ app.post('/api/orders', async (req, res) => {
     orders.push(newOrder);
     saveOrders(orders);
 
-    res.json({ orderId: newOrder.id, success: true });
+    res.json({ orderId: newOrder.id, success: true, paymentStatus: 'authorized' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -77,7 +84,7 @@ app.get('/api/orders', (req, res) => {
   res.json(orders);
 });
 
-// 3. Admin Accept (Capture Payment)
+// 3. Admin Accept (Confirm Order)
 app.post('/api/orders/:id/accept', async (req, res) => {
   try {
     const { id } = req.params;
@@ -86,20 +93,18 @@ app.post('/api/orders/:id/accept', async (req, res) => {
 
     if (orderIndex === -1) return res.status(404).json({ error: 'Order not found' });
 
-    // Capture the funds
-    await stripe.paymentIntents.capture(orders[orderIndex].paymentIntentId);
-
+    // Mock: Mark order as confirmed
     orders[orderIndex].status = 'Confirmed';
     saveOrders(orders);
 
-    console.log(`Email sent to ${orders[orderIndex].email}: Your order is confirmed!`);
+    console.log(`Order ${id} confirmed. Email sent to ${orders[orderIndex].email}`);
     res.json({ success: true, order: orders[orderIndex] });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// 4. Admin Decline (Cancel Payment)
+// 4. Admin Decline (Cancel Order)
 app.post('/api/orders/:id/decline', async (req, res) => {
   try {
     const { id } = req.params;
@@ -108,13 +113,11 @@ app.post('/api/orders/:id/decline', async (req, res) => {
 
     if (orderIndex === -1) return res.status(404).json({ error: 'Order not found' });
 
-    // Cancel the authorization
-    await stripe.paymentIntents.cancel(orders[orderIndex].paymentIntentId);
-
+    // Mock: Mark order as canceled
     orders[orderIndex].status = 'Canceled';
     saveOrders(orders);
 
-    console.log(`Email sent to ${orders[orderIndex].email}: Your order was declined.`);
+    console.log(`Order ${id} declined. Email sent to ${orders[orderIndex].email}`);
     res.json({ success: true, order: orders[orderIndex] });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -131,8 +134,6 @@ app.post('/api/auth/login', (req, res) => {
   }
 });
 
-
-
 // Home route: simple status page
 app.get('/', (req, res) => {
   res.send(`<!doctype html>
@@ -141,6 +142,7 @@ app.get('/', (req, res) => {
       <body>
         <h1>CleanOps Backend is running</h1>
         <p>Available API: <a href="/api/orders">/api/orders</a></p>
+        <p>Mock payment system is active (no Stripe integration)</p>
       </body>
     </html>`);
 });

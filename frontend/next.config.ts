@@ -4,11 +4,6 @@ const nextConfig: NextConfig = {
   // Enable React Compiler for better performance
   reactCompiler: true,
 
-  // Optimize package imports
-  experimental: {
-    optimizePackageImports: ['@stripe/react-stripe-js'],
-  },
-
   // Keep webpack for now to avoid migration issues
   // Remove or comment out this if you want to enable Turbopack in the future
   // For Turbopack migration, webpack config should be converted to turbopack config

@@ -1,11 +1,13 @@
 "use client"
 
 import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 
 type RoomType = 'Bedroom' | 'Bathroom' | 'Kitchen' | 'Living Room' | 'Office'
 
 function OrderContent() {
+  const router = useRouter()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [rooms, setRooms] = useState<number>(1)
@@ -54,14 +56,15 @@ function OrderContent() {
       if (!response.ok) throw new Error('Failed to create order')
       
       const data = await response.json()
-      setSuccess('Order created — we will contact you shortly.')
-      setName('')
-      setEmail('')
-      setRooms(1)
-      setSelectedTypes([])
-      setNotes('')
+      setSuccess('Order created successfully! Redirecting to payment...')
+      
+      // Redirect to payment page with orderId
+      setTimeout(() => {
+        router.push(`/customer/payment?orderId=${data.orderId}`)
+      }, 1500)
     } catch (err) {
       setError('Failed to create order. Try again.')
+      console.error(err)
     } finally {
       setLoading(false)
     }
@@ -117,7 +120,7 @@ function OrderContent() {
           </div>
 
           <div className="mt-2 flex gap-2">
-            <button type="submit" className="px-3.5 py-2.5 bg-sky-500 text-white rounded-lg cursor-pointer font-semibold hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors" disabled={loading}>{loading ? 'Creating…' : 'Create Order'}</button>
+            <button type="submit" className="px-3.5 py-2.5 bg-sky-500 text-white rounded-lg cursor-pointer font-semibold hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors" disabled={loading}>{loading ? 'Creating…' : 'Create Order & Pay'}</button>
           </div>
         </form>
       </div>
