@@ -24,8 +24,9 @@ export default function Navbar() {
         </div>
 
         <nav className="flex gap-3 items-center">
-          <Link href="/homepage" className="text-slate-500 no-underline px-2.5 py-2 rounded-lg text-base">Homepage</Link>
-          <Link href="/customer/order" className="text-slate-500 no-underline px-2.5 py-2 rounded-lg text-base">Clean</Link>
+          <Link href="/homepage" className="text-slate-500 no-underline px-2.5 py-2 rounded-lg text-base hover:text-slate-700 transition-colors">Homepage</Link>
+          <Link href="/customer/order" className="text-slate-500 no-underline px-2.5 py-2 rounded-lg text-base hover:text-slate-700 transition-colors">Clean</Link>
+          <Link href="/customer/requests" className="text-slate-500 no-underline px-2.5 py-2 rounded-lg text-base hover:text-slate-700 transition-colors">My Requests</Link>
         </nav>
 
         <div>
