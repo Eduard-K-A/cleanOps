@@ -1,13 +1,15 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/authContext'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 
 type RoomType = 'Bedroom' | 'Bathroom' | 'Kitchen' | 'Living Room' | 'Office'
 
 function OrderContent() {
   const router = useRouter()
+  const { user, mounted } = useAuth()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [rooms, setRooms] = useState<number>(1)
@@ -18,6 +20,14 @@ function OrderContent() {
   const [success, setSuccess] = useState<string | null>(null)
 
   const allTypes: RoomType[] = ['Bedroom', 'Bathroom', 'Kitchen', 'Living Room', 'Office']
+
+  // Populate form with logged-in user's info
+  useEffect(() => {
+    if (mounted && user) {
+      setName(user.username || '')
+      setEmail(user.email || '')
+    }
+  }, [mounted, user])
 
   function toggleType(t: RoomType) {
     setSelectedTypes((s) => (s.includes(t) ? s.filter((x) => x !== t) : [...s, t]))
@@ -49,7 +59,8 @@ function OrderContent() {
           email,
           rooms,
           selectedTypes,
-          notes
+          notes,
+          userId: user?.id // Include userId to associate order with user
         })
       })
       
