@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { useAuth } from '@/lib/authContext'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
@@ -9,6 +10,7 @@ interface Request {
   id: string
   name: string
   email: string
+  userId?: string
   rooms: number
   selectedTypes: string[]
   notes: string
@@ -17,14 +19,17 @@ interface Request {
 }
 
 export default function RequestsPage() {
+  const { user, mounted } = useAuth()
   const [requests, setRequests] = useState<Request[]>([])
   const [activeTab, setActiveTab] = useState<'Pending' | 'Active' | 'Finished'>('Pending')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchRequests()
-  }, [])
+    if (mounted && user) {
+      fetchRequests()
+    }
+  }, [mounted, user])
 
   const fetchRequests = async () => {
     try {
@@ -39,7 +44,13 @@ export default function RequestsPage() {
         selectedTypes: Array.isArray(req.selectedTypes) ? req.selectedTypes : []
       }))
       
-      setRequests(normalizedRequests)
+      // Filter requests to only show current user's requests
+      // Match by email or userId if available
+      const userRequests = normalizedRequests.filter(req => 
+        req.email === user?.email || req.userId === user?.id
+      )
+      
+      setRequests(userRequests)
     } catch (err) {
       setError('Failed to load requests. Please try again.')
       toast.error('Failed to load requests')
