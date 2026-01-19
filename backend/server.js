@@ -46,13 +46,14 @@ if (!localStorage.getItem(DB_KEY)) {
 // 1. Create Order (Mock Payment)
 app.post('/api/orders', async (req, res) => {
   try {
-    const { name, email, rooms, selectedTypes, notes } = req.body;
+    const { name, email, rooms, selectedTypes, notes, userId } = req.body;
     
     // Mock payment authorization - always succeeds
     const paymentId = 'mock_payment_' + Math.random().toString(36).substr(2, 9);
     
     const newOrder = {
       id: uuidv4(),
+      userId, // Store the user ID to associate order with user
       name,
       email,
       rooms,
