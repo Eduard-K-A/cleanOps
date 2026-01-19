@@ -170,8 +170,8 @@ export default function RequestsPage() {
                     <div>
                       <p className="text-slate-600 text-sm font-medium mb-1">Services</p>
                       <div className="flex flex-wrap gap-2">
-                        {(request.selectedTypes ?? []).map((type, idx) => (
-                          <span key={idx} className="text-xs bg-white bg-opacity-60 text-slate-700 px-3 py-1 rounded-full">
+                        {(request.selectedTypes ?? []).map((type) => (
+                          <span key={type} className="text-xs bg-white bg-opacity-60 text-slate-700 px-3 py-1 rounded-full">
                             {type}
                           </span>
                         ))}
