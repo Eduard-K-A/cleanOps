@@ -41,8 +41,9 @@ export default function LoginPage() {
     setLoading(true)
     try {
       // Make login request to backend
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
       const response = await axios.post(
-        'http://localhost:5000/api/auth/login',
+        `${apiUrl}/auth/login`,
         {
           email,
           password

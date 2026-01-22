@@ -44,8 +44,9 @@ export default function SignupPage() {
 
     try {
       // Send registration request to backend
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
       const response = await axios.post(
-        'http://localhost:5000/api/auth/register',
+        `${apiUrl}/auth/register`,
         {
           username: data.username,
           email: data.email,
