@@ -9,10 +9,11 @@ const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const allowedOrigins = process.env.ALLOWED_ORIGINS;
 const localStorage = new LocalStorage('./storage');
 
 // Middleware
-app.use(cors({ origin: 'http://localhost:3000' })); // Allow Frontend
+app.use(cors({ origin: allowedOrigins })); // Allow Frontend
 app.use(express.json());
 
 // Use routes
