@@ -9,11 +9,27 @@ const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const allowedOrigins = process.env.ALLOWED_ORIGINS || 'http://localhost:3000';
+const allowedOriginsList = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',').map(origin => origin.trim());
 const localStorage = new LocalStorage('./storage');
 
+// Dynamic CORS Configuration
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or Postman)
+    if (!origin || allowedOriginsList.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200
+};
+
 // Middleware
-app.use(cors({ origin: allowedOrigins })); // Allow Frontend
+app.use(cors(corsOptions)); // Apply dynamic CORS
 app.use(express.json());
 
 // Use routes
