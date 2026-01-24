@@ -35,7 +35,8 @@ export default function RequestsPage() {
     try {
       setLoading(true)
       setError(null)
-      const response = await axios.get('http://localhost:5000/api/orders')
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+      const response = await axios.get(`${apiUrl}/orders`)
       
       // Ensure response.data is an array and normalize each request
       const data = Array.isArray(response.data) ? response.data : []
