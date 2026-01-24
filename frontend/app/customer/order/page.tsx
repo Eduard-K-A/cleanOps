@@ -51,7 +51,8 @@ function OrderContent() {
 
     setLoading(true)
     try {
-      const response = await fetch('http://localhost:5000/api/orders', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+      const response = await fetch(`${apiUrl}/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
