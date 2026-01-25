@@ -27,7 +27,8 @@ export default function Navbar() {
           <Link href="/homepage" className="text-slate-500 no-underline px-2.5 py-2 rounded-lg text-base hover:text-slate-700 transition-colors">Homepage</Link>
           <Link href="/customer/order" className="text-slate-500 no-underline px-2.5 py-2 rounded-lg text-base hover:text-slate-700 transition-colors">Clean</Link>
           <Link href="/customer/requests" className="text-slate-500 no-underline px-2.5 py-2 rounded-lg text-base hover:text-slate-700 transition-colors">My Requests</Link>
-        </nav>
+          <Link href="/customer/dashboard" className="text-slate-500 no-underline px-2.5 py-2 rounded-lg text-base hover:text-slate-700 transition-colors"> My Dashboard</Link>
+                </nav>
 
         <div>
           {mounted && (
