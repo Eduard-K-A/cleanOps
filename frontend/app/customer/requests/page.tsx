@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { useAuth } from '@/lib/authContext'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { getApiBaseUrl } from '@/lib/api'
 
 interface Request {
   id: string
@@ -35,7 +36,7 @@ export default function RequestsPage() {
     try {
       setLoading(true)
       setError(null)
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+      const apiUrl = getApiBaseUrl()
       const response = await axios.get(`${apiUrl}/orders`)
       
       // Ensure response.data is an array and normalize each request
