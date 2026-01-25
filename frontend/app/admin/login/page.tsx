@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/authContext'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { getApiBaseUrl } from '@/lib/api'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -41,7 +42,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       // Make login request to backend
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+      const apiUrl = getApiBaseUrl()
       const response = await axios.post(
         `${apiUrl}/auth/login`,
         {
