@@ -13,14 +13,18 @@ export default function CatchAll({ params }: CatchAllProps) {
   const router = useRouter()
 
   useEffect(() => {
-    // Redirect to homepage for any non-existent route
-    router.replace('/homepage')
+    // Redirect to homepage for any non-existent route after 2 seconds
+    const timer = setTimeout(() => {
+      router.replace('/homepage')
+    }, 2000)
+
+    return () => clearTimeout(timer)
   }, [router])
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-50">
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-slate-900 mb-2">Page Not Found</h1>
+        <h1 className="text-4xl font-bold text-slate-900 mb-2">The page you are looking for is not found.</h1>
         <p className="text-lg text-slate-600 mb-8">Redirecting you to the homepage...</p>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto"></div>
       </div>
