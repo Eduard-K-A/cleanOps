@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { getApiBaseUrl } from '@/lib/api'
 
 interface SignupFormData {
   username: string
@@ -44,7 +45,7 @@ export default function SignupPage() {
 
     try {
       // Send registration request to backend
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+      const apiUrl = getApiBaseUrl()
       const response = await axios.post(
         `${apiUrl}/auth/register`,
         {
