@@ -18,14 +18,14 @@ export default function Footer() {
 
         <div className="flex flex-col gap-2">
           <div className="text-xs text-gray-900 font-semibold">Company</div>
-          <Link href="/" className="text-gray-600 no-underline text-sm mt-1.5 hover:text-sky-500 transition-colors">About</Link>
-          <Link href="/" className="text-gray-600 no-underline text-sm mt-1.5 hover:text-sky-500 transition-colors">Careers</Link>
+          <Link href="/homepage" className="text-gray-600 no-underline text-sm mt-1.5 hover:text-sky-500 transition-colors">About</Link>
+          <Link href="/homepage" className="text-gray-600 no-underline text-sm mt-1.5 hover:text-sky-500 transition-colors">Careers</Link>
         </div>
 
         <div className="flex flex-col gap-2">
           <div className="text-xs text-gray-900 font-semibold">Legal</div>
-          <Link href="/" className="text-gray-600 no-underline text-sm mt-1.5 hover:text-sky-500 transition-colors">Privacy</Link>
-          <Link href="/" className="text-gray-600 no-underline text-sm mt-1.5 hover:text-sky-500 transition-colors">Terms</Link>
+          <Link href="/homepage" className="text-gray-600 no-underline text-sm mt-1.5 hover:text-sky-500 transition-colors">Privacy</Link>
+          <Link href="/homepage" className="text-gray-600 no-underline text-sm mt-1.5 hover:text-sky-500 transition-colors">Terms</Link>
         </div>
       </div>
 
