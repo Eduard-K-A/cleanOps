@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import Link from 'next/link'
 
 function CustomerDashboardContent() {
   return (
@@ -24,8 +25,8 @@ function CustomerDashboardContent() {
         <aside className="flex flex-col gap-3">
           <div className="bg-white p-3 rounded-lg shadow-sm">
             <h3 className="m-0 mb-2 text-sm font-semibold">Quick actions</h3>
-            <button className="block w-full p-2.5 bg-sky-500 text-white rounded-lg mb-2 cursor-pointer font-semibold hover:bg-sky-600 transition-colors">Create order</button>
-            <button className="block w-full p-2.5 bg-white text-slate-900 border border-slate-200 rounded-lg cursor-pointer font-semibold hover:bg-slate-50 transition-colors">View invoices</button>
+            <Link href="/customer/order" className="block w-full p-2.5 bg-sky-500 text-white rounded-lg mb-2 cursor-pointer font-semibold hover:bg-sky-600 transition-colors text-center">Create order</Link>
+            <Link href="/customer/payment" className="block w-full p-2.5 bg-white text-slate-900 border border-slate-200 rounded-lg cursor-pointer font-semibold hover:bg-slate-50 transition-colors text-center">View invoices</Link>
           </div>
 
           <div className="bg-white p-3 rounded-lg shadow-sm">
