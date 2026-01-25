@@ -9,13 +9,13 @@ const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const allowedOriginsList = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',').map(origin => origin.trim());
+const allowedOriginsRaw = process.env.ALLOWED_ORIGINS || 'http://localhost:3000,https://clean-ops-alpha.vercel.app';
+const allowedOriginsList = allowedOriginsRaw.split(',').map((s) => s.trim()).filter(Boolean);
 const localStorage = new LocalStorage('./storage');
 
-// Dynamic CORS Configuration
+// Dynamic CORS Configuration — allow frontend (localhost:3000 | Vercel)
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or Postman)
     if (!origin || allowedOriginsList.includes(origin)) {
       callback(null, true);
     } else {
