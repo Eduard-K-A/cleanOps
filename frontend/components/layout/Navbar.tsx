@@ -11,7 +11,7 @@ export default function Navbar() {
 
   const handleLogout = () => {
     logout()
-    router.push('/admin/login')
+    router.push('/login')
   }
 
   return (
@@ -33,7 +33,7 @@ export default function Navbar() {
         <div>
           {mounted && (
             !isLoggedIn ? (
-              <Link href="/admin/login" className="bg-sky-500 text-white px-3 py-2 rounded-lg no-underline font-semibold text-base">
+              <Link href="/login" className="bg-sky-500 text-white px-3 py-2 rounded-lg no-underline font-semibold text-base">
                 Sign in
               </Link>
             ) : (
