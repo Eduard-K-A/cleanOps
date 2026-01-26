@@ -30,7 +30,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
     // If user is not logged in, redirect to login
     if (!isLoggedIn) {
-      router.push('/admin/login')
+      router.push('/login')
     }
   }, [isLoggedIn, mounted, router])
 
