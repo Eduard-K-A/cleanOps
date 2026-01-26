@@ -66,7 +66,7 @@ export default function SignupPage() {
 
       // Redirect to login page after a short delay
       setTimeout(() => {
-        router.push('/admin/login')
+        router.push('/login')
       }, 1500)
     } catch (error: any) {
       // Handle backend errors
@@ -228,7 +228,7 @@ export default function SignupPage() {
 
         <p className="m-0 text-xs text-gray-500 text-center mt-1.5">
           Already have an account?{' '}
-          <a href="/admin/login" className="text-blue-600 no-underline hover:underline cursor-pointer">
+          <a href="/login" className="text-blue-600 no-underline hover:underline cursor-pointer">
             Sign in
           </a>
         </p>
