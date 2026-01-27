@@ -14,6 +14,7 @@ export default function SignupPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<'customer' | 'employee'>('customer');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -29,7 +30,7 @@ export default function SignupPage() {
     }
     setLoading(true);
     try {
-      const response = await api.signup(normalizedEmail, password);
+      const response = await api.signup(normalizedEmail, password, role);
       if (!response.success) {
         toast.error(response.error ?? 'Sign up failed');
         return;
@@ -52,6 +53,18 @@ export default function SignupPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="role">Account type</Label>
+              <select
+                id="role"
+                className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
+                value={role}
+                onChange={(e) => setRole(e.target.value as 'customer' | 'employee')}
+              >
+                <option value="customer">Customer</option>
+                <option value="employee">Employee</option>
+              </select>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
