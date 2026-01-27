@@ -1,24 +1,23 @@
+const { sendError } = require('../lib/errors');
+
 /**
- * Generic request validation middleware using Joi
+ * Generic request validation middleware using Joi.
+ * Uses standardized error shape: { success: false, error: string, code: number }.
  * @param {object} schema - Joi schema to validate against
  * @returns {function} Express middleware function
  */
 function validateRequest(schema) {
   return (req, res, next) => {
     const { error, value } = schema.validate(req.body, {
-      abortEarly: true, // Stop at first error
-      stripUnknown: true // Remove unknown fields
+      abortEarly: true,
+      stripUnknown: true,
     });
 
     if (error) {
-      // Extract the first validation error message
-      const errorMessage = error.details[0].message;
-      return res.status(400).json({
-        error: errorMessage
-      });
+      const message = error.details[0]?.message || 'Validation failed';
+      return sendError(res, message, 400);
     }
 
-    // Replace req.body with validated value
     req.body = value;
     next();
   };
