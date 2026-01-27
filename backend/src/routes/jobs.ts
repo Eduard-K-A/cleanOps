@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { verifyAuth, requireRole } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { asyncHandler } from '../utils/asyncHandler';
 import {
   createJob,
   getJobs,
@@ -38,14 +39,14 @@ router.post(
       ).min(1),
     }),
   }),
-  createJob
+  asyncHandler(createJob as any)
 );
 
 // Get jobs (filtered by role)
-router.get('/', getJobs);
+router.get('/', asyncHandler(getJobs as any));
 
 // Get job feed for employees (sorted by proximity)
-router.get('/feed', requireRole('employee'), getJobFeed);
+router.get('/feed', requireRole('employee'), asyncHandler(getJobFeed as any));
 
 // Claim a job (employee)
 router.post(
@@ -56,7 +57,7 @@ router.post(
       job_id: z.string().uuid(),
     }),
   }),
-  claimJob
+  asyncHandler(claimJob as any)
 );
 
 // Update job status
@@ -71,7 +72,7 @@ router.patch(
       proof_of_work: z.array(z.string().url()).optional(),
     }),
   }),
-  updateJobStatus
+  asyncHandler(updateJobStatus as any)
 );
 
 // Approve job completion (customer only)
@@ -83,7 +84,7 @@ router.post(
       job_id: z.string().uuid(),
     }),
   }),
-  approveJob
+  asyncHandler(approveJob as any)
 );
 
 export default router;
