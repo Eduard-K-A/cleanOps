@@ -48,9 +48,33 @@ app.use('/api/webhooks', webhooksRouter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Welcome page
+app.get('/', (req, res) => {
+  res.type('html').send(`
+    <main style="font-family: Arial, sans-serif; padding: 32px; max-width: 640px; margin: auto;">
+      <h1>CleanOps Backend</h1>
+      <p>The backend server is running.</p>
+      <ul>
+        <li>Health check: <code>/health</code></li>
+        <li>Test endpoint: <code>/test</code></li>
+        <li>API root: <code>/api</code></li>
+      </ul>
+    </main>
+  `);
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Simple test endpoint
+app.get('/test', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Test endpoint reached',
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // API Routes
