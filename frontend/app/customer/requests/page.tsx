@@ -82,8 +82,11 @@ export default function RequestsPage() {
               <Loader2 className="h-10 w-10 animate-spin text-sky-600" />
             </div>
           ) : jobs.length === 0 ? (
-            <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/50 p-12 text-center">
-              <p className="text-slate-600">No jobs yet. Create one from the order page.</p>
+            <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/50 p-12 text-center space-y-4">
+              <p className="text-slate-600">You don&apos;t have any job requests yet.</p>
+              <Button onClick={() => router.push('/customer/order')}>
+                Create your first order
+              </Button>
             </div>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2">
