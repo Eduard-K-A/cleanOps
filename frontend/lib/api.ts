@@ -112,5 +112,14 @@ export const api = {
   async getProfile(): Promise<ApiResponse<Profile>> {
     const response = await apiClient.get('/auth/me');
     return response.data;
+  },
+
+  async signup(email: string, password: string, role?: 'customer' | 'employee'): Promise<ApiResponse> {
+    const response = await apiClient.post('/auth/signup', {
+      email,
+      password,
+      role,
+    });
+    return response.data;
   }
 };
