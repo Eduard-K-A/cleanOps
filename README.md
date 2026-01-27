@@ -4,7 +4,7 @@ Production-ready service marketplace for cleaning jobs: real-time geolocation, S
 
 ## Stack
 
-- **Frontend:** Next.js 14+ (App Router), TypeScript, Tailwind, Lucide, Shadcn-style UI, Zustand
+- **Frontend:** Next.js (App Router), TypeScript, Tailwind, Lucide, Shadcn-style UI, Zustand, Supabase Auth
 - **Backend:** Node.js, Express, Supabase (PostgreSQL + Auth), Socket.io, Stripe Connect, node-cron
 
 ## Setup
@@ -30,6 +30,8 @@ npm install
 npm run dev
 ```
 
+Backend runs on `http://localhost:5000` (API under `/api`, health check at `/health`).
+
 See `backend/.env.example` for all variables. Stripe webhook: `POST /api/webhooks/stripe` (raw body, use Stripe CLI for local testing).
 
 ### 3. Frontend
@@ -41,6 +43,13 @@ cp .env.local.example .env.local
 npm install
 npm run dev
 ```
+
+Frontend runs on `http://localhost:3000`.
+
+### 4. Accounts / Roles
+
+- **Customer vs Employee**: some endpoints are role-protected (e.g. employee job feed).
+- **Signup**: the signup page lets you choose an **Account type** (`customer` or `employee`) and stores it in the Supabase `profiles` table.
 
 ### 4. Stripe Connect
 
@@ -59,8 +68,17 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for details.
 ## Main flows
 
 1. **Book & escrow:** Customer completes multi-step form → `POST /api/jobs` → Stripe PaymentIntent (manual capture) → redirect to payment page → authorize card.
-2. **Employee feed:** `GET /api/jobs?feed=employee` (+ optional `lat`, `lng`) → open jobs by proximity. Claim → `PATCH /api/jobs/:id/claim`.
-3. **Complete & pay:** Worker uploads proof → `PATCH /api/jobs/:id/proof`. Customer approves → `PATCH /api/jobs/:id/approve` → capture PaymentIntent → Transfer to worker (minus platform fee).
+2. **Employee feed:** `GET /api/jobs/feed` → open jobs by proximity. Claim → `POST /api/jobs/claim`.
+3. **Complete & pay:** Worker uploads proof → `PATCH /api/jobs/:job_id/status` (`PENDING_REVIEW` + `proof_of_work`) → customer approves → `POST /api/jobs/:job_id/approve` → capture PaymentIntent → Transfer to worker (minus platform fee).
+
+## Troubleshooting
+
+- **403 Forbidden on `/api/jobs/feed`**
+  - You are authenticated, but your `profiles.role` is not `employee`. Sign up as an employee (or update the profile role in Supabase).
+- **`net::ERR_CONNECTION_REFUSED` calling the API**
+  - The backend is not running or crashed. Restart `backend` and check the server logs.
+- **500 "Failed to create job"**
+  - Usually Stripe is not configured. Ensure `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are set to valid values (test keys are fine for local).
 
 ## Env summary
 
