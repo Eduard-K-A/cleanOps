@@ -33,27 +33,6 @@ router.post('/signup', async (req, res: Response<ApiResponse<{ user_id: string; 
 
     const { email, password, role } = parsed.data;
 
-    // Avoid duplicate signups
-    const { data: existing, error: lookupError } = await supabase.auth.admin.getUserByEmail(email);
-    if (lookupError) {
-      console.error('auth/signup lookup error:', lookupError);
-      res.status(500).json({
-        success: false,
-        error: 'Unable to check existing users',
-        code: 500,
-      });
-      return;
-    }
-
-    if (existing?.user) {
-      res.status(400).json({
-        success: false,
-        error: 'Email already registered',
-        code: 400,
-      });
-      return;
-    }
-
     // Create the user and auto-confirm to avoid email send rate limits
     const { data: created, error: createError } = await supabase.auth.admin.createUser({
       email,
@@ -65,7 +44,11 @@ router.post('/signup', async (req, res: Response<ApiResponse<{ user_id: string; 
       console.error('auth/signup create error:', createError);
       res.status(500).json({
         success: false,
-        error: createError?.message ?? 'Failed to create user',
+        // Surface a friendly error for already-registered emails; fall back otherwise
+        error:
+          createError?.message === 'User already registered'
+            ? 'Email already registered'
+            : createError?.message ?? 'Failed to create user',
         code: 500,
       });
       return;
