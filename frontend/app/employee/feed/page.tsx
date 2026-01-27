@@ -35,7 +35,7 @@ export default function EmployeeFeedPage() {
   }
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute requiredRole="employee" redirectTo="/customer/dashboard">
       <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-8">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <h1 className="mb-2 text-3xl font-bold text-slate-900">Available jobs</h1>
