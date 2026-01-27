@@ -1,70 +1,97 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { api } from '@root/lib/api';
+import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import type { Job } from '@/types';
 
 export default function AdminDashboard() {
-  const [orders, setOrders] = useState([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   // Basic Auth Check
   useEffect(() => {
     if (!localStorage.getItem('adminToken')) router.push('/admin/login');
-    fetchOrders();
+    fetchJobs();
   }, []);
 
-  const fetchOrders = async () => {
-    const res = await api.get('/orders'); // Get all orders
-    setOrders(res.data);
+  const fetchJobs = async () => {
+    try {
+      setLoading(true);
+      const response = await api.getJobs();
+      setJobs(response.data ?? []);
+    } catch (e) {
+      toast.error('Failed to load jobs');
+      setJobs([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAction = async (id: string, action: 'accept' | 'decline') => {
     try {
-      await api.post(`/orders/${id}/${action}`);
-      toast.success(`Order ${action}ed`);
-      fetchOrders();
+      if (action === 'accept') {
+        await api.updateJobStatus(id, 'IN_PROGRESS');
+      } else {
+        await api.updateJobStatus(id, 'CANCELLED');
+      }
+      toast.success(`Job ${action}ed`);
+      await fetchJobs();
     } catch (e) {
       toast.error(`Failed to ${action}`);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="p-10 bg-slate-50 min-h-screen">
+        <h1 className="text-3xl font-bold text-blue-900 mb-8">Admin Dashboard</h1>
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-10 bg-slate-50 min-h-screen">
       <h1 className="text-3xl font-bold text-blue-900 mb-8">Admin Dashboard</h1>
       
       <div className="grid gap-4">
-        {orders.map((order: any) => (
-          <div key={order.id} className="bg-white p-6 rounded-lg shadow flex justify-between items-center">
-            <div>
-              <p className="font-bold text-lg">{order.serviceType}</p>
-              <p className="text-gray-600">{order.name} - {order.email}</p>
-              <p className="text-sm text-gray-400">Status: 
-                <span className={`font-bold ml-1 ${
-                  order.status === 'Confirmed' ? 'text-green-600' : 
-                  order.status === 'Canceled' ? 'text-red-600' : 'text-yellow-600'
-                }`}>
-                  {order.status}
-                </span>
-              </p>
-            </div>
-            
-            {order.status === 'Pending' && (
-              <div className="space-x-2">
-                <button 
-                  onClick={() => handleAction(order.id, 'accept')}
-                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
-                  Accept
-                </button>
-                <button 
-                  onClick={() => handleAction(order.id, 'decline')}
-                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
-                  Decline
-                </button>
+        {jobs.length === 0 ? (
+          <p className="text-gray-600">No jobs found</p>
+        ) : (
+          jobs.map((job: Job) => (
+            <div key={job.id} className="bg-white p-6 rounded-lg shadow flex justify-between items-center">
+              <div>
+                <p className="font-bold text-lg">Job #{job.id.slice(0, 8)}</p>
+                <p className="text-gray-600">${job.price_amount / 100}</p>
+                <p className="text-sm text-gray-400">Status: 
+                  <span className={`font-bold ml-1 ${
+                    job.status === 'COMPLETED' ? 'text-green-600' : 
+                    job.status === 'CANCELLED' ? 'text-red-600' : 'text-yellow-600'
+                  }`}>
+                    {job.status}
+                  </span>
+                </p>
               </div>
-            )}
-          </div>
-        ))}
+              
+              {job.status === 'OPEN' && (
+                <div className="space-x-2">
+                  <button 
+                    onClick={() => handleAction(job.id, 'accept')}
+                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+                    Approve
+                  </button>
+                  <button 
+                    onClick={() => handleAction(job.id, 'decline')}
+                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
+                    Decline
+                  </button>
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
