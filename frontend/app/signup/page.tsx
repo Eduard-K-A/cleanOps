@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,8 @@ export default function SignupPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim() || !password) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password) {
       toast.error('Email and password required');
       return;
     }
@@ -28,9 +29,9 @@ export default function SignupPage() {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({ email: email.trim(), password });
-      if (error) {
-        toast.error(error.message ?? 'Sign up failed');
+      const response = await api.signup(normalizedEmail, password);
+      if (!response.success) {
+        toast.error(response.error ?? 'Sign up failed');
         return;
       }
       toast.success('Account created. Sign in to continue.');
