@@ -4,6 +4,7 @@ import { verifyAuth } from '../middleware/auth';
 import { getSupabaseAdmin } from '../config/supabase';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
+import { asyncHandler } from '../utils/asyncHandler';
 import { ApiResponse, Notification } from '../types';
 
 const router = Router();
@@ -16,7 +17,7 @@ router.use(verifyAuth);
 /**
  * Get user notifications
  */
-router.get('/', async (req: AuthenticatedRequest, res: Response<ApiResponse<Notification[]>>) => {
+router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response<ApiResponse<Notification[]>>) => {
   try {
     const userId = req.user!.id;
     const { is_read, limit = '50' } = req.query;
@@ -46,14 +47,14 @@ router.get('/', async (req: AuthenticatedRequest, res: Response<ApiResponse<Noti
     if (error instanceof AppError) throw error;
     throw new AppError('Failed to fetch notifications', 500);
   }
-});
+}));
 
 /**
  * Mark notification as read
  */
 router.patch(
   '/:id/read',
-  async (req: AuthenticatedRequest, res: Response<ApiResponse<Notification>>) => {
+  asyncHandler(async (req: AuthenticatedRequest, res: Response<ApiResponse<Notification>>) => {
     try {
       const userId = req.user!.id;
       const { id } = req.params;
@@ -78,13 +79,13 @@ router.patch(
       if (error instanceof AppError) throw error;
       throw new AppError('Failed to update notification', 500);
     }
-  }
+  })
 );
 
 /**
  * Mark all notifications as read
  */
-router.post('/read-all', async (req: AuthenticatedRequest, res: Response<ApiResponse>) => {
+router.post('/read-all', asyncHandler(async (req: AuthenticatedRequest, res: Response<ApiResponse>) => {
   try {
     const userId = req.user!.id;
 
@@ -105,6 +106,6 @@ router.post('/read-all', async (req: AuthenticatedRequest, res: Response<ApiResp
     if (error instanceof AppError) throw error;
     throw new AppError('Failed to update notifications', 500);
   }
-});
+}));
 
 export default router;
