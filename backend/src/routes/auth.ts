@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import { z } from 'zod';
 import { getSupabaseAdmin } from '../config/supabase';
 import { verifyAuth, AuthenticatedRequest } from '../middleware/auth';
 import { ApiResponse, Profile } from '../types';
@@ -7,6 +8,99 @@ const router = Router();
 // Supabase table typing may resolve to `never` without a generated Database type.
 // Cast here to keep route handlers compiling cleanly.
 const supabase = getSupabaseAdmin() as any;
+
+const signupSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Invalid email'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  role: z.enum(['customer', 'employee']).optional().default('customer'),
+});
+
+/**
+ * POST /api/auth/signup
+ * Create a user via the service role to bypass email rate limits.
+ */
+router.post('/signup', async (req, res: Response<ApiResponse<{ user_id: string; role: string }>>) => {
+  try {
+    const parsed = signupSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        success: false,
+        error: parsed.error.errors[0]?.message ?? 'Invalid payload',
+        code: 400,
+      });
+      return;
+    }
+
+    const { email, password, role } = parsed.data;
+
+    // Avoid duplicate signups
+    const { data: existing, error: lookupError } = await supabase.auth.admin.getUserByEmail(email);
+    if (lookupError) {
+      console.error('auth/signup lookup error:', lookupError);
+      res.status(500).json({
+        success: false,
+        error: 'Unable to check existing users',
+        code: 500,
+      });
+      return;
+    }
+
+    if (existing?.user) {
+      res.status(400).json({
+        success: false,
+        error: 'Email already registered',
+        code: 400,
+      });
+      return;
+    }
+
+    // Create the user and auto-confirm to avoid email send rate limits
+    const { data: created, error: createError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+
+    if (createError || !created?.user) {
+      console.error('auth/signup create error:', createError);
+      res.status(500).json({
+        success: false,
+        error: createError?.message ?? 'Failed to create user',
+        code: 500,
+      });
+      return;
+    }
+
+    // Ensure a profile row exists
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert({ id: created.user.id, role })
+      .select('id')
+      .single();
+
+    if (profileError) {
+      console.error('auth/signup profile error:', profileError);
+      res.status(500).json({
+        success: false,
+        error: 'User created but failed to create profile',
+        code: 500,
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: { user_id: created.user.id, role },
+    });
+  } catch (error) {
+    console.error('auth/signup unexpected error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Signup failed',
+      code: 500,
+    });
+  }
+});
 
 /**
  * GET /api/auth/me
