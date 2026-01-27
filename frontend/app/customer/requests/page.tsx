@@ -15,6 +15,7 @@ export default function RequestsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchJobs();
@@ -23,10 +24,26 @@ export default function RequestsPage() {
   async function fetchJobs() {
     try {
       setLoading(true);
+      setError(null);
       const response = await api.getJobs();
       setJobs(response.data ?? []);
-    } catch {
-      toast.error('Failed to load requests');
+    } catch (e: unknown) {
+      const err = e as {
+        code?: string;
+        message?: string;
+        response?: { data?: { error?: string } };
+      };
+      const isNetworkError =
+        err?.code === 'ERR_NETWORK' ||
+        err?.message?.includes('Network Error') ||
+        err?.message?.includes('ERR_CONNECTION_REFUSED');
+
+      const message = isNetworkError
+        ? 'Cannot reach the backend server. Make sure it is running on http://localhost:5000 and that NEXT_PUBLIC_API_URL is set correctly.'
+        : err?.response?.data?.error ?? 'Failed to load your requests.';
+
+      setError(message);
+      toast.error(message);
       setJobs([]);
     } finally {
       setLoading(false);
@@ -53,6 +70,12 @@ export default function RequestsPage() {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <h1 className="mb-2 text-3xl font-bold text-slate-900">My requests</h1>
           <p className="mb-8 text-slate-600">Track and manage your cleaning jobs.</p>
+
+          {error && !loading && (
+            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              {error}
+            </div>
+          )}
 
           {loading ? (
             <div className="flex items-center justify-center py-16">
