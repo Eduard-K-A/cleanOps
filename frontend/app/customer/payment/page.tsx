@@ -1,175 +1,136 @@
-"use client";
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useState, Suspense } from 'react';
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import toast from 'react-hot-toast';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-function CheckoutForm() {
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : null;
+
+function CheckoutForm({ jobId, clientSecret }: { jobId: string; clientSecret: string }) {
   const router = useRouter();
+  const stripe = useStripe();
+  const elements = useElements();
   const [loading, setLoading] = useState(false);
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
-  const [cvv, setCvv] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate mock card fields
-    if (!cardNumber.trim() || cardNumber.length < 13) {
-      toast.error('Please enter a valid card number');
-      return;
-    }
-    if (!expiryDate.trim() || !expiryDate.includes('/')) {
-      toast.error('Please enter expiry date (MM/YY)');
-      return;
-    }
-    if (!cvv.trim() || cvv.length < 3) {
-      toast.error('Please enter a valid CVV');
-      return;
-    }
+    if (!stripe || !elements) return;
+
+    const card = elements.getElement(CardElement);
+    if (!card) return;
 
     setLoading(true);
     try {
-      // Simulate payment processing delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      toast.success('Payment Authorized! Awaiting Admin Confirmation.');
-      
-      // Redirect to home after 2 seconds
-      setTimeout(() => {
-        router.push('/');
-      }, 2000);
-    } catch (error) {
+      const { error } = await stripe.confirmCardPayment(clientSecret, { payment_method: { card } });
+      if (error) {
+        toast.error(error.message ?? 'Payment failed');
+        return;
+      }
+      if (typeof window !== 'undefined') sessionStorage.removeItem('cleanops_payment');
+      toast.success('Payment authorized. Funds held in escrow until you approve the job.');
+      router.push('/customer/requests');
+    } catch {
       toast.error('Payment failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    const matches = v.match(/\d{4,16}/g);
-    const match = (matches && matches[0]) || '';
-    const parts = [];
-
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-
-    if (parts.length) {
-      return parts.join(' ');
-    } else {
-      return value;
-    }
-  };
-
-  const formatExpiry = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    if (v.length >= 2) {
-      return v.slice(0, 2) + '/' + v.slice(2, 4);
-    }
-    return v;
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Card Number
-        </label>
-        <input
-          type="text"
-          placeholder="1234 5678 9012 3456"
-          value={cardNumber}
-          onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-          maxLength={19}
-          disabled={loading}
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4">
+        <p className="mb-2 text-sm font-medium text-slate-700">Card details</p>
+        <CardElement
+          options={{
+            style: {
+              base: { fontSize: '16px', color: '#1e293b' },
+              invalid: { color: '#dc2626' },
+            },
+          }}
         />
       </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Expiry Date
-          </label>
-          <input
-            type="text"
-            placeholder="MM/YY"
-            value={expiryDate}
-            onChange={(e) => setExpiryDate(formatExpiry(e.target.value))}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-            maxLength={5}
-            disabled={loading}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            CVV
-          </label>
-          <input
-            type="text"
-            placeholder="123"
-            value={cvv}
-            onChange={(e) => setCvv(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-            maxLength={4}
-            disabled={loading}
-          />
-        </div>
-      </div>
-
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
-        <p className="font-semibold mb-1">Mock Payment Mode</p>
-        <p>This is a demonstration. Use any card details to test.</p>
-      </div>
-
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full mt-6 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold p-3 rounded-lg transition-colors"
-      >
-        {loading ? (
-          <span className="flex items-center justify-center gap-2">
-            <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
-            Processing Payment...
-          </span>
-        ) : (
-          'Authorize Payment'
-        )}
-      </button>
+      <Button type="submit" className="w-full" disabled={!stripe || loading}>
+        {loading ? 'Authorizing…' : 'Authorize payment (escrow)'}
+      </Button>
     </form>
   );
 }
 
 function PaymentContent() {
-  const searchParams = useSearchParams();
-  const orderId = searchParams.get('orderId');
+  const [data, setData] = useState<{ jobId: string; clientSecret: string } | null | 'loading'>('loading');
 
-  if (!orderId) {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = sessionStorage.getItem('cleanops_payment');
+      const parsed = raw ? (JSON.parse(raw) as { jobId?: string; clientSecret?: string }) : null;
+      if (parsed?.jobId && parsed?.clientSecret)
+        setData({ jobId: parsed.jobId, clientSecret: parsed.clientSecret });
+      else setData(null);
+    } catch {
+      setData(null);
+    }
+  }, []);
+
+  if (data === 'loading') {
     return (
-      <div className="max-w-md mx-auto mt-10 p-6 bg-white shadow-lg rounded-lg">
-        <div className="text-center text-red-600 font-semibold">Invalid Payment Session</div>
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-sky-200 border-t-sky-600" />
       </div>
     );
   }
 
+  if (data === null) {
+    return (
+      <Card className="mx-auto max-w-md">
+        <CardHeader>
+          <CardTitle>Invalid session</CardTitle>
+          <CardDescription>Missing payment details. Start a new booking from the order page.</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  const { jobId, clientSecret } = data;
+
+  const options = { clientSecret, appearance: { theme: 'stripe' as const } };
+
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-white shadow-lg rounded-lg">
-      <h2 className="text-2xl font-bold mb-2">Complete Payment</h2>
-      <p className="text-gray-600 text-sm mb-6">Order ID: {orderId}</p>
-      <CheckoutForm />
+    <div className="mx-auto max-w-md px-4 py-8">
+      <Card>
+        <CardHeader>
+          <CardTitle>Complete payment</CardTitle>
+          <CardDescription>
+            Job <code className="rounded bg-slate-100 px-1">{jobId.slice(0, 8)}…</code>. Funds are held in escrow until you approve the work.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {stripePromise ? (
+            <Elements stripe={stripePromise} options={options}>
+              <CheckoutForm jobId={jobId} clientSecret={clientSecret} />
+            </Elements>
+          ) : (
+            <p className="text-sm text-amber-700">
+              Set <code>NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> to enable Stripe. Use test card 4242….
+            </p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
 function PaymentLoadingFallback() {
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-white shadow-lg rounded-lg">
-      <div className="flex flex-col items-center justify-center gap-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
-        <p className="text-gray-600 font-medium">Loading payment form...</p>
-      </div>
+    <div className="flex min-h-[40vh] items-center justify-center">
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-sky-200 border-t-sky-600" />
     </div>
   );
 }

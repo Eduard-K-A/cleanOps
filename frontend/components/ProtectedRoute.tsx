@@ -1,49 +1,47 @@
-'use client'
+'use client';
 
-import { useAuth } from '@/lib/authContext'
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useAuth } from '@/lib/authContext';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 interface ProtectedRouteProps {
-  children: React.ReactNode
+  children: React.ReactNode;
+  requiredRole?: 'customer' | 'employee';
+  redirectTo?: string;
 }
 
-/**
- * Wrapper component to protect individual pages from unauthorized access.
- * Redirects unauthenticated users to /admin/login.
- * 
- * Usage:
- * export default function MyPage() {
- *   return (
- *     <ProtectedRoute>
- *       <YourPageContent />
- *     </ProtectedRoute>
- *   )
- * }
- */
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isLoggedIn, mounted } = useAuth()
-  const router = useRouter()
+export function   ProtectedRoute({ children, requiredRole, redirectTo }: ProtectedRouteProps) {
+  const { isLoggedIn, mounted, profile, loading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    if (!mounted) return // Wait for hydration
-
-    // If user is not logged in, redirect to login
-    if (!isLoggedIn) {
-      router.push('/login')
+    if (!mounted) return;
+    if (!isLoggedIn) router.push('/login');
+    if (requiredRole && !loading && profile?.role && profile.role !== requiredRole) {
+      router.push(redirectTo ?? '/');
     }
-  }, [isLoggedIn, mounted, router])
+  }, [isLoggedIn, mounted, router, requiredRole, redirectTo, loading, profile?.role]);
 
-  // Show nothing while checking auth (prevents flash of content)
-  if (!mounted) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
+  if (!mounted || loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-sky-200 border-t-sky-600" />
+      </div>
+    );
   }
-
-  // If not logged in, show nothing (redirect is happening)
   if (!isLoggedIn) {
-    return <div className="flex items-center justify-center min-h-screen">Redirecting...</div>
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center text-slate-500">
+        Redirecting to sign in…
+      </div>
+    );
   }
-
-  // User is authenticated, show the page
-  return <>{children}</>
+  if (requiredRole && profile?.role && profile.role !== requiredRole) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center text-slate-500">
+        Redirecting…
+      </div>
+    );
+  }
+  return <>{children}</>;
 }
