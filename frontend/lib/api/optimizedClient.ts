@@ -38,10 +38,10 @@ axiosInstance.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Response interceptor - handle retries
+// Response interceptor - handle retries (pass axios instance so retries use same config)
 axiosInstance.interceptors.response.use(
   (response) => response,
-  createRetryInterceptor(defaultConfig.retry)
+  createRetryInterceptor(defaultConfig.retry, axiosInstance)
 );
 
 interface RequestOptions {
