@@ -51,15 +51,23 @@ app.use(express.urlencoded({ extended: true }));
 // Welcome page
 app.get('/', (req, res) => {
   res.type('html').send(`
-    <main style="font-family: Arial, sans-serif; padding: 32px; max-width: 640px; margin: auto;">
-      <h1>CleanOps Backend</h1>
-      <p>The backend server is running.</p>
-      <ul>
-        <li>Health check: <code>/health</code></li>
-        <li>Test endpoint: <code>/test</code></li>
-        <li>API root: <code>/api</code></li>
-      </ul>
-    </main>
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>CleanOps Backend</title>
+      </head>
+      <body>
+        <main style="font-family: Arial, sans-serif; padding: 32px; max-width: 640px; margin: auto;">
+          <h1>CleanOps Backend</h1>
+          <p>The backend server is running.</p>
+          <ul>
+            <li>Health check: <code>/health</code></li>
+            <li>Test endpoint: <code>/test</code></li>
+            <li>API root: <code>/api</code></li>
+          </ul>
+        </main>
+      </body>
+    </html>
   `);
 });
 
