@@ -1,65 +1,53 @@
-import axios, { type AxiosInstance } from 'axios';
-import { supabase } from './supabase';
 import { ApiResponse, CreateJobRequest, Job, Message, Notification, Profile } from '@/types';
+import { optimizedApi } from './api/optimizedClient';
+import { RequestPriority } from './api/requestQueue';
 
-export function getApiBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
-  if (process.env.NODE_ENV === 'development') return 'http://localhost:5000/api';
-  if (typeof window !== 'undefined') {
-    const h = window.location.hostname;
-    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0') return 'http://localhost:5000/api';
-  }
-  return 'https://cleanops-8epb.onrender.com/api';
-}
+// Re-export optimized API utilities for advanced usage
+export { optimizedApi, cacheManager, performanceMonitor, requestQueueManager } from './api/optimizedClient';
+export { RequestPriority } from './api/requestQueue';
 
-// Create a reusable axios instance with interceptor
-const apiClient: AxiosInstance = axios.create({ baseURL: getApiBaseUrl() });
-
-apiClient.interceptors.request.use(async (config) => {
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// Use optimized API client as the default
+const apiClient = optimizedApi;
 
 export const api = {
-  // Generic methods for raw API calls
+  // Generic methods using optimized client
   async get<T = any>(endpoint: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
-    const response = await apiClient.get(endpoint, { params });
-    return response.data;
+    return apiClient.get<T>(endpoint, params);
   },
 
   async patch<T = any>(endpoint: string, data?: Record<string, any>): Promise<ApiResponse<T>> {
-    const response = await apiClient.patch(endpoint, data);
-    return response.data;
+    return apiClient.patch<T>(endpoint, data);
   },
 
   async post<T = any>(endpoint: string, data?: Record<string, any>): Promise<ApiResponse<T>> {
-    const response = await apiClient.post(endpoint, data);
-    return response.data;
+    return apiClient.post<T>(endpoint, data);
   },
 
-  // Jobs
+  // Jobs - with optimized caching and priorities
   async createJob(data: CreateJobRequest): Promise<ApiResponse<{ job: Job; client_secret: string }>> {
-    const response = await apiClient.post('/jobs', data);
-    return response.data;
+    return apiClient.post('/jobs', data, { priority: RequestPriority.HIGH });
   },
 
   async getJobs(status?: string, role?: string): Promise<ApiResponse<Job[]>> {
-    const response = await apiClient.get('/jobs', {
-      params: { status, role },
+    return apiClient.get<Job[]>('/jobs', { status, role }, {
+      useCache: true,
+      cacheTTL: 2 * 60 * 1000, // 2 minutes cache
+      priority: RequestPriority.HIGH,
     });
-    return response.data;
   },
 
   async getJobFeed(): Promise<ApiResponse<Job[]>> {
-    const response = await apiClient.get('/jobs/feed');
-    return response.data;
+    return apiClient.get<Job[]>('/jobs/feed', undefined, {
+      useCache: true,
+      cacheTTL: 30 * 1000, // 30 seconds cache for feed
+      priority: RequestPriority.HIGH,
+    });
   },
 
   async claimJob(job_id: string): Promise<ApiResponse<Job>> {
-    const response = await apiClient.post('/jobs/claim', { job_id });
-    return response.data;
+    return apiClient.post<Job>('/jobs/claim', { job_id }, {
+      priority: RequestPriority.HIGH,
+    });
   },
 
   async updateJobStatus(
@@ -67,59 +55,72 @@ export const api = {
     status: Job['status'],
     proof_of_work?: string[]
   ): Promise<ApiResponse<Job>> {
-    const response = await apiClient.patch(`/jobs/${job_id}/status`, {
+    return apiClient.patch<Job>(`/jobs/${job_id}/status`, {
       status,
       proof_of_work,
+    }, {
+      priority: RequestPriority.HIGH,
     });
-    return response.data;
   },
 
   async approveJob(job_id: string): Promise<ApiResponse<Job>> {
-    const response = await apiClient.post(`/jobs/${job_id}/approve`);
-    return response.data;
+    return apiClient.post<Job>(`/jobs/${job_id}/approve`, undefined, {
+      priority: RequestPriority.HIGH,
+    });
   },
 
   // Messages
   async getMessages(job_id: string): Promise<ApiResponse<Message[]>> {
-    const response = await apiClient.get(`/messages/job/${job_id}`);
-    return response.data;
+    return apiClient.get<Message[]>(`/messages/job/${job_id}`, undefined, {
+      useCache: true,
+      cacheTTL: 1 * 60 * 1000, // 1 minute cache
+      priority: RequestPriority.HIGH,
+    });
   },
 
   async sendMessage(job_id: string, content: string): Promise<ApiResponse<Message>> {
-    const response = await apiClient.post('/messages', { job_id, content });
-    return response.data;
+    return apiClient.post<Message>('/messages', { job_id, content }, {
+      priority: RequestPriority.HIGH,
+    });
   },
 
   // Notifications
   async getNotifications(is_read?: boolean): Promise<ApiResponse<Notification[]>> {
-    const response = await apiClient.get('/notifications', {
-      params: { is_read },
+    return apiClient.get<Notification[]>('/notifications', { is_read }, {
+      useCache: true,
+      cacheTTL: 30 * 1000, // 30 seconds cache
+      priority: RequestPriority.MEDIUM,
     });
-    return response.data;
   },
 
   async markNotificationRead(id: string): Promise<ApiResponse<Notification>> {
-    const response = await apiClient.patch(`/notifications/${id}/read`);
-    return response.data;
+    return apiClient.patch<Notification>(`/notifications/${id}/read`, undefined, {
+      priority: RequestPriority.MEDIUM,
+    });
   },
 
   async markAllNotificationsRead(): Promise<ApiResponse> {
-    const response = await apiClient.post('/notifications/read-all');
-    return response.data;
+    return apiClient.post('/notifications/read-all', undefined, {
+      priority: RequestPriority.MEDIUM,
+    });
   },
 
-  // Auth
+  // Auth - critical priority
   async getProfile(): Promise<ApiResponse<Profile>> {
-    const response = await apiClient.get('/auth/me');
-    return response.data;
+    return apiClient.get<Profile>('/auth/me', undefined, {
+      useCache: true,
+      cacheTTL: 5 * 60 * 1000, // 5 minutes cache
+      priority: RequestPriority.CRITICAL,
+    });
   },
 
   async signup(email: string, password: string, role?: 'customer' | 'employee'): Promise<ApiResponse> {
-    const response = await apiClient.post('/auth/signup', {
+    return apiClient.post('/auth/signup', {
       email,
       password,
       role,
+    }, {
+      priority: RequestPriority.CRITICAL,
     });
-    return response.data;
   }
 };
