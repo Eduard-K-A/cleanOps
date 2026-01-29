@@ -15,13 +15,13 @@
   "type": "commonjs",
   "dependencies": {
     "@supabase/supabase-js": "^2.93.1",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.1",
-    "express": "^4.18.2",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.1",
     "expressjs": "^1.0.1",
     "node-cron": "^3.0.3",
     "socket.io": "^4.6.1",
-    "stripe": "^14.10.0",
+    "stripe": "^14.25.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
