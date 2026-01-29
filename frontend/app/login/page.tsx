@@ -59,7 +59,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-100 to-white px-4 py-8">
+    <main className="flex min-h-screen items-center justify-center bg-linear-to-b from-slate-100 to-white px-4 py-8">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Sign in</CardTitle>
