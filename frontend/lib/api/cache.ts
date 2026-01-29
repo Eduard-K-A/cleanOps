@@ -94,7 +94,9 @@ export class CacheManager {
     // Enforce memory cache size limit
     if (this.memoryCache.size > this.config.maxMemoryEntries) {
       const firstKey = this.memoryCache.keys().next().value;
-      this.memoryCache.delete(firstKey);
+      if (typeof firstKey === 'string') {
+        this.memoryCache.delete(firstKey);
+      }
     }
 
     // Set localStorage if enabled
