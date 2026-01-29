@@ -65,6 +65,8 @@ function calculateDelay(attempt: number, config: Required<RetryConfig>): number 
 /**
  * Retry function with exponential backoff
  */
+import axios, { type AxiosInstance } from 'axios';
+
 export async function withRetry<T>(
   fn: () => Promise<T>,
   config: RetryConfig = {}
@@ -100,27 +102,38 @@ export async function withRetry<T>(
 /**
  * Create retry wrapper for axios requests
  */
-export function createRetryInterceptor(config: RetryConfig = {}) {
+export function createRetryInterceptor(config: RetryConfig = {}, axiosInstance?: AxiosInstance) {
   return async (error: any) => {
     const finalConfig: Required<RetryConfig> = { ...DEFAULT_CONFIG, ...config };
-    
+
     if (!isRetryableError(error, finalConfig)) {
       return Promise.reject(error);
     }
 
     const originalRequest = error.config;
-    
-    // Don't retry if already retried
+    if (!originalRequest) return Promise.reject(error);
+
+    // Initialize retry counter
+    originalRequest._retryCount = originalRequest._retryCount || 0;
+
+    // If we've exhausted retries, reject
     if (originalRequest._retryCount >= finalConfig.maxRetries) {
       return Promise.reject(error);
     }
 
-    originalRequest._retryCount = (originalRequest._retryCount || 0) + 1;
-    const delay = calculateDelay(originalRequest._retryCount - 1, finalConfig);
+    const delay = calculateDelay(originalRequest._retryCount, finalConfig);
+
+    // Increment retry counter before waiting
+    originalRequest._retryCount += 1;
 
     await new Promise((resolve) => setTimeout(resolve, delay));
 
-    // Retry the request
-    return originalRequest;
+    // Retry using provided axios instance (preferred) or default axios
+    const client = axiosInstance ?? axios;
+    try {
+      return client(originalRequest);
+    } catch (err) {
+      return Promise.reject(err);
+    }
   };
 }
