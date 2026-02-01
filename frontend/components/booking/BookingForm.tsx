@@ -57,19 +57,15 @@ function StepSize() {
 }
 
 function StepLocation() {
-  const { location_lat, location_lng, address, setLocation, setStep } = useBookingStore();
-  const [lat, setLat] = useState(String(location_lat ?? ''));
-  const [lng, setLng] = useState(String(location_lng ?? ''));
+  const { address, setLocation, setStep } = useBookingStore();
   const [addr, setAddr] = useState(address);
 
   const handleNext = () => {
-    const la = parseFloat(lat);
-    const ln = parseFloat(lng);
-    if (Number.isNaN(la) || Number.isNaN(ln)) {
-      toast.error('Enter valid latitude and longitude.');
+    if (!addr || addr.trim().length === 0) {
+      toast.error('Please enter an address for the job.');
       return;
     }
-    setLocation(la, ln, addr || undefined);
+    setLocation(addr.trim());
     setStep('urgency');
   };
 
@@ -90,28 +86,7 @@ function StepLocation() {
             onChange={(e) => setAddr(e.target.value)}
           />
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Latitude</Label>
-            <Input
-              type="number"
-              step="any"
-              placeholder="e.g. 40.7128"
-              value={lat}
-              onChange={(e) => setLat(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Longitude</Label>
-            <Input
-              type="number"
-              step="any"
-              placeholder="e.g. -74.0060"
-              value={lng}
-              onChange={(e) => setLng(e.target.value)}
-            />
-          </div>
-        </div>
+        <div className="text-sm text-slate-500">We only collect an address for scheduling. Geocoding is optional internally.</div>
         <div className="flex justify-between">
           <Button variant="outline" onClick={() => setStep('size')}>
             <ChevronLeft className="h-4 w-4" /> Back
@@ -203,13 +178,13 @@ function StepUrgency() {
 }
 
 function StepPayment() {
-  const { location_lat, location_lng, urgency, tasks, price_amount, reset, setStep } = useBookingStore();
+  const { address, urgency, tasks, price_amount, reset, setStep } = useBookingStore();
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleCreate = async () => {
-    if (location_lat == null || location_lng == null || tasks.length === 0 || price_amount < 100) {
-      toast.error('Missing location, tasks, or invalid price.');
+    if (!address || address.trim().length === 0 || tasks.length === 0 || price_amount < 100) {
+      toast.error('Missing address, tasks, or invalid price.');
       return;
     }
     setLoading(true);
@@ -217,11 +192,7 @@ function StepPayment() {
       const response = await api.createJob({
         urgency,
         price_amount,
-        location_coordinates: {
-          lat: location_lat,
-          lng: location_lng,
-          address: 'Current location',
-        },
+        address: address,
         tasks: tasks.map((task, index) => ({
           id: `task-${index}`,
           name: task,
