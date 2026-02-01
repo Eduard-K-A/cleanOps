@@ -25,11 +25,7 @@ router.post(
     body: z.object({
       urgency: z.enum(['LOW', 'NORMAL', 'HIGH']),
       price_amount: z.number().int().positive(),
-      location_coordinates: z.object({
-        lat: z.number(),
-        lng: z.number(),
-        address: z.string().min(1),
-      }),
+      address: z.string().min(1),
       tasks: z.array(
         z.object({
           id: z.string(),
