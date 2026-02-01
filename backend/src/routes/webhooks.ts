@@ -1,11 +1,10 @@
 import express, { Router, Request, Response } from 'express';
-import { getStripe } from '../config/stripe';
-import { getEnv } from '../config/env';
+import payment from '../config/payment';
+// import { getEnv } from '../config/env';
 import { getSupabaseAdmin } from '../config/supabase';
 import { ApiResponse } from '../types';
 
 const router = Router();
-const stripe = getStripe();
 const supabase = getSupabaseAdmin();
 
 /**
@@ -16,23 +15,12 @@ router.post(
   '/stripe',
   express.raw({ type: 'application/json' }),
   async (req: Request, res: Response<ApiResponse>) => {
-    const sig = req.headers['stripe-signature'];
-    const env = getEnv();
-
-    if (!sig) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing stripe-signature header',
-        code: 400,
-      });
-    }
-
+    // For the mock payment provider we do not enforce signatures; parse body.
     let event;
-
     try {
-      event = stripe.webhooks.constructEvent(req.body, sig, env.STRIPE_WEBHOOK_SECRET);
+      event = payment.constructEvent(req.body, undefined, undefined);
     } catch (err: any) {
-      console.error('Webhook signature verification failed:', err.message);
+      console.error('Webhook parse failed:', err.message);
       return res.status(400).json({
         success: false,
         error: `Webhook Error: ${err.message}`,
