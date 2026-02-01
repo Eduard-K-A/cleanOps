@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { getSupabaseAdmin } from '../config/supabase';
-import { getStripe, getPlatformFeePercent } from '../config/stripe';
+import { getPlatformFeePercent } from '../config/payment';
+import payment from '../config/payment';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { CreateJobRequest, UpdateJobStatusRequest, ClaimJobRequest, Job, ApiResponse } from '../types';
@@ -24,7 +25,7 @@ export async function createJob(
   try {
     const userId = req.user!.id;
     const jobData = req.body as CreateJobBody;
-    const stripe = getStripe();
+    // use mock payment module
 
     // Verify customer has < 2 active jobs
     const { data: activeJobs, error: countError } = await supabase
@@ -42,7 +43,7 @@ export async function createJob(
     }
 
     // Create Stripe PaymentIntent with manual capture (escrow)
-    const paymentIntent = await stripe.paymentIntents.create({
+    const paymentIntent = await payment.createPaymentIntent({
       amount: jobData.price_amount,
       currency: 'usd',
       capture_method: 'manual', // Hold funds until job completion
@@ -51,8 +52,9 @@ export async function createJob(
         job_type: 'cleaning',
       },
     });
+    console.log('Created paymentIntent (mock):', paymentIntent);
 
-    // Create job in database
+    // Create job in database. We store the user-provided address as `location_address`.
     const { data: job, error: jobError } = await supabase
       .from('jobs')
       .insert({
@@ -60,7 +62,7 @@ export async function createJob(
         urgency: jobData.urgency,
         price_amount: jobData.price_amount,
         stripe_payment_intent_id: paymentIntent.id,
-        location_coordinates: jobData.location_coordinates,
+        location_address: (jobData as any).address,
         tasks: jobData.tasks,
         proof_of_work: [],
         status: 'OPEN',
@@ -69,8 +71,9 @@ export async function createJob(
       .single();
 
     if (jobError || !job) {
+      console.error('Job insert failed:', jobError);
       // Rollback: cancel payment intent if job creation fails
-      await stripe.paymentIntents.cancel(paymentIntent.id).catch(console.error);
+      await payment.cancelPaymentIntent(paymentIntent.id).catch(console.error);
       throw new AppError('Failed to create job', 500);
     }
 
@@ -83,7 +86,11 @@ export async function createJob(
     });
   } catch (error) {
     if (error instanceof AppError) throw error;
-    throw new AppError('Failed to create job', 500);
+    console.error('createJob error:', error);
+    const msg = process.env.NODE_ENV === 'production'
+      ? 'Failed to create job'
+      : `Failed to create job: ${error instanceof Error ? error.message : String(error)}`;
+    throw new AppError(msg, 500);
   }
 }
 
@@ -310,7 +317,7 @@ export async function approveJob(
   try {
     const userId = req.user!.id;
     const { job_id } = req.params;
-    const stripe = getStripe();
+    // use mock payment module
 
     // Get job
     const { data: job, error: jobError } = await supabase
@@ -330,7 +337,7 @@ export async function approveJob(
     }
 
     // Capture the PaymentIntent (funds move to platform)
-    const paymentIntent = await stripe.paymentIntents.capture(job.stripe_payment_intent_id);
+    const paymentIntent = await payment.capturePaymentIntent(job.stripe_payment_intent_id);
 
     if (paymentIntent.status !== 'succeeded') {
       throw new AppError('Payment capture failed', 500);
@@ -349,7 +356,7 @@ export async function approveJob(
     }
 
     // Create transfer to worker's connected account
-    const transfer = await stripe.transfers.create({
+    const transfer = await payment.createTransfer({
       amount: payoutAmount,
       currency: 'usd',
       destination: workerProfile.stripe_account_id,
