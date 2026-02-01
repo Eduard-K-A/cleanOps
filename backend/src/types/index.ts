@@ -37,6 +37,9 @@ export interface Job {
     lng: number;
     address: string;
   };
+  location_address?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
   tasks: Task[];
   proof_of_work: string[];
   created_at: string;
@@ -80,11 +83,8 @@ export interface CreateJobRequest {
   customer_id: string;
   urgency: JobUrgency;
   price_amount: number;
-  location_coordinates: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
+  // In the simplified flow we only request an address string from users.
+  address?: string;
   tasks: Task[];
 }
 
