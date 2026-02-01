@@ -23,7 +23,7 @@ const statusVariant = {
   CANCELLED: 'outline',
 } as const;
 
-function parseCoords(job: { location_coordinates?: unknown; location_lat?: number | null; location_lng?: number | null }): [number | null, number | null] {
+function parseCoords(job: { location_coordinates?: unknown; location_lat?: number | null; location_lng?: number | null; location_address?: string | null }): [number | null, number | null] {
   if (job.location_lat != null && job.location_lng != null)
     return [job.location_lng, job.location_lat];
   const loc = job.location_coordinates;
@@ -56,19 +56,29 @@ export function JobCard({ job, onClaim, onView, showClaim, isClaiming }: JobCard
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
-        {(lat != null && lng != null) && (
+        {(lat != null && lng != null) ? (
           <p className="flex items-center gap-1.5 text-sm text-slate-600">
             <MapPin className="h-4 w-4 shrink-0" />
             {lat.toFixed(4)}, {lng.toFixed(4)}
           </p>
-        )}
+        ) : job.location_address ? (
+          <p className="flex items-center gap-1.5 text-sm text-slate-600">
+            <MapPin className="h-4 w-4 shrink-0" />
+            {job.location_address}
+          </p>
+        ) : null}
         {Array.isArray(job.tasks) && job.tasks.length > 0 && (
           <div className="flex flex-wrap gap-1">
-            {job.tasks.slice(0, 5).map((t) => (
-              <span key={t} className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
-                {t}
-              </span>
-            ))}
+            {job.tasks.slice(0, 5).map((t) => {
+              // Tasks may be strings (older clients) or objects { id, name }.
+              const key = typeof t === 'string' ? t : (t as any).id ?? JSON.stringify(t);
+              const label = typeof t === 'string' ? t : (t as any).name ?? String(t);
+              return (
+                <span key={key} className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                  {label}
+                </span>
+              );
+            })}
             {(job.tasks.length > 5) && (
               <span className="text-xs text-slate-400">+{job.tasks.length - 5}</span>
             )}
