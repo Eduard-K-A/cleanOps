@@ -169,7 +169,7 @@ async function optimizedPost<T>(
   const requestPriority = priority ?? getPriorityForEndpoint(endpoint);
 
   const requestFn = async (): Promise<ApiResponse<T>> => {
-    const response = await axiosInstance.post<ApiResponse<T>>(endpoint, data);
+    const response = await axiosInstance.post<ApiResponse<T>>(endpoint, data);  //fails here when creating an order
     return response.data;
   };
 
