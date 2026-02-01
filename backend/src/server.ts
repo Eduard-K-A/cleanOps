@@ -13,6 +13,7 @@ import jobsRouter from './routes/jobs';
 import messagesRouter from './routes/messages';
 import notificationsRouter from './routes/notifications';
 import webhooksRouter from './routes/webhooks';
+import paymentsRouter from './routes/payments';
 
 // Validate environment variables
 validateEnv();
@@ -90,6 +91,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/jobs', jobsRouter);
 app.use('/api/messages', messagesRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api/payments', paymentsRouter);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
