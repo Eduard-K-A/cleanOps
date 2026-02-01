@@ -4,36 +4,34 @@
  */
 
 export interface OptimisticUpdateConfig<T> {
-  // Current data
-  currentData: T;
-  
-  // Optimistic update function
-  optimisticUpdate: (current: T) => T;
-  
+  // Current data (may be undefined/null when calling optimistic update)
+  currentData?: T | null;
+
+  // Optimistic update function receives possibly-missing current value
+  optimisticUpdate: (current?: T | null) => T;
+
   // Actual API call
   apiCall: () => Promise<T>;
-  
+
   // Rollback function (called on error)
-  rollback?: (original: T) => void;
-  
+  rollback?: (original?: T | null) => void;
+
   // Success callback
   onSuccess?: (result: T) => void;
-  
+
   // Error callback
-  onError?: (error: any, original: T) => void;
+  onError?: (error: any, original?: T | null) => void;
 }
 
 /**
  * Execute optimistic update
  */
-export async function executeOptimisticUpdate<T>(
-  config: OptimisticUpdateConfig<T>
-): Promise<T> {
+export async function executeOptimisticUpdate<T>(config: OptimisticUpdateConfig<T>): Promise<T> {
   const { currentData, optimisticUpdate, apiCall, rollback, onSuccess, onError } = config;
-  
+
   // Store original data for rollback
   const originalData = currentData;
-  
+
   // Apply optimistic update immediately
   let optimisticData: T;
   try {
@@ -56,7 +54,7 @@ export async function executeOptimisticUpdate<T>(
     if (rollback) {
       rollback(originalData);
     }
-    
+
     // Call error callback
     onError?.(error, originalData);
     
@@ -69,15 +67,15 @@ export async function executeOptimisticUpdate<T>(
  * Create optimistic update handler for React state
  */
 export function createOptimisticHandler<T>(
-  setState: (data: T | ((prev: T) => T)) => void,
+  setState: (data: T | ((prev: T | null) => T)) => void,
   apiCall: () => Promise<T>
 ) {
-  return async (optimisticUpdate: (current: T) => T) => {
+  return async (optimisticUpdate: (current: T | null) => T) => {
     // Get current state
-    let currentData: T;
-    setState((prev) => {
+    let currentData: T | null | undefined;
+    setState((prev: any) => {
       currentData = prev;
-      return optimisticUpdate(prev);
+      return optimisticUpdate(prev ?? null);
     });
 
     try {
@@ -86,7 +84,7 @@ export function createOptimisticHandler<T>(
       return result;
     } catch (error) {
       // Rollback on error
-      setState(currentData!);
+      setState(currentData as any);
       throw error;
     }
   };
