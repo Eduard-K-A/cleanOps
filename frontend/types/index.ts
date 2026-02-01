@@ -22,6 +22,7 @@ export interface Job {
   price_amount: number;
   stripe_payment_intent_id?: string | null;
   location_coordinates?: unknown;
+  location_address?: string | null;
   location_lat?: number | null;
   location_lng?: number | null;
   tasks: string[];
@@ -48,11 +49,8 @@ export interface CreateJobBody {
 export interface CreateJobRequest {
   urgency: JobUrgency;
   price_amount: number;
-  location_coordinates: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
+  // Client now only collects an address string; lat/lng may be resolved later.
+  address: string;
   tasks: Array<{
     id: string;
     name: string;
