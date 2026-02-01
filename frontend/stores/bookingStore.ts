@@ -6,15 +6,13 @@ type Step = 'size' | 'location' | 'urgency' | 'payment';
 interface BookingState {
   step: Step;
   size: string;
-  location_lat: number | null;
-  location_lng: number | null;
   address: string;
   urgency: JobUrgency;
   tasks: string[];
   price_amount: number;
   setStep: (s: Step) => void;
   setSize: (s: string) => void;
-  setLocation: (lat: number, lng: number, address?: string) => void;
+  setLocation: (address: string) => void;
   setUrgency: (u: JobUrgency) => void;
   setTasks: (t: string[]) => void;
   setPriceAmount: (n: number) => void;
@@ -24,8 +22,6 @@ interface BookingState {
 const defaultState = {
   step: 'size' as Step,
   size: '',
-  location_lat: null as number | null,
-  location_lng: null as number | null,
   address: '',
   urgency: 'NORMAL' as JobUrgency,
   tasks: [] as string[],
@@ -36,8 +32,7 @@ export const useBookingStore = create<BookingState>((set) => ({
   ...defaultState,
   setStep: (step) => set({ step }),
   setSize: (size) => set({ size }),
-  setLocation: (location_lat, location_lng, address) =>
-    set({ location_lat, location_lng, address: address ?? '' }),
+  setLocation: (address) => set({ address: address ?? '' }),
   setUrgency: (urgency) => set({ urgency }),
   setTasks: (tasks) => set({ tasks }),
   setPriceAmount: (price_amount) => set({ price_amount }),
