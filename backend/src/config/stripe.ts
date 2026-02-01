@@ -1,19 +1,11 @@
-import Stripe from 'stripe';
+// Stubbed stripe config: Stripe is intentionally removed for mock payments.
 import { getEnv } from './env';
-
-let stripeInstance: Stripe;
-
-export function getStripe(): Stripe {
-  if (!stripeInstance) {
-    const env = getEnv();
-    stripeInstance = new Stripe(env.STRIPE_SECRET_KEY, {
-      apiVersion: '2023-10-16',
-    });
-  }
-  return stripeInstance;
-}
 
 export function getPlatformFeePercent(): number {
   const env = getEnv();
   return parseFloat(env.PLATFORM_FEE_PERCENT);
+}
+
+export function getStripe(): never {
+  throw new Error('Stripe is disabled in this build; use the mock payment module instead.');
 }
