@@ -79,7 +79,7 @@ function StepLocation() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-2">
-          <Label>Address (optional)</Label>
+          <Label>Address</Label>
           <Input
             placeholder="123 Main St, City"
             value={addr}
