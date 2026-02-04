@@ -20,6 +20,13 @@ export async function verifyAuth(
 ): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
+    // Log incoming authorization header (masked)
+    try {
+      const masked = authHeader ? `${String(authHeader).slice(0, 12)}...` : null;
+      console.debug('verifyAuth header', { authorization: masked });
+    } catch (e) {
+      // ignore logging errors
+    }
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       res.status(401).json({
@@ -46,6 +53,13 @@ export async function verifyAuth(
         code: 401,
       });
       return;
+    }
+
+    // Log resolved user from Supabase (non-sensitive)
+    try {
+      console.debug('verifyAuth resolved user', { userId: user?.id, email: user?.email });
+    } catch (e) {
+      // ignore logging errors
     }
 
     // Get user profile to include role
