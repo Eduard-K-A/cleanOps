@@ -89,6 +89,7 @@ app.get('/test', (req, res) => {
 // API Routes
 app.use('/api/auth', authRouter);
 app.use('/api/jobs', jobsRouter);
+app.use('api/jobs/feed', jobsRouter);
 app.use('/api/messages', messagesRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/payments', paymentsRouter);

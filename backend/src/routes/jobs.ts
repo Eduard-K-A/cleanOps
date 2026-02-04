@@ -42,7 +42,7 @@ router.post(
 router.get('/', asyncHandler(getJobs as any));
 
 // Get job feed for employees (sorted by proximity)
-router.get('/feed', requireRole('employee'), asyncHandler(getJobFeed as any));
+router.get('/feed', requireRole('employee'), asyncHandler(getJobFeed as any)); // no api/jobs/feed route in backend yet
 
 // Claim a job (employee)
 router.post(
