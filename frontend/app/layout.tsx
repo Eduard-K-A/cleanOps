@@ -5,6 +5,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { ClientToaster } from "@/components/ClientToaster";
 import { AuthProvider } from "@/lib/authContext";
+import EmployeeOnboardingModal from '@/components/onboarding/EmployeeOnboardingModal';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,6 +35,7 @@ export default function RootLayout({
         <AuthProvider>
           <ClientToaster />
           <Navbar />
+          <EmployeeOnboardingModal />
           <div className="min-h-main-content">{children}</div>
           <Footer />
         </AuthProvider>
