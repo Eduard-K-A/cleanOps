@@ -156,10 +156,10 @@ export async function getJobFeed(
       // ignore logging errors
     }
 
-    // Get employee's location
+    // Get employee's location (lat/lng per migrations)
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('location_lat, location_lng, location_point')
+      .select('location_lat, location_lng')
       .eq('id', userId)
       .eq('role', 'employee')
       .single();
@@ -171,15 +171,16 @@ export async function getJobFeed(
       // ignore logging errors
     }
 
-    if (profileError || !profile || !profile.location_point) {
+    if (profileError || !profile || profile.location_lat == null || profile.location_lng == null) {
       console.warn('getJobFeed: missing employee location', { userId, profile, profileError });
       throw new AppError('Employee location not set', 400);
     }
 
-    // Get open jobs within 50km, ordered by distance
-    const { data: jobs, error } = await supabase.rpc('get_nearby_jobs', {
-      employee_location: profile.location_point,
-      max_distance_meters: 50000, // 50km in meters
+    // Get open jobs within 50km, ordered by distance using RPC defined in migrations
+    const { data: jobs, error } = await supabase.rpc('nearby_open_jobs', {
+      lat: profile.location_lat,
+      lng: profile.location_lng,
+      radius_km: 50,
     });
 
     if (error) {
