@@ -28,20 +28,67 @@ const axiosInstance: AxiosInstance = axios.create({
   timeout: 10000, // 10 second timeout
 });
 
-// Request interceptor - add auth token
+// Request interceptor - add auth token and debug logging
 axiosInstance.interceptors.request.use(async (config) => {
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // Mask Authorization when logging
+  const maskedAuth = config.headers?.Authorization
+    ? `${String(config.headers.Authorization).slice(0, 12)}...${String(config.headers.Authorization).slice(-6)}`
+    : undefined;
+
+  console.debug('API Request', {
+    method: config.method,
+    url: `${config.baseURL ?? ''}${config.url ?? ''}`,
+    params: config.params,
+    headers: { ...config.headers, Authorization: maskedAuth },
+    timestamp: new Date().toISOString(),
+  });
+
   return config;
 });
 
-// Response interceptor - handle retries (pass axios instance so retries use same config)
+// Response interceptor - handle retries and debug logging
 axiosInstance.interceptors.response.use(
-  (response) => response,
-  createRetryInterceptor(defaultConfig.retry, axiosInstance)
+  (response) => {
+    try {
+      console.debug('API Response', {
+        url: `${response.config.baseURL ?? ''}${response.config.url ?? ''}`,
+        method: response.config.method,
+        status: response.status,
+        data: response.data,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (e) {
+      // swallow logging errors
+    }
+    return response;
+  },
+  async (error) => {
+    try {
+      if (error.response) {
+        console.error('API Error Response', {
+          url: `${error.config?.baseURL ?? ''}${error.config?.url ?? ''}`,
+          method: error.config?.method,
+          status: error.response.status,
+          responseData: error.response.data,
+          requestParams: error.config?.params,
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        console.error('API Error (no response)', { message: error.message, timestamp: new Date().toISOString() });
+      }
+    } catch (e) {
+      // swallow logging errors
+    }
+
+    // Delegate to retry interceptor for retry logic
+    return createRetryInterceptor(defaultConfig.retry, axiosInstance)(error);
+  }
 );
 
 interface RequestOptions {
