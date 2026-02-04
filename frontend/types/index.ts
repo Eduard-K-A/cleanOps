@@ -9,6 +9,8 @@ export interface Profile {
   rating?: number | null;
   location_lat?: number | null;
   location_lng?: number | null;
+  full_name?: string | null;
+  onboarding_completed?: boolean;
   created_at?: string;
   updated_at?: string;
 }
