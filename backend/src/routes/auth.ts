@@ -162,6 +162,9 @@ router.get(
         rating: Number(profileRow.rating ?? 5),
         location_lat: profileRow.location_lat ?? null,
         location_lng: profileRow.location_lng ?? null,
+        // onboarding and full name may be present after migrations
+        ...(profileRow.full_name ? { full_name: profileRow.full_name } : {}),
+        onboarding_completed: !!profileRow.onboarding_completed,
         created_at: profileRow.created_at,
         updated_at: profileRow.updated_at,
       };
@@ -177,6 +180,68 @@ router.get(
         error: 'Failed to fetch profile',
         code: 500,
       });
+    }
+  }
+);
+
+/**
+ * PATCH /api/auth/me
+ * Update current user's profile (used by onboarding)
+ */
+router.patch(
+  '/me',
+  verifyAuth,
+  async (req: AuthenticatedRequest, res: Response<ApiResponse<Profile>>) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ success: false, error: 'Authentication required', code: 401 });
+        return;
+      }
+
+      const userId = req.user.id;
+
+      // Allow updating a limited set of fields
+      const allowed: any = {};
+      if (typeof req.body.full_name === 'string') allowed.full_name = req.body.full_name.trim();
+      if (typeof req.body.location_lat === 'number') allowed.location_lat = req.body.location_lat;
+      if (typeof req.body.location_lng === 'number') allowed.location_lng = req.body.location_lng;
+      if (typeof req.body.onboarding_completed === 'boolean') allowed.onboarding_completed = req.body.onboarding_completed;
+
+      if (Object.keys(allowed).length === 0) {
+        res.status(400).json({ success: false, error: 'No updatable fields provided', code: 400 });
+        return;
+      }
+
+      const { data: updated, error: updateError } = await supabase
+        .from('profiles')
+        .update(allowed)
+        .eq('id', userId)
+        .select('*')
+        .single();
+
+      if (updateError || !updated) {
+        console.error('auth/me update error:', updateError);
+        res.status(500).json({ success: false, error: 'Failed to update profile', code: 500 });
+        return;
+      }
+
+      const profile: Profile = {
+        id: updated.id,
+        role: updated.role,
+        stripe_account_id: updated.stripe_account_id ?? null,
+        rating: Number(updated.rating ?? 5),
+        location_lat: updated.location_lat ?? null,
+        location_lng: updated.location_lng ?? null,
+        ...(updated.full_name ? { full_name: updated.full_name } : {}),
+        onboarding_completed: !!updated.onboarding_completed,
+        created_at: updated.created_at,
+        updated_at: updated.updated_at,
+      };
+
+      res.json({ success: true, data: profile });
+    } catch (error) {
+      console.error('auth/me update unexpected error:', error);
+      res.status(500).json({ success: false, error: 'Failed to update profile', code: 500 });
     }
   }
 );
