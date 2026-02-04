@@ -149,6 +149,13 @@ export async function getJobFeed(
   try {
     const userId = req.user!.id;
 
+    // Debug: log request user
+    try {
+      console.debug('getJobFeed called', { userId });
+    } catch (e) {
+      // ignore logging errors
+    }
+
     // Get employee's location
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -157,7 +164,15 @@ export async function getJobFeed(
       .eq('role', 'employee')
       .single();
 
+    // Debug: log profile fetch result
+    try {
+      console.debug('profile fetch result', { profile, profileError });
+    } catch (e) {
+      // ignore logging errors
+    }
+
     if (profileError || !profile || !profile.location_point) {
+      console.warn('getJobFeed: missing employee location', { userId, profile, profileError });
       throw new AppError('Employee location not set', 400);
     }
 
