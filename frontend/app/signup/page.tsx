@@ -20,6 +20,7 @@ export default function SignupPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
+    const normalizedRole = (role ?? 'customer').toString().trim().toLowerCase() as 'customer' | 'employee';
     if (!normalizedEmail || !password) {
       toast.error('Email and password required');
       return;
@@ -30,7 +31,8 @@ export default function SignupPage() {
     }
     setLoading(true);
     try {
-      const response = await api.signup(normalizedEmail, password, role);
+      console.log('Signing up payload:', { email: normalizedEmail, role: normalizedRole });
+      const response = await api.signup(normalizedEmail, password, normalizedRole);
       if (!response.success) {
         toast.error(response.error ?? 'Sign up failed');
         return;

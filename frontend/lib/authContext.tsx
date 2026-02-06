@@ -90,6 +90,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Alias for compatibility
   const signOut = logout;
 
+  // Log user role for debugging when profile changes
+  useEffect(() => {
+    if (profile) {
+      console.log('User role:', profile.role);
+    } else {
+      console.log('User role: none');
+    }
+  }, [profile]);
+
   return (
     <AuthContext.Provider
       value={{
