@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/authContext';
 
 export default function Navbar() {
   const router = useRouter();
-  const { isLoggedIn, mounted, logout } = useAuth();
+  const { isLoggedIn, mounted, logout, profile } = useAuth();
 
   async function handleLogout() {
     await logout();
@@ -24,18 +24,24 @@ export default function Navbar() {
           <Link href="/homepage" className="rounded-lg px-2.5 py-2 text-slate-500 no-underline hover:text-slate-700">
             Home
           </Link>
-          <Link href="/customer/order" className="rounded-lg px-2.5 py-2 text-slate-500 no-underline hover:text-slate-700">
-            Book
-          </Link>
-          <Link href="/customer/requests" className="rounded-lg px-2.5 py-2 text-slate-500 no-underline hover:text-slate-700">
-            My requests
-          </Link>
-          <Link href="/customer/dashboard" className="rounded-lg px-2.5 py-2 text-slate-500 no-underline hover:text-slate-700">
-            Dashboard
-          </Link>
-          <Link href="/employee/feed" className="rounded-lg px-2.5 py-2 text-slate-500 no-underline hover:text-slate-700">
-            Jobs feed
-          </Link>
+
+          {profile?.role === 'employee' ? (
+            <Link href="/employee/feed" className="rounded-lg px-2.5 py-2 text-slate-500 no-underline hover:text-slate-700">
+              Jobs feed
+            </Link>
+          ) : (
+            <>
+              <Link href="/customer/order" className="rounded-lg px-2.5 py-2 text-slate-500 no-underline hover:text-slate-700">
+                Book
+              </Link>
+              <Link href="/customer/requests" className="rounded-lg px-2.5 py-2 text-slate-500 no-underline hover:text-slate-700">
+                My requests
+              </Link>
+              <Link href="/customer/dashboard" className="rounded-lg px-2.5 py-2 text-slate-500 no-underline hover:text-slate-700">
+                Dashboard
+              </Link>
+            </>
+          )}
         </nav>
 
         <div>
