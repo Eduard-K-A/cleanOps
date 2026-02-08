@@ -32,8 +32,10 @@ router.post('/signup', async (req, res: Response<ApiResponse<{ user_id: string; 
     }
 
     const { email, password, role } = parsed.data;
+    console.log('[DEBUG-SIGNUP] Form data received:', { email, role });
 
     // Create the user and auto-confirm to avoid email send rate limits
+    console.log('[DEBUG-SIGNUP] Pre-save user object:', { email, role });
     const { data: created, error: createError } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -53,6 +55,8 @@ router.post('/signup', async (req, res: Response<ApiResponse<{ user_id: string; 
       });
       return;
     }
+
+    console.log('[DEBUG-SIGNUP] Post-save user from DB:', created?.user ?? null);
 
     // Ensure a profile row exists
     const { error: profileError } = await supabase
@@ -115,6 +119,8 @@ router.get(
         .eq('id', userId)
         .single();
 
+      console.log('[DEBUG-LOGIN] Login attempt:', { userId });
+
       // If we got an error that isn't "no rows", stop here.
       if (existingError && existingError.code !== 'PGRST116') {
         console.error('auth/me load profile error:', existingError);
@@ -127,6 +133,11 @@ router.get(
       }
 
       let profileRow = (existing as any) ?? null;
+
+      if (profileRow) {
+        console.log('[DEBUG-LOGIN] User found in DB:', { userId: profileRow.id, role: profileRow.role });
+        console.log('[DEBUG-LOGIN] Setting session/token with role:', profileRow.role);
+      }
 
       // If profile does not exist, create a default one (customer role)
       if (!profileRow) {
