@@ -31,8 +31,10 @@ export default function SignupPage() {
     }
     setLoading(true);
     try {
+      console.log('[DEBUG-SIGNUP] Form data received:', { email: normalizedEmail, role: normalizedRole });
       console.log('Signing up payload:', { email: normalizedEmail, role: normalizedRole });
       const response = await api.signup(normalizedEmail, password, normalizedRole);
+      console.log('[DEBUG-SIGNUP] Post-save response from API:', response);
       if (!response.success) {
         toast.error(response.error ?? 'Sign up failed');
         return;

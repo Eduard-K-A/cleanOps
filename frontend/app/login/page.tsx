@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { api } from '@/lib/api';
+import { api, cacheManager } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,7 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
+      console.log('[DEBUG-LOGIN] Login attempt:', { email: email.trim() });
       const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       if (error) {
         toast.error(error.message ?? 'Sign in failed');
@@ -34,9 +35,14 @@ export default function LoginPage() {
 
       // Fetch user profile from backend to get role and other details
       try {
+        // Invalidate cached profile to ensure fresh role for the current account
+        try { cacheManager.invalidate('/auth/me'); } catch (e) {}
         const profileResponse = await api.getProfile();
+        console.log('[DEBUG-LOGIN] User authenticated:', { email: email.trim() });
         if (profileResponse.success && profileResponse.data) {
           const profile = profileResponse.data;
+          console.log('[DEBUG-LOGIN] User found in DB:', { userId: profile.id, email: email.trim(), role: profile.role });
+          console.log('[DEBUG-LOGIN] Setting session/token with role:', profile.role);
           // Route based on role
           const dashboardPath = profile.role === 'employee' 
             ? '/employee/feed' 
