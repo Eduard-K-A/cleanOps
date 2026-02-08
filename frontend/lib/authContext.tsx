@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { type User, type Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import { api } from './api';
+import { api, cacheManager } from './api';
 import type { Profile } from '@/types';
 
 interface AuthContextType {
@@ -55,13 +55,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
-      setSession(s);
+      setSession(s ?? null);
       setUser(s?.user ?? null);
-      if (s?.user?.id) {
-        await fetchProfile(s.user.id);
-      } else {
+
+      // Clear profile on sign out or when there is no session
+      if (event === 'SIGNED_OUT' || !s?.user?.id) {
         setProfile(null);
         setLoading(false);
+        return;
+      }
+
+      // Fetch profile for signed in users
+      if (s.user.id) {
+        await fetchProfile(s.user.id);
       }
     });
 
@@ -70,8 +76,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user?.id) {
+        // Ensure stale cached profile is cleared when session changes
+        try {
+          cacheManager.invalidate('/auth/me');
+        } catch (e) {
+          // ignore cache errors
+        }
         await fetchProfile(s.user.id);
       } else {
+        setProfile(null);
         setLoading(false);
       }
       setMounted(true);
@@ -81,10 +94,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchProfile]);
 
   const logout = useCallback(async () => {
+    console.log('[DEBUG-LOGOUT] Pre-logout auth state:', { user, profile, session });
     await supabase.auth.signOut();
+    // Clear cached profile so next login fetches fresh data
+    try {
+      cacheManager.invalidate('/auth/me');
+    } catch (e) {
+      // swallow
+    }
     setUser(null);
     setProfile(null);
     setSession(null);
+    console.log('[DEBUG-LOGOUT] Post-logout auth state:', { previousRole: profile?.role ?? null, currentRole: null });
   }, []);
 
   // Alias for compatibility
