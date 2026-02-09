@@ -20,6 +20,13 @@ const URGENCIES: { value: JobUrgency; label: string }[] = [
 ];
 const TASKS = ['Dusting', 'Vacuuming', 'Mopping', 'Bathrooms', 'Kitchen', 'Windows'];
 
+// Compute price (in cents) based on size base, urgency multiplier and number of tasks.
+function computePrice(base: number, urgency: JobUrgency, taskCount: number) {
+  const mult = urgency === 'HIGH' ? 1.3 : urgency === 'LOW' ? 0.9 : 1;
+  // Per-task surcharge: 12% of the base price per task (works for 0..n tasks)
+  const taskMultiplier = 1 + 0.12 * taskCount;
+  return Math.round(base * mult * taskMultiplier);
+}
 function StepSize() {
   const { size, setSize, setStep } = useBookingStore();
   return (
@@ -103,12 +110,12 @@ function StepLocation() {
 function StepUrgency() {
   const { urgency, setUrgency, tasks, setTasks, setStep, setPriceAmount, size } = useBookingStore();
   const base = size?.toLowerCase().includes('large') ? 15000 : size?.toLowerCase().includes('medium') ? 10000 : 6500;
-  const mult = urgency === 'HIGH' ? 1.3 : urgency === 'LOW' ? 0.9 : 1;
-  const price = Math.round(base * mult);
+  const price = computePrice(base, urgency, tasks.length);
 
   const toggleTask = (t: string) => {
-    if (tasks.includes(t)) setTasks(tasks.filter((x) => x !== t));
-    else setTasks([...tasks, t]);
+    const newTasks = tasks.includes(t) ? tasks.filter((x) => x !== t) : [...tasks, t];
+    setTasks(newTasks);
+    setPriceAmount(computePrice(base, urgency, newTasks.length));
   };
 
   return (
@@ -130,8 +137,7 @@ function StepUrgency() {
                 variant={urgency === u.value ? 'default' : 'outline'}
                 onClick={() => {
                   setUrgency(u.value);
-                  const m = u.value === 'HIGH' ? 1.3 : u.value === 'LOW' ? 0.9 : 1;
-                  setPriceAmount(Math.round(base * m));
+                  setPriceAmount(computePrice(base, u.value, tasks.length));
                 }}
               >
                 {u.label}
