@@ -26,9 +26,14 @@ export default function Navbar() {
           </Link>
 
           {profile?.role === 'employee' ? (
+            <>
             <Link href="/employee/feed" className="rounded-lg px-2.5 py-2 text-slate-500 no-underline hover:text-slate-700">
               Jobs feed
             </Link>
+              <Link href="/employee/history_activity" className="rounded-lg px-2.5 py-2 text-slate-500 no-underline hover:text-slate-700">
+              My Activities
+            </Link>
+            </>
           ) : (
             <>
               <Link href="/customer/order" className="rounded-lg px-2.5 py-2 text-slate-500 no-underline hover:text-slate-700">
