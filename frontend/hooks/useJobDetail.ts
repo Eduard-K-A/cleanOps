@@ -18,11 +18,15 @@ export function useJobDetail() {
     }
 
     (async () => {
+      console.debug('useJobDetail: fetching job', { id });
       try {
         const response = await api.get<Job>(`/jobs/${id}`);
         setJob(response.data ?? null);
-      } catch {
-        toast.error('Failed to load job');
+      } catch (e: unknown) {
+        const err = e as { response?: { data?: { error?: string } } };
+        const message = err?.response?.data?.error ?? 'Failed to load job';
+        console.error('useJobDetail fetch error', { id, err });
+        toast.error(message);
         setJob(null);
       } finally {
         setLoading(false);
