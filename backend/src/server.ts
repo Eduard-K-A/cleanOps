@@ -89,7 +89,8 @@ app.get('/test', (req, res) => {
 // API Routes
 app.use('/api/auth', authRouter);
 app.use('/api/jobs', jobsRouter);
-app.use('api/jobs/feed', jobsRouter);
+// Note: previously there was an incorrect mount `app.use('api/jobs/feed', jobsRouter)`
+// which lacked a leading slash and was unnecessary because `/api/jobs` is already mounted above.
 app.use('/api/messages', messagesRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/payments', paymentsRouter);

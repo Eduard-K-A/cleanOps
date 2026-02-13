@@ -21,20 +21,32 @@ export function useAsyncData<T>({
   const [error, setError] = useState<Error | null>(null);
 
   const refetch = useCallback(async () => {
+    console.debug('useAsyncData: refetch starting');
     try {
       setLoading(true);
       setError(null);
       const response = await fetchFn();
-      const result = (response.data ?? defaultValue) as T;
+      console.debug('useAsyncData: fetchFn response', { response });
+      // Support both raw data and ApiResponse wrappers
+      // If response has a `data` field, prefer it; otherwise assume response is the payload
+      const payload = (response && typeof response === 'object' && 'data' in response)
+        ? (response as any).data
+        : response;
+      const result = (payload ?? defaultValue) as T;
+      console.debug('useAsyncData: setting data', { length: Array.isArray(result) ? (result as any).length : undefined });
       setData(result);
       onSuccess?.(result);
+      return result;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(errorMessage);
-      setError(error);
+      console.error('useAsyncData: fetch error', err);
+      const errorObj = err instanceof Error ? err : new Error(errorMessage);
+      setError(errorObj);
       toast.error(errorMessage);
       setData(defaultValue);
+      return defaultValue;
     } finally {
       setLoading(false);
+      console.debug('useAsyncData: refetch finished');
     }
   }, [fetchFn, defaultValue, errorMessage, onSuccess]);
 

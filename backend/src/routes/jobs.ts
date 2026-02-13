@@ -7,6 +7,7 @@ import {
   createJob,
   getJobs,
   getJobFeed,
+  getJob,
   claimJob,
   updateJobStatus,
   approveJob,
@@ -43,6 +44,17 @@ router.get('/', asyncHandler(getJobs as any));
 
 // Get job feed for employees (sorted by proximity)
 router.get('/feed', requireRole('employee'), asyncHandler(getJobFeed as any)); // no api/jobs/feed route in backend yet
+
+// Get single job by id
+router.get(
+  '/:job_id',
+  validate({
+    params: z.object({
+      job_id: z.string().uuid(),
+    }),
+  }),
+  asyncHandler(getJob as any)
+);
 
 // Claim a job (employee)
 router.post(

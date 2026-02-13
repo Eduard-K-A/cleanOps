@@ -140,6 +140,48 @@ export async function getJobs(
 }
 
 /**
+ * Get single job by id
+ */
+export async function getJob(
+  req: AuthenticatedRequest,
+  res: Response<ApiResponse<Job>>
+): Promise<void> {
+  try {
+    const userId = req.user!.id;
+    const { job_id } = req.params as { job_id: string };
+
+    // Debug: log incoming request
+    console.debug('getJob called', { userId, job_id });
+
+    const { data: job, error: jobError } = await supabase
+      .from('jobs')
+      .select('*')
+      .eq('id', job_id)
+      .single();
+
+    if (jobError || !job) {
+      console.warn('getJob: job not found', { job_id, jobError });
+      throw new AppError('Job not found', 404);
+    }
+
+    // Optionally enforce visibility rules: customers see own jobs, employees see open/assigned
+    const role = req.user?.role;
+    if (role === 'customer' && job.customer_id !== userId) {
+      throw new AppError('Unauthorized', 403);
+    }
+
+    res.json({
+      success: true,
+      data: job as Job,
+    });
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    console.error('getJob error:', error);
+    throw new AppError('Failed to fetch job', 500);
+  }
+}
+
+/**
  * Get nearby open jobs for employees (sorted by proximity)
  */
 export async function getJobFeed(
