@@ -3,7 +3,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { type User, type Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import { api, cacheManager } from './api';
+import { api, cacheManager, requestQueueManager } from './api';
+import { requestDeduplicationManager } from './api/requestDeduplication';
 import type { Profile } from '@/types';
 
 interface AuthContextType {
@@ -96,12 +97,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     console.log('[DEBUG-LOGOUT] Pre-logout auth state:', { user, profile, session });
     await supabase.auth.signOut();
-    // Clear cached profile so next login fetches fresh data
+    // Clear optimized client caches so no user data persists
     try {
+      // Target the specific endpoint mentioned in the report
+      cacheManager.invalidate('/customer/order');
+      // Invalidate patterns (covers parameterized keys)
+      cacheManager.invalidatePattern('^/customer/order');
+      // Also ensure auth/profile entries are cleared
       cacheManager.invalidate('/auth/me');
+      // As a defensive fallback, clear the entire cache manager (memory + localStorage)
+      cacheManager.clear();
     } catch (e) {
-      // swallow
+      // swallow cache errors
     }
+
+    // Clear request utilities that may hold in-flight or deduplication state
+    try {
+      requestQueueManager.clear();
+    } catch (e) {}
+    try {
+      requestDeduplicationManager.clear();
+    } catch (e) {}
+
+    // Clear any user-specific storage (sessionStorage/localStorage)
+    if (typeof window !== 'undefined') {
+      try {
+        // Session storage (short-lived payment/session keys)
+        for (const k of Object.keys(sessionStorage)) {
+          if (k.startsWith('cleanops_') || k === 'cleanops_payment') sessionStorage.removeItem(k);
+        }
+      } catch (e) {}
+
+      try {
+        // Local storage entries prefixed by cache manager will be removed by cacheManager.clear(),
+        // but clear any other obvious user-scoped keys as a precaution
+        for (const k of Object.keys(localStorage)) {
+          if (k.startsWith('cleanops_') || k.includes('payment') || k.includes('user')) localStorage.removeItem(k);
+        }
+      } catch (e) {}
+    }
+
+    // Optionally clear third-party caches if present (React Query / SWR)
+    try {
+      // If the app exposes a global QueryClient for convenience (not required), clear it
+      const globalRQ = (window as any).__REACT_QUERY_CLIENT__;
+      if (globalRQ) {
+        try { globalRQ.clear?.(); } catch (e) {}
+        try { globalRQ.removeQueries?.(); } catch (e) {}
+      }
+    } catch (e) {}
+
+    // Reset in-memory auth state
     setUser(null);
     setProfile(null);
     setSession(null);
