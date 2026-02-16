@@ -182,63 +182,28 @@ export async function getJob(
 }
 
 /**
- * Get nearby open jobs for employees (sorted by proximity)
+ * Get open jobs for employees.
+ *
+ * Requirement: the employee feed must display **every available job**
+ * (i.e. all OPEN jobs) regardless of the employee's location.
+ * We therefore no longer filter by distance; we simply return all
+ * OPEN jobs, ordered by recency. Any future proximity UX should be
+ * implemented client‑side (e.g. sort) without hiding jobs server‑side.
  */
 export async function getJobFeed(
-  req: AuthenticatedRequest,
+  _req: AuthenticatedRequest,
   res: Response<ApiResponse<Job[]>>
 ): Promise<void> {
   try {
-    const userId = req.user!.id;
-
-    // Debug: log request user
-    try {
-      console.debug('getJobFeed called', { userId });
-    } catch (e) {
-      // ignore logging errors
-    }
-
-    // Get employee's location (lat/lng per migrations)
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('location_lat, location_lng')
-      .eq('id', userId)
-      .eq('role', 'employee')
-      .single();
-
-    // Debug: log profile fetch result
-    try {
-      console.debug('profile fetch result', { profile, profileError });
-    } catch (e) {
-      // ignore logging errors
-    }
-
-    if (profileError || !profile || profile.location_lat == null || profile.location_lng == null) {
-      console.warn('getJobFeed: missing employee location', { userId, profile, profileError });
-      throw new AppError('Employee location not set', 400);
-    }
-
-    // Get open jobs within 50km, ordered by distance using RPC defined in migrations
-    const { data: jobs, error } = await supabase.rpc('nearby_open_jobs', {
-      lat: profile.location_lat,
-      lng: profile.location_lng,
-      radius_km: 50,
-    });
+    const { data: jobs, error } = await supabase
+      .from('jobs')
+      .select('*')
+      .eq('status', 'OPEN')
+      .order('created_at', { ascending: false });
 
     if (error) {
-      // Fallback: get all open jobs if RPC fails
-      const { data: fallbackJobs } = await supabase
-        .from('jobs')
-        .select('*')
-        .eq('status', 'OPEN')
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      res.json({
-        success: true,
-        data: (fallbackJobs || []) as Job[],
-      });
-      return;
+      console.error('getJobFeed error:', error);
+      throw new AppError('Failed to fetch job feed', 500);
     }
 
     res.json({
