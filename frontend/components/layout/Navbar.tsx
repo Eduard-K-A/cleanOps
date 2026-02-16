@@ -1,17 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
+import { UserProfileButton } from './UserProfileButton';
 
 export default function Navbar() {
-  const router = useRouter();
-  const { isLoggedIn, mounted, logout, profile } = useAuth();
-
-  async function handleLogout() {
-    await logout();
-    router.push('/login');
-  }
+  const { isLoggedIn, mounted, profile } = useAuth();
 
   return (
     <header className="w-full border-b border-slate-200 bg-white">
@@ -49,21 +43,17 @@ export default function Navbar() {
           )}
         </nav>
 
-        <div>
-          {mounted &&
-            (isLoggedIn ? (
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="cursor-pointer rounded-lg border-none bg-sky-500 px-3 py-2 font-semibold text-white hover:bg-sky-600"
-              >
-                Sign out
-              </button>
-            ) : (
-              <Link href="/login" className="rounded-lg bg-sky-500 px-3 py-2 font-semibold text-white no-underline hover:bg-sky-600">
-                Sign in
-              </Link>
-            ))}
+        <div className="flex items-center gap-3">
+          {mounted && isLoggedIn ? (
+            <UserProfileButton />
+          ) : (
+            <Link
+              href="/login"
+              className="rounded-lg bg-sky-500 px-3 py-2 font-semibold text-white no-underline hover:bg-sky-600"
+            >
+              Sign in
+            </Link>
+          )}
         </div>
       </div>
     </header>

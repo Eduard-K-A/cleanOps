@@ -7,7 +7,7 @@ import { JobCard } from '@/components/jobs/JobCard';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { api } from '@/lib/api';
-import type { Job } from '@/types';
+import type { Job, Profile } from '@/types';
 import toast from 'react-hot-toast';
 
 export default function EmployeeFeedPage() {
@@ -18,6 +18,12 @@ export default function EmployeeFeedPage() {
     fetchFn: () => api.getJobFeed(),
     defaultValue: [],
     errorMessage: 'Failed to load jobs',
+  });
+
+  const { data: profile, loading: profileLoading } = useAsyncData<Profile | null>({
+    fetchFn: () => api.getProfile(),
+    defaultValue: null,
+    errorMessage: 'Failed to load profile',
   });
 
   async function handleClaim(id: string) {
@@ -43,6 +49,20 @@ export default function EmployeeFeedPage() {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <h1 className="mb-2 text-3xl font-bold text-slate-900">Available jobs</h1>
           <p className="mb-8 text-slate-600">Claim jobs near you. Sorted by proximity when location is provided.</p>
+
+          {/* Show notice when employee doesn't have location set */}
+          {(!profileLoading && profile && (profile.location_lat == null || profile.location_lng == null)) && (
+            <div className="mb-6 rounded-md border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+              Your location is not set — to get nearby jobs, add your location in your profile.
+              <button
+                type="button"
+                className="ml-4 inline-flex items-center justify-center rounded-md bg-yellow-600 px-3 py-1 text-xs font-medium text-white hover:bg-yellow-700"
+                onClick={() => router.push('/employee/dashboard')}
+              >
+                Update profile
+              </button>
+            </div>
+          )}
 
           {/* Debug: log state changes */}
 
