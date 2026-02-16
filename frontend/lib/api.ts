@@ -37,9 +37,10 @@ export const api = {
   },
 
   async getJobFeed(): Promise<ApiResponse<Job[]>> {
+    // Always fetch fresh data so employees see all currently available jobs.
+    // Caching here can cause the feed to show stale results even after new jobs are created.
     return apiClient.get<Job[]>('/jobs/feed', undefined, {
-      useCache: true,
-      cacheTTL: 30 * 1000, // 30 seconds cache for feed
+      useCache: false,
       priority: RequestPriority.HIGH,
     });
   },
@@ -121,6 +122,13 @@ export const api = {
       role,
     }, {
       priority: RequestPriority.CRITICAL,
+    });
+  },
+
+  // Update current user's profile (name, location, etc.)
+  async updateProfile(updates: Partial<Profile>): Promise<ApiResponse<Profile>> {
+    return apiClient.patch<Profile>('/auth/me', updates as any, {
+      priority: RequestPriority.HIGH,
     });
   }
 };
