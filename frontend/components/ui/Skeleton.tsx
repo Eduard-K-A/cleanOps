@@ -57,7 +57,7 @@ export function Skeleton({
  */
 export function JobCardSkeleton() {
   return (
-    <div className="border rounded-lg p-4 space-y-3">
+    <div className="border rounded-lg p-4 space-y-3 ">
       <div className="flex items-start justify-between">
         <Skeleton variant="text" width="60%" height={24} />
         <Skeleton variant="circular" width={24} height={24} />
