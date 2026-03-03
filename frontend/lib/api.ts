@@ -37,10 +37,13 @@ export const api = {
   },
 
   async getJobFeed(): Promise<ApiResponse<Job[]>> {
-    // Always fetch fresh data so employees see all currently available jobs.
-    // Caching here can cause the feed to show stale results even after new jobs are created.
+    // Use a short cache window so employees get reasonable responsiveness
+    // while still refreshing frequently. The backend also has its own
+    // cache, so even if the client gets a cached response the server
+    // may still serve quickly.
     return apiClient.get<Job[]>('/jobs/feed', undefined, {
-      useCache: false,
+      useCache: true,
+      cacheTTL: 10 * 1000, // 10 seconds
       priority: RequestPriority.HIGH,
     });
   },
