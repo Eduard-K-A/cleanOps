@@ -5,6 +5,11 @@ import payment from '../config/payment';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { CreateJobRequest, UpdateJobStatusRequest, ClaimJobRequest, Job, ApiResponse } from '../types';
+import { getCached, setCache, clearCache } from '../utils/cache';
+
+// cache TTLs (milliseconds)
+const FEED_CACHE_TTL = 10 * 1000; // 10 seconds
+const JOBS_CACHE_TTL = 2 * 60 * 1000; // 2 minutes (matches frontend)
 
 // NOTE: Until you generate/attach a typed Supabase `Database` definition,
 // `@supabase/supabase-js` can infer table types as `never` in some setups.
@@ -22,6 +27,8 @@ export async function createJob(
   req: AuthenticatedRequest,
   res: Response<ApiResponse<{ job: Job; client_secret: string }>>
 ): Promise<void> {
+  // Invalidate cached feed since a new OPEN job has been added
+  clearCache();
   try {
     const userId = req.user!.id;
     const jobData = req.body as CreateJobBody;
@@ -106,6 +113,14 @@ export async function getJobs(
     const status = typeof req.query.status === 'string' ? req.query.status : undefined;
     const role = req.user?.role;
 
+    // build a cache key so that each user/role/status combination is stored separately
+    const cacheKey = `jobs:${userId}:${role || 'none'}:${status || 'all'}`;
+    const cached = getCached<Job[]>(cacheKey);
+    if (cached) {
+      res.json({ success: true, data: cached });
+      return;
+    }
+
     let query = supabase.from('jobs').select('*');
 
     // Customers see their own jobs
@@ -129,9 +144,12 @@ export async function getJobs(
       throw new AppError('Failed to fetch jobs', 500);
     }
 
+    const result = (jobs || []) as Job[];
+    setCache(cacheKey, result, JOBS_CACHE_TTL);
+
     res.json({
       success: true,
-      data: jobs as Job[],
+      data: result,
     });
   } catch (error) {
     if (error instanceof AppError) throw error;
@@ -195,6 +213,13 @@ export async function getJobFeed(
   res: Response<ApiResponse<Job[]>>
 ): Promise<void> {
   try {
+    const cacheKey = 'feed:openJobs';
+    const cached = getCached<Job[]>(cacheKey);
+    if (cached) {
+      res.json({ success: true, data: cached });
+      return;
+    }
+
     const { data: jobs, error } = await supabase
       .from('jobs')
       .select('*')
@@ -206,9 +231,12 @@ export async function getJobFeed(
       throw new AppError('Failed to fetch job feed', 500);
     }
 
+    const result = (jobs || []) as Job[];
+    setCache(cacheKey, result, FEED_CACHE_TTL);
+
     res.json({
       success: true,
-      data: (jobs || []) as Job[],
+      data: result,
     });
   } catch (error) {
     if (error instanceof AppError) throw error;
@@ -223,6 +251,8 @@ export async function claimJob(
   req: AuthenticatedRequest,
   res: Response<ApiResponse<Job>>
 ): Promise<void> {
+  // any change that affects open jobs should invalidate feed cache
+  clearCache();
   try {
     const userId = req.user!.id;
     const { job_id } = req.body as ClaimJobBody;
@@ -272,6 +302,8 @@ export async function updateJobStatus(
   req: AuthenticatedRequest,
   res: Response<ApiResponse<Job>>
 ): Promise<void> {
+  // status updates may change which jobs are considered "open" so clear feed
+  clearCache();
   try {
     const userId = req.user!.id;
     const { job_id } = req.params as { job_id: string };
@@ -337,6 +369,8 @@ export async function approveJob(
   req: AuthenticatedRequest,
   res: Response<ApiResponse<Job>>
 ): Promise<void> {
+  // once a job is completed and removed from the open set, invalidate caches
+  clearCache();
   try {
     const userId = req.user!.id;
     const { job_id } = req.params;
