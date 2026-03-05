@@ -1,5 +1,5 @@
 import { ApiResponse, CreateJobRequest, Job, Message, Notification, Profile } from '@/types';
-import { optimizedApi } from './api/optimizedClient';
+import { optimizedApi, cacheManager } from './api/optimizedClient';
 import { RequestPriority } from './api/requestQueue';
 
 // Re-export optimized API utilities for advanced usage
@@ -25,7 +25,13 @@ export const api = {
 
   // Jobs - with optimized caching and priorities
   async createJob(data: CreateJobRequest): Promise<ApiResponse<{ job: Job; client_secret: string }>> {
-    return apiClient.post('/jobs', data, { priority: RequestPriority.HIGH });
+    const result = await apiClient.post<{ job: Job; client_secret: string }>('/jobs', data, { priority: RequestPriority.HIGH });
+    // Invalidate the jobs feed cache since a new OPEN job has been added
+    if (result.success) {
+      cacheManager.invalidate('/jobs/feed');
+      cacheManager.invalidate('/jobs');
+    }
+    return result;
   },
 
   async getJobs(status?: string, role?: string): Promise<ApiResponse<Job[]>> {
@@ -49,9 +55,15 @@ export const api = {
   },
 
   async claimJob(job_id: string): Promise<ApiResponse<Job>> {
-    return apiClient.post<Job>('/jobs/claim', { job_id }, {
+    const result = await apiClient.post<Job>('/jobs/claim', { job_id }, {
       priority: RequestPriority.HIGH,
     });
+    // Invalidate the jobs feed cache since claiming a job changes which jobs are available
+    if (result.success) {
+      cacheManager.invalidate('/jobs/feed');
+      cacheManager.invalidate('/jobs');
+    }
+    return result;
   },
 
   async updateJobStatus(
@@ -59,18 +71,32 @@ export const api = {
     status: Job['status'],
     proof_of_work?: string[]
   ): Promise<ApiResponse<Job>> {
-    return apiClient.patch<Job>(`/jobs/${job_id}/status`, {
+    const result = await apiClient.patch<Job>(`/jobs/${job_id}/status`, {
       status,
       proof_of_work,
     }, {
       priority: RequestPriority.HIGH,
     });
+    // Invalidate job-related caches since status changed
+    if (result.success) {
+      cacheManager.invalidate('/jobs/feed');
+      cacheManager.invalidate('/jobs');
+      cacheManager.invalidate(`/jobs/${job_id}`);
+    }
+    return result;
   },
 
   async approveJob(job_id: string): Promise<ApiResponse<Job>> {
-    return apiClient.post<Job>(`/jobs/${job_id}/approve`, undefined, {
+    const result = await apiClient.post<Job>(`/jobs/${job_id}/approve`, undefined, {
       priority: RequestPriority.HIGH,
     });
+    // Invalidate job-related caches since job is now completed
+    if (result.success) {
+      cacheManager.invalidate('/jobs/feed');
+      cacheManager.invalidate('/jobs');
+      cacheManager.invalidate(`/jobs/${job_id}`);
+    }
+    return result;
   },
 
   // Messages
