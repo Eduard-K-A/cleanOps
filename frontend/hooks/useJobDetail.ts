@@ -17,7 +17,7 @@ export function useJobDetail() {
       return;
     }
 
-    (async () => {
+    const fetchJob = async () => {
       console.debug('useJobDetail: fetching job', { id });
       try {
         const response = await api.get<Job>(`/jobs/${id}`);
@@ -31,7 +31,13 @@ export function useJobDetail() {
       } finally {
         setLoading(false);
       }
-    })();
+    };
+
+    fetchJob();
+
+    // Auto-refresh job every 1 second to sync status changes in real-time
+    const interval = setInterval(fetchJob, 1000);
+    return () => clearInterval(interval);
   }, [params?.id]);
 
   const handleApprove = async () => {
