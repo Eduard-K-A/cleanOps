@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import type { Job } from '@/types';
 import toast from 'react-hot-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 export default function RequestsPage() {
   const router = useRouter();
@@ -16,14 +16,18 @@ export default function RequestsPage() {
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     fetchJobs();
+    
+    // Auto-refresh jobs every 5 seconds to sync status changes
+    const interval = setInterval(fetchJobs, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   async function fetchJobs() {
     try {
-      setLoading(true);
       setError(null);
       const response = await api.getJobs();
       setJobs(response.data ?? []);
@@ -43,11 +47,16 @@ export default function RequestsPage() {
         : err?.response?.data?.error ?? 'Failed to load your requests.';
 
       setError(message);
-      toast.error(message);
       setJobs([]);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
+  }
+
+  async function handleRefresh() {
+    setIsRefreshing(true);
+    await fetchJobs();
   }
 
   async function handleApprove(id: string) {
@@ -68,8 +77,22 @@ export default function RequestsPage() {
     <ProtectedRoute>
       <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-8">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <h1 className="mb-2 text-3xl font-bold text-slate-900">My requests</h1>
-          <p className="mb-8 text-slate-600">Track and manage your cleaning jobs.</p>
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="mb-2 text-3xl font-bold text-slate-900">My requests</h1>
+              <p className="text-slate-600">Track and manage your cleaning jobs.</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Refreshing…' : 'Refresh'}
+            </Button>
+          </div>
 
           {error && !loading && (
             <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
