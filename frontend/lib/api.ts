@@ -26,10 +26,11 @@ export const api = {
   // Jobs - with optimized caching and priorities
   async createJob(data: CreateJobRequest): Promise<ApiResponse<{ job: Job; client_secret: string }>> {
     const result = await apiClient.post<{ job: Job; client_secret: string }>('/jobs', data, { priority: RequestPriority.HIGH });
-    // Invalidate the jobs feed cache since a new OPEN job has been added
+    // Invalidate the jobs/feed and jobs list caches since a new OPEN job has been added
+    // usePattern so any query‑param variants (e.g. "/jobs{}" or "/jobs?status=...") are removed
     if (result.success) {
-      cacheManager.invalidate('/jobs/feed');
-      cacheManager.invalidate('/jobs');
+      cacheManager.invalidatePattern('/jobs/feed');
+      cacheManager.invalidatePattern('/jobs');
     }
     return result;
   },
@@ -58,10 +59,11 @@ export const api = {
     const result = await apiClient.post<Job>('/jobs/claim', { job_id }, {
       priority: RequestPriority.HIGH,
     });
-    // Invalidate the jobs feed cache since claiming a job changes which jobs are available
+    // Invalidate any cached job lists — both feed and generic queries — so the newly
+    // claimed job will show up immediately in history/activities.
     if (result.success) {
-      cacheManager.invalidate('/jobs/feed');
-      cacheManager.invalidate('/jobs');
+      cacheManager.invalidatePattern('/jobs/feed');
+      cacheManager.invalidatePattern('/jobs');
     }
     return result;
   },
@@ -79,8 +81,8 @@ export const api = {
     });
     // Invalidate job-related caches since status changed
     if (result.success) {
-      cacheManager.invalidate('/jobs/feed');
-      cacheManager.invalidate('/jobs');
+      cacheManager.invalidatePattern('/jobs/feed');
+      cacheManager.invalidatePattern('/jobs');
       cacheManager.invalidate(`/jobs/${job_id}`);
     }
     return result;
@@ -92,8 +94,8 @@ export const api = {
     });
     // Invalidate job-related caches since job is now completed
     if (result.success) {
-      cacheManager.invalidate('/jobs/feed');
-      cacheManager.invalidate('/jobs');
+      cacheManager.invalidatePattern('/jobs/feed');
+      cacheManager.invalidatePattern('/jobs');
       cacheManager.invalidate(`/jobs/${job_id}`);
     }
     return result;
