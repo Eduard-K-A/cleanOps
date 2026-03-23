@@ -15,6 +15,7 @@ export default function RequestsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -73,6 +74,20 @@ export default function RequestsPage() {
     }
   }
 
+  async function handleCancel(id: string) {
+    try {
+      setCancelling(id);
+      await api.updateJobStatus(id, 'CANCELLED');
+      toast.success('Job cancelled successfully.');
+      await fetchJobs();
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { error?: string } } };
+      toast.error(err?.response?.data?.error ?? 'Failed to cancel job');
+    } finally {
+      setCancelling(null);
+    }
+  }
+
   return (
     <ProtectedRoute>
       <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-8">
@@ -118,6 +133,8 @@ export default function RequestsPage() {
                   <JobCard
                     job={job}
                     onView={(id) => router.push(`/customer/jobs/${id}`)}
+                    onCancel={handleCancel}
+                    isCancelling={cancelling === job.id}
                   />
                   {job.status === 'PENDING_REVIEW' && (
                     <Button
