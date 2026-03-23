@@ -13,6 +13,28 @@ type Transfer = {
     destination: string;
     metadata?: Record<string, any>;
 };
+type StripeAccount = {
+    id: string;
+    type: 'express';
+    country: string;
+    email: string;
+    capabilities: {
+        card_payments: {
+            requested: boolean;
+        };
+        transfers: {
+            requested: boolean;
+        };
+    };
+    business_type: 'individual' | 'company';
+    details_submitted: boolean;
+    charges_enabled: boolean;
+    payouts_enabled: boolean;
+};
+type AccountLink = {
+    url: string;
+    expires_at: number;
+};
 export declare function createPaymentIntent(opts: {
     amount: number;
     currency: string;
@@ -27,6 +49,27 @@ export declare function createTransfer(opts: {
     destination: string;
     metadata?: Record<string, any>;
 }): Promise<Transfer>;
+export declare function createExpressAccount(opts: {
+    type: 'express';
+    country: string;
+    email: string;
+    capabilities: {
+        card_payments: {
+            requested: boolean;
+        };
+        transfers: {
+            requested: boolean;
+        };
+    };
+    business_type: 'individual' | 'company';
+}): Promise<StripeAccount>;
+export declare function createAccountLink(opts: {
+    account: string;
+    refresh_url: string;
+    return_url: string;
+    type: 'account_onboarding';
+}): Promise<AccountLink>;
+export declare function retrieveAccount(accountId: string): Promise<StripeAccount>;
 export declare function constructEvent(rawBody: any, _sig: any, _secret: any): any;
 export declare function _resetMocks(): void;
 declare const _default: {
@@ -34,6 +77,9 @@ declare const _default: {
     cancelPaymentIntent: typeof cancelPaymentIntent;
     capturePaymentIntent: typeof capturePaymentIntent;
     createTransfer: typeof createTransfer;
+    createExpressAccount: typeof createExpressAccount;
+    createAccountLink: typeof createAccountLink;
+    retrieveAccount: typeof retrieveAccount;
     constructEvent: typeof constructEvent;
     _resetMocks: typeof _resetMocks;
 };
