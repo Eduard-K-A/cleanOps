@@ -210,8 +210,8 @@ function StepPayment() {
       reset();
       router.push('/customer/payment');
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { error?: string } } };
-      toast.error(err?.response?.data?.error || 'Failed to create job');
+      const message = e instanceof Error ? e.message : 'Failed to create job';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
