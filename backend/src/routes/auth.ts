@@ -169,7 +169,7 @@ router.get(
       const profile: Profile = {
         id: profileRow.id,
         role: profileRow.role,
-        stripe_account_id: profileRow.stripe_account_id ?? null,
+        money_balance: Number(profileRow.money_balance ?? 0),
         rating: Number(profileRow.rating ?? 5),
         location_lat: profileRow.location_lat ?? null,
         location_lng: profileRow.location_lng ?? null,
@@ -239,7 +239,7 @@ router.patch(
       const profile: Profile = {
         id: updated.id,
         role: updated.role,
-        stripe_account_id: updated.stripe_account_id ?? null,
+        money_balance: Number(updated.money_balance ?? 0),
         rating: Number(updated.rating ?? 5),
         location_lat: updated.location_lat ?? null,
         location_lng: updated.location_lng ?? null,
