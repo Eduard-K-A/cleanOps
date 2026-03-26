@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 function PaymentContent() {
-  const [data, setData] = useState<{ jobId: string; clientSecret: string } | null | 'loading'>('loading');
+  const [data, setData] = useState<{ jobId: string; amount: number } | null | 'loading'>('loading');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -16,9 +16,9 @@ function PaymentContent() {
     if (typeof window === 'undefined') return;
     try {
       const raw = sessionStorage.getItem('cleanops_payment');
-      const parsed = raw ? (JSON.parse(raw) as { jobId?: string; clientSecret?: string }) : null;
-      if (parsed?.jobId && parsed?.clientSecret)
-        setData({ jobId: parsed.jobId, clientSecret: parsed.clientSecret });
+      const parsed = raw ? (JSON.parse(raw) as { jobId?: string; amount?: number }) : null;
+      if (parsed?.jobId && parsed?.amount)
+        setData({ jobId: parsed.jobId, amount: parsed.amount });
       else setData(null);
     } catch {
       setData(null);
@@ -44,7 +44,7 @@ function PaymentContent() {
     );
   }
 
-  const { jobId, clientSecret } = data;
+  const { jobId, amount } = data;
 
   const handleAuthorize = async () => {
     setLoading(true);
@@ -52,15 +52,16 @@ function PaymentContent() {
       const res = await fetch('/api/payments/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId, clientSecret }),
+        body: JSON.stringify({ jobId, amount }),
       });
       if (!res.ok) throw new Error('Authorization failed');
       sessionStorage.removeItem('cleanops_payment');
       toast.success('Payment authorized (mock). Funds are held in escrow until you approve the job.');
       router.push('/customer/requests');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Authorize error:', err);
-      toast.error(err?.message || 'Authorization failed');
+      const message = err instanceof Error ? err.message : 'Authorization failed';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -72,11 +73,11 @@ function PaymentContent() {
         <CardHeader>
           <CardTitle>Complete payment (mock)</CardTitle>
           <CardDescription>
-            Job <code className="rounded bg-slate-100 px-1">{jobId.slice(0, 8)}…</code>. Funds are held in escrow until you approve the work.
+            Job <code className="rounded bg-slate-100 px-1">{jobId.slice(0, 8)}…</code>. Amount: <code className="rounded bg-slate-100 px-1">${(amount / 100).toFixed(2)}</code>. Funds are held in escrow until you approve the work.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="mb-4 text-sm text-slate-600">This environment uses a mock payment flow; no card details are required.</p>
+          <p className="mb-4 text-sm text-slate-600">This environment uses a mock payment flow; no card details are required. Simply authorize the payment.</p>
           <div className="flex justify-end">
             <Button onClick={handleAuthorize} disabled={loading}>
               {loading ? 'Authorizing…' : 'Authorize payment (mock)'}

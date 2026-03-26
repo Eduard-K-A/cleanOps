@@ -67,8 +67,13 @@ export default function RequestsPage() {
       toast.success('Job approved. Payout completed.');
       await fetchJobs();
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { error?: string } } };
-      toast.error(err?.response?.data?.error ?? 'Failed to approve');
+      const defaultMsg = 'Failed to approve';
+      if (e instanceof Error) {
+        toast.error(e.message || defaultMsg);
+      } else {
+        const err = e as { response?: { data?: { error?: string } } };
+        toast.error(err?.response?.data?.error ?? defaultMsg);
+      }
     } finally {
       setApproving(null);
     }
