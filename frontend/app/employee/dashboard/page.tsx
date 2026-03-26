@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, DollarSign, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { StripeConnect } from '@/components/StripeConnect';
 
 export default function EmployeeDashboardPage() {
   const router = useRouter();
@@ -79,6 +80,11 @@ export default function EmployeeDashboardPage() {
                 <div className="text-2xl font-bold">${(totalEarnings / 100).toFixed(2)}</div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Stripe Account Connection */}
+          <div className="mb-8">
+            <StripeConnect />
           </div>
 
           {/* Quick Actions */}
