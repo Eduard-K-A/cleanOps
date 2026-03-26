@@ -5,7 +5,7 @@ export type NotificationType = 'JOB_ASSIGNED' | 'JOB_UPDATED' | 'MESSAGE_RECEIVE
 export interface Profile {
     id: string;
     role: UserRole;
-    stripe_account_id?: string | null;
+    money_balance: number;
     rating: number;
     location_lat?: number | null;
     location_lng?: number | null;
@@ -21,7 +21,7 @@ export interface Job {
     status: JobStatus;
     urgency: JobUrgency;
     price_amount: number;
-    stripe_payment_intent_id?: string | null;
+    money_transaction_id?: string | null;
     location_coordinates: {
         lat: number;
         lng: number;

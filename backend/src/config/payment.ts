@@ -15,8 +15,30 @@ type Transfer = {
   metadata?: Record<string, any>;
 };
 
+type StripeAccount = {
+  id: string;
+  type: 'express';
+  country: string;
+  email: string;
+  capabilities: {
+    card_payments: { requested: boolean };
+    transfers: { requested: boolean };
+  };
+  business_type: 'individual' | 'company';
+  details_submitted: boolean;
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+};
+
+type AccountLink = {
+  url: string;
+  expires_at: number;
+};
+
 const paymentIntents = new Map<string, PaymentIntent>();
 const transfers = new Map<string, Transfer>();
+const stripeAccounts = new Map<string, StripeAccount>();
+const accountLinks = new Map<string, AccountLink>();
 
 function genId(prefix = 'pi') {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -77,6 +99,66 @@ export async function createTransfer(opts: {
   return transfer;
 }
 
+export async function createExpressAccount(opts: {
+  type: 'express';
+  country: string;
+  email: string;
+  capabilities: {
+    card_payments: { requested: boolean };
+    transfers: { requested: boolean };
+  };
+  business_type: 'individual' | 'company';
+}): Promise<StripeAccount> {
+  const id = genId('acct');
+  const account: StripeAccount = {
+    id,
+    type: opts.type,
+    country: opts.country,
+    email: opts.email,
+    capabilities: opts.capabilities,
+    business_type: opts.business_type,
+    details_submitted: false,
+    charges_enabled: false,
+    payouts_enabled: false,
+  };
+  stripeAccounts.set(id, account);
+  return account;
+}
+
+export async function createAccountLink(opts: {
+  account: string;
+  refresh_url: string;
+  return_url: string;
+  type: 'account_onboarding';
+}): Promise<AccountLink> {
+  const account = stripeAccounts.get(opts.account);
+  if (!account) {
+    throw new Error('Account not found');
+  }
+
+  // Simulate onboarding completion for mock
+  account.details_submitted = true;
+  account.charges_enabled = true;
+  account.payouts_enabled = true;
+  stripeAccounts.set(opts.account, account);
+
+  const link: AccountLink = {
+    url: `${opts.return_url}?onboarding=completed`,
+    expires_at: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+  };
+
+  accountLinks.set(opts.account, link);
+  return link;
+}
+
+export async function retrieveAccount(accountId: string): Promise<StripeAccount> {
+  const account = stripeAccounts.get(accountId);
+  if (!account) {
+    throw new Error('Account not found');
+  }
+  return account;
+}
+
 // Mimic Stripe's webhook constructEvent signature. For the mock we simply parse the body.
 export function constructEvent(rawBody: any, _sig: any, _secret: any) {
   // If body is raw buffer (express.raw), try to parse; if already object, return.
@@ -100,6 +182,9 @@ export default {
   cancelPaymentIntent,
   capturePaymentIntent,
   createTransfer,
+  createExpressAccount,
+  createAccountLink,
+  retrieveAccount,
   constructEvent,
   _resetMocks,
 };
