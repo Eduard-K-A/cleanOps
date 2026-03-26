@@ -2,11 +2,11 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { Job, ApiResponse } from '../types';
 /**
- * Create a new job with Stripe PaymentIntent (escrow)
+ * Create a new job with mock money authorization (escrow)
  */
 export declare function createJob(req: AuthenticatedRequest, res: Response<ApiResponse<{
     job: Job;
-    client_secret: string;
+    transactionId: string;
 }>>): Promise<void>;
 /**
  * Get jobs (filtered by user role)
@@ -35,7 +35,7 @@ export declare function claimJob(req: AuthenticatedRequest, res: Response<ApiRes
  */
 export declare function updateJobStatus(req: AuthenticatedRequest, res: Response<ApiResponse<Job>>): Promise<void>;
 /**
- * Approve job completion and process payout
+ * Approve job completion and process payout (mock money system)
  */
 export declare function approveJob(req: AuthenticatedRequest, res: Response<ApiResponse<Job>>): Promise<void>;
 //# sourceMappingURL=jobController.d.ts.map

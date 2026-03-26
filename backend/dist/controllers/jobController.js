@@ -1,7 +1,4 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createJob = createJob;
 exports.getJobs = getJobs;
@@ -11,8 +8,6 @@ exports.claimJob = claimJob;
 exports.updateJobStatus = updateJobStatus;
 exports.approveJob = approveJob;
 const supabase_1 = require("../config/supabase");
-const payment_1 = require("../config/payment");
-const payment_2 = __importDefault(require("../config/payment"));
 const errorHandler_1 = require("../middleware/errorHandler");
 const cache_1 = require("../utils/cache");
 // cache TTLs (milliseconds)
@@ -23,7 +18,7 @@ const JOBS_CACHE_TTL = 2 * 60 * 1000; // 2 minutes (matches frontend)
 // We cast here so controllers compile while still returning our app-level types.
 const supabase = (0, supabase_1.getSupabaseAdmin)();
 /**
- * Create a new job with Stripe PaymentIntent (escrow)
+ * Create a new job with mock money authorization (escrow)
  */
 async function createJob(req, res) {
     // Invalidate cached feed since a new OPEN job has been added
@@ -31,7 +26,6 @@ async function createJob(req, res) {
     try {
         const userId = req.user.id;
         const jobData = req.body;
-        // use mock payment module
         // Verify customer has < 2 active jobs
         const { data: activeJobs, error: countError } = await supabase
             .from('jobs')
@@ -44,17 +38,10 @@ async function createJob(req, res) {
         if (activeJobs && activeJobs.length >= 2) {
             throw new errorHandler_1.AppError('Customer cannot have more than 2 active jobs', 400, 400);
         }
-        // Create Stripe PaymentIntent with manual capture (escrow)
-        const paymentIntent = await payment_2.default.createPaymentIntent({
-            amount: jobData.price_amount,
-            currency: 'usd',
-            capture_method: 'manual', // Hold funds until job completion
-            metadata: {
-                customer_id: userId,
-                job_type: 'cleaning',
-            },
-        });
-        console.log('Created paymentIntent (mock):', paymentIntent);
+        // Create a mock money transaction reference (simulating escrow hold)
+        // In a real system, this would deduct from user's balance
+        const mockTxnId = `txn_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+        console.log('Created mock transaction (escrow):', { mockTxnId, amount: jobData.price_amount, customerId: userId });
         // Create job in database. We store the user-provided address as `location_address`.
         const { data: job, error: jobError } = await supabase
             .from('jobs')
@@ -62,7 +49,7 @@ async function createJob(req, res) {
             customer_id: userId,
             urgency: jobData.urgency,
             price_amount: jobData.price_amount,
-            stripe_payment_intent_id: paymentIntent.id,
+            money_transaction_id: mockTxnId,
             location_address: jobData.address,
             tasks: jobData.tasks,
             proof_of_work: [],
@@ -72,15 +59,13 @@ async function createJob(req, res) {
             .single();
         if (jobError || !job) {
             console.error('Job insert failed:', jobError);
-            // Rollback: cancel payment intent if job creation fails
-            await payment_2.default.cancelPaymentIntent(paymentIntent.id).catch(console.error);
             throw new errorHandler_1.AppError('Failed to create job', 500);
         }
         res.status(201).json({
             success: true,
             data: {
                 job: job,
-                client_secret: paymentIntent.client_secret,
+                transactionId: mockTxnId,
             },
         });
     }
@@ -317,7 +302,7 @@ async function updateJobStatus(req, res) {
     }
 }
 /**
- * Approve job completion and process payout
+ * Approve job completion and process payout (mock money system)
  */
 async function approveJob(req, res) {
     // once a job is completed and removed from the open set, invalidate caches
@@ -325,11 +310,10 @@ async function approveJob(req, res) {
     try {
         const userId = req.user.id;
         const { job_id } = req.params;
-        // use mock payment module
         // Get job
         const { data: job, error: jobError } = await supabase
             .from('jobs')
-            .select('*, worker:profiles!worker_id(stripe_account_id)')
+            .select('*')
             .eq('id', job_id)
             .eq('customer_id', userId)
             .eq('status', 'PENDING_REVIEW')
@@ -337,35 +321,21 @@ async function approveJob(req, res) {
         if (jobError || !job) {
             throw new errorHandler_1.AppError('Job not found or not ready for approval', 404);
         }
-        if (!job.stripe_payment_intent_id) {
-            throw new errorHandler_1.AppError('Payment intent not found', 400);
+        if (!job.money_transaction_id) {
+            throw new errorHandler_1.AppError('Payment transaction not found', 400);
         }
-        // Capture the PaymentIntent (funds move to platform)
-        const paymentIntent = await payment_2.default.capturePaymentIntent(job.stripe_payment_intent_id);
-        if (paymentIntent.status !== 'succeeded') {
-            throw new errorHandler_1.AppError('Payment capture failed', 500);
+        // Ensure worker is set
+        if (!job.worker_id) {
+            throw new errorHandler_1.AppError('Job is not assigned to a worker', 400);
         }
-        // Calculate payout amount (minus platform fee)
-        const platformFeePercent = (0, payment_1.getPlatformFeePercent)();
-        const platformFee = Math.round((job.price_amount * platformFeePercent) / 100);
-        const payoutAmount = job.price_amount - platformFee;
-        // Get worker's Stripe account
-        const workerJoin = job.worker;
-        const workerProfile = Array.isArray(workerJoin) ? workerJoin[0] : workerJoin;
-        if (!workerProfile?.stripe_account_id) {
-            throw new errorHandler_1.AppError('Worker Stripe account not connected', 400);
-        }
-        // Create transfer to worker's connected account
-        const transfer = await payment_2.default.createTransfer({
-            amount: payoutAmount,
-            currency: 'usd',
-            destination: workerProfile.stripe_account_id,
-            metadata: {
-                job_id: job_id,
-                platform_fee: platformFee.toString(),
-            },
+        // In mock system, just simulate the transfer (no actual deduction for demo)
+        console.log('Mock job approval and payout', {
+            job_id,
+            amount: job.price_amount,
+            worker_id: job.worker_id,
+            transaction_id: job.money_transaction_id,
         });
-        // Update job status
+        // Update job status to COMPLETED
         const { data: updatedJob, error: updateError } = await supabase
             .from('jobs')
             .update({
@@ -378,15 +348,15 @@ async function approveJob(req, res) {
         if (updateError || !updatedJob) {
             throw new errorHandler_1.AppError('Failed to update job status', 500);
         }
-        // Create notifications
+        // Create notifications (mock money workflow)
         await supabase.from('notifications').insert([
             {
                 user_id: job.worker_id,
                 type: 'PAYMENT_RECEIVED',
                 payload: {
                     job_id: job_id,
-                    amount: payoutAmount,
-                    transfer_id: transfer.id,
+                    amount: job.price_amount,
+                    method: 'mock_money',
                 },
             },
             {
