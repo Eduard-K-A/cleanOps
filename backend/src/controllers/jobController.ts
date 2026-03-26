@@ -1,7 +1,6 @@
 import { Response } from 'express';
 import { getSupabaseAdmin } from '../config/supabase';
-import { getPlatformFeePercent } from '../config/payment';
-import payment from '../config/payment';
+import money from '../config/money';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { CreateJobRequest, UpdateJobStatusRequest, ClaimJobRequest, Job, ApiResponse } from '../types';
@@ -21,18 +20,17 @@ type ClaimJobBody = Pick<ClaimJobRequest, 'job_id'>;
 type UpdateJobStatusBody = Omit<UpdateJobStatusRequest, 'job_id'>;
 
 /**
- * Create a new job with Stripe PaymentIntent (escrow)
+ * Create a new job with mock money authorization (escrow)
  */
 export async function createJob(
   req: AuthenticatedRequest,
-  res: Response<ApiResponse<{ job: Job; client_secret: string }>>
+  res: Response<ApiResponse<{ job: Job; transactionId: string }>>
 ): Promise<void> {
   // Invalidate cached feed since a new OPEN job has been added
   clearCache();
   try {
     const userId = req.user!.id;
     const jobData = req.body as CreateJobBody;
-    // use mock payment module
 
     // Verify customer has < 2 active jobs
     const { data: activeJobs, error: countError } = await supabase
@@ -49,17 +47,10 @@ export async function createJob(
       throw new AppError('Customer cannot have more than 2 active jobs', 400, 400);
     }
 
-    // Create Stripe PaymentIntent with manual capture (escrow)
-    const paymentIntent = await payment.createPaymentIntent({
-      amount: jobData.price_amount,
-      currency: 'usd',
-      capture_method: 'manual', // Hold funds until job completion
-      metadata: {
-        customer_id: userId,
-        job_type: 'cleaning',
-      },
-    });
-    console.log('Created paymentIntent (mock):', paymentIntent);
+    // Create a mock money transaction reference (simulating escrow hold)
+    // In a real system, this would deduct from user's balance
+    const mockTxnId = `txn_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    console.log('Created mock transaction (escrow):', { mockTxnId, amount: jobData.price_amount, customerId: userId });
 
     // Create job in database. We store the user-provided address as `location_address`.
     const { data: job, error: jobError } = await supabase
@@ -68,7 +59,7 @@ export async function createJob(
         customer_id: userId,
         urgency: jobData.urgency,
         price_amount: jobData.price_amount,
-        stripe_payment_intent_id: paymentIntent.id,
+        money_transaction_id: mockTxnId,
         location_address: (jobData as any).address,
         tasks: jobData.tasks,
         proof_of_work: [],
@@ -79,8 +70,6 @@ export async function createJob(
 
     if (jobError || !job) {
       console.error('Job insert failed:', jobError);
-      // Rollback: cancel payment intent if job creation fails
-      await payment.cancelPaymentIntent(paymentIntent.id).catch(console.error);
       throw new AppError('Failed to create job', 500);
     }
 
@@ -88,7 +77,7 @@ export async function createJob(
       success: true,
       data: {
         job: job as Job,
-        client_secret: paymentIntent.client_secret!,
+        transactionId: mockTxnId,
       },
     });
   } catch (error) {
@@ -363,7 +352,7 @@ export async function updateJobStatus(
 }
 
 /**
- * Approve job completion and process payout
+ * Approve job completion and process payout (mock money system)
  */
 export async function approveJob(
   req: AuthenticatedRequest,
@@ -374,12 +363,11 @@ export async function approveJob(
   try {
     const userId = req.user!.id;
     const { job_id } = req.params;
-    // use mock payment module
 
     // Get job
     const { data: job, error: jobError } = await supabase
       .from('jobs')
-      .select('*, worker:profiles!worker_id(stripe_account_id)')
+      .select('*')
       .eq('id', job_id)
       .eq('customer_id', userId)
       .eq('status', 'PENDING_REVIEW')
@@ -389,41 +377,24 @@ export async function approveJob(
       throw new AppError('Job not found or not ready for approval', 404);
     }
 
-    if (!job.stripe_payment_intent_id) {
-      throw new AppError('Payment intent not found', 400);
+    if (!job.money_transaction_id) {
+      throw new AppError('Payment transaction not found', 400);
     }
 
-    // Capture the PaymentIntent (funds move to platform)
-    const paymentIntent = await payment.capturePaymentIntent(job.stripe_payment_intent_id);
-
-    if (paymentIntent.status !== 'succeeded') {
-      throw new AppError('Payment capture failed', 500);
+    // Ensure worker is set
+    if (!job.worker_id) {
+      throw new AppError('Job is not assigned to a worker', 400);
     }
 
-    // Calculate payout amount (minus platform fee)
-    const platformFeePercent = getPlatformFeePercent();
-    const platformFee = Math.round((job.price_amount * platformFeePercent) / 100);
-    const payoutAmount = job.price_amount - platformFee;
-
-    // Get worker's Stripe account
-    const workerJoin = (job as any).worker;
-    const workerProfile = Array.isArray(workerJoin) ? workerJoin[0] : workerJoin;
-    if (!workerProfile?.stripe_account_id) {
-      throw new AppError('Worker Stripe account not connected', 400);
-    }
-
-    // Create transfer to worker's connected account
-    const transfer = await payment.createTransfer({
-      amount: payoutAmount,
-      currency: 'usd',
-      destination: workerProfile.stripe_account_id,
-      metadata: {
-        job_id: job_id,
-        platform_fee: platformFee.toString(),
-      },
+    // In mock system, just simulate the transfer (no actual deduction for demo)
+    console.log('Mock job approval and payout', {
+      job_id,
+      amount: job.price_amount,
+      worker_id: job.worker_id,
+      transaction_id: job.money_transaction_id,
     });
 
-    // Update job status
+    // Update job status to COMPLETED
     const { data: updatedJob, error: updateError } = await supabase
       .from('jobs')
       .update({
@@ -438,15 +409,15 @@ export async function approveJob(
       throw new AppError('Failed to update job status', 500);
     }
 
-    // Create notifications
+    // Create notifications (mock money workflow)
     await supabase.from('notifications').insert([
       {
         user_id: job.worker_id!,
         type: 'PAYMENT_RECEIVED',
         payload: {
           job_id: job_id,
-          amount: payoutAmount,
-          transfer_id: transfer.id,
+          amount: job.price_amount,
+          method: 'mock_money',
         },
       },
       {

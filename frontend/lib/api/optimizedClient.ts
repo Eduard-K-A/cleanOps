@@ -71,11 +71,17 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     try {
       if (error.response) {
+        const status = error.response.status;
+        const data = error.response.data;
+        const messageFromServer = data && (data.error || data.message || (Object.keys(data).length ? JSON.stringify(data) : null));
+
         console.error('API Error Response', {
           url: `${error.config?.baseURL ?? ''}${error.config?.url ?? ''}`,
           method: error.config?.method,
-          status: error.response.status,
-          responseData: error.response.data,
+          status,
+          responseData: data,
+          normalizedMessage: messageFromServer || `HTTP ${status}`,
+          requestData: error.config?.data,
           requestParams: error.config?.params,
           timestamp: new Date().toISOString(),
         });
@@ -97,6 +103,21 @@ interface RequestOptions {
   priority?: RequestPriority;
   skipDeduplication?: boolean;
   skipRetry?: boolean;
+}
+
+function formatApiError(error: any): Error {
+  if (error?.response?.data) {
+    const data = error.response.data;
+    if (typeof data === 'object') {
+      const apiErr = data.error || data.message || (Object.keys(data).length ? JSON.stringify(data) : 'Empty body');
+      return new Error(`API ${error.response?.status || ''} ${apiErr}`.trim());
+    }
+    return new Error(`API ${error.response?.status || ''} ${String(data)}`.trim());
+  }
+  if (error?.message) {
+    return new Error(error.message);
+  }
+  return new Error('Unknown API error');
 }
 
 /**
@@ -180,7 +201,7 @@ async function optimizedGet<T>(
   } catch (error: any) {
     const duration = measurePerformance(`api_get_${endpoint}_error`, startMark);
     performanceMonitor.recordRequestTiming(duration, false, false);
-    throw error;
+    throw formatApiError(error);
   }
 }
 
@@ -248,7 +269,7 @@ async function optimizedPost<T>(
   } catch (error: any) {
     const duration = measurePerformance(`api_post_${endpoint}_error`, startMark);
     performanceMonitor.recordRequestTiming(duration, false, false);
-    throw error;
+    throw formatApiError(error);
   }
 }
 
@@ -298,7 +319,7 @@ async function optimizedPatch<T>(
   } catch (error: any) {
     const duration = measurePerformance(`api_patch_${endpoint}_error`, startMark);
     performanceMonitor.recordRequestTiming(duration, false, false);
-    throw error;
+    throw formatApiError(error);
   }
 }
 
@@ -337,7 +358,7 @@ async function optimizedDelete<T>(
   } catch (error: any) {
     const duration = measurePerformance(`api_delete_${endpoint}_error`, startMark);
     performanceMonitor.recordRequestTiming(duration, false, false);
-    throw error;
+    throw formatApiError(error);
   }
 }
 

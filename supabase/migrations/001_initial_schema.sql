@@ -9,16 +9,18 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE TABLE public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   role TEXT NOT NULL CHECK (role IN ('customer', 'employee')) DEFAULT 'customer',
-  stripe_account_id TEXT,
+  money_balance NUMERIC(12,2) NOT NULL DEFAULT 0.00, -- Mock money balance
   rating NUMERIC(3,2) CHECK (rating >= 0 AND rating <= 5),
   location_lat DOUBLE PRECISION,
   location_lng DOUBLE PRECISION,
+  full_name TEXT,
+  onboarding_completed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_profiles_role ON public.profiles(role);
-CREATE INDEX idx_profiles_stripe_account ON public.profiles(stripe_account_id) WHERE stripe_account_id IS NOT NULL;
+CREATE INDEX idx_profiles_money_balance ON public.profiles(money_balance) WHERE money_balance > 0;
 
 -- =============================================================================
 -- JOBS
@@ -40,8 +42,11 @@ CREATE TABLE public.jobs (
   status job_status NOT NULL DEFAULT 'OPEN',
   urgency job_urgency NOT NULL DEFAULT 'NORMAL',
   price_amount INTEGER NOT NULL CHECK (price_amount > 0), -- cents
-  stripe_payment_intent_id TEXT,
+  money_transaction_id TEXT, -- Reference to mock money transaction
   location_coordinates GEOGRAPHY(POINT, 4326),
+  location_address TEXT,
+  location_lat DOUBLE PRECISION,
+  location_lng DOUBLE PRECISION,
   tasks JSONB NOT NULL DEFAULT '[]',
   proof_of_work JSONB NOT NULL DEFAULT '[]', -- array of URLs
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

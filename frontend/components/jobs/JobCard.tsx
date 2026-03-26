@@ -10,8 +10,10 @@ interface JobCardProps {
   job: Job;
   onClaim?: (id: string) => void;
   onView?: (id: string) => void;
+  onCancel?: (id: string) => void;
   showClaim?: boolean;
   isClaiming?: boolean;
+  isCancelling?: boolean;
 }
 
 const urgencyVariant = { LOW: 'secondary', NORMAL: 'default', HIGH: 'destructive' } as const;
@@ -34,9 +36,10 @@ function parseCoords(job: { location_coordinates?: unknown; location_lat?: numbe
   return [null, null];
 }
 
-export function JobCard({ job, onClaim, onView, showClaim, isClaiming }: JobCardProps) {
+export function JobCard({ job, onClaim, onView, onCancel, showClaim, isClaiming, isCancelling }: JobCardProps) {
   const [lng, lat] = parseCoords(job);
   const canClaim = showClaim && job.status === 'OPEN' && !!onClaim;
+  const canCancel = job.status === 'OPEN' && !!onCancel;
 
   return (
     <Card className="overflow-hidden transition-shadow hover:shadow-md">
@@ -89,6 +92,11 @@ export function JobCard({ job, onClaim, onView, showClaim, isClaiming }: JobCard
         {onView && (
           <Button variant="outline" size="sm" onClick={() => onView(job.id)}>
             View <ChevronRight className="h-4 w-4" />
+          </Button>
+        )}
+        {canCancel && onCancel && (
+          <Button variant="destructive" size="sm" onClick={() => onCancel(job.id)} disabled={isCancelling}>
+            {isCancelling ? 'Cancelling…' : 'Cancel'}
           </Button>
         )}
         {canClaim && onClaim && (

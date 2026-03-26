@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, LogOut, MapPin, Pencil, User as UserIcon } from 'lucide-react';
+import { ChevronDown, LogOut, MapPin, Pencil, User as UserIcon, DollarSign } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -107,6 +107,8 @@ export function UserProfileButton() {
   const [open, setOpen] = useState(false);
   const [savingLocation, setSavingLocation] = useState(false);
   const [locationLabel, setLocationLabel] = useState('');
+  const [addingMoney, setAddingMoney] = useState(false);
+  const [moneyAmount, setMoneyAmount] = useState('');
 
   const email = user?.email ?? 'Unknown user';
 
@@ -151,6 +153,26 @@ export function UserProfileButton() {
       setLocationLabel(next.trim());
     } finally {
       setSavingLocation(false);
+    }
+  }
+
+  async function handleAddMoney() {
+    if (!profile || !moneyAmount || isNaN(Number(moneyAmount)) || Number(moneyAmount) <= 0) {
+      return;
+    }
+    try {
+      setAddingMoney(true);
+      const response = await api.post('/payments/add-money', {
+        amount: Number(moneyAmount),
+      });
+      if (response.success) {
+        await refetchProfile();
+        setMoneyAmount('');
+      } else {
+        throw new Error(response.error || 'Failed to add money');
+      }
+    } finally {
+      setAddingMoney(false);
     }
   }
 
@@ -217,6 +239,48 @@ export function UserProfileButton() {
                   Approx. coordinates: {profile.location_lat.toFixed(3)}, {profile.location_lng.toFixed(3)}
                 </div>
               )}
+            </div>
+
+            <div className="space-y-1">
+              <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Balance</div>
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">
+                  <DollarSign className="h-4 w-4 text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-slate-900">
+                    ${(profile?.money_balance || 0).toFixed(2)}
+                  </div>
+                  <p className="text-[11px] text-slate-500">Mock money for demo</p>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Input
+                  type="number"
+                  placeholder="Enter amount"
+                  value={moneyAmount}
+                  onChange={(e) => setMoneyAmount(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void handleAddMoney();
+                    }
+                  }}
+                  disabled={addingMoney}
+                  min="0"
+                  step="0.01"
+                  className="h-8 text-sm"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={addingMoney || !moneyAmount || Number(moneyAmount) <= 0}
+                  onClick={() => void handleAddMoney()}
+                  className="whitespace-nowrap"
+                >
+                  {addingMoney ? 'Adding…' : 'Add'}
+                </Button>
+              </div>
             </div>
 
             <div className="mt-2 border-t border-slate-100 pt-2">

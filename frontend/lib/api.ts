@@ -24,8 +24,18 @@ export const api = {
   },
 
   // Jobs - with optimized caching and priorities
-  async createJob(data: CreateJobRequest): Promise<ApiResponse<{ job: Job; client_secret: string }>> {
-    const result = await apiClient.post<{ job: Job; client_secret: string }>('/jobs', data, { priority: RequestPriority.HIGH });
+  async createJob(data: CreateJobRequest): Promise<ApiResponse<{ job: Job; transactionId: string }>> {
+    if (!data.address || data.address.trim().length === 0) {
+      throw new Error('Invalid job address');
+    }
+    if (!data.tasks || data.tasks.length === 0) {
+      throw new Error('At least one task is required');
+    }
+    if (!data.price_amount || data.price_amount <= 0) {
+      throw new Error('Invalid price amount');
+    }
+
+    const result = await apiClient.post<{ job: Job; transactionId: string }>('/jobs', data, { priority: RequestPriority.HIGH });
     // Invalidate the jobs/feed and jobs list caches since a new OPEN job has been added
     // usePattern so any query‑param variants (e.g. "/jobs{}" or "/jobs?status=...") are removed
     if (result.success) {
@@ -73,6 +83,21 @@ export const api = {
     status: Job['status'],
     proof_of_work?: string[]
   ): Promise<ApiResponse<Job>> {
+    if (status === 'PENDING_REVIEW') {
+      const normalizedUrls = (proof_of_work || []).map((url) => url?.trim()).filter(Boolean);
+      if (normalizedUrls.length === 0) {
+        throw new Error('PENDING_REVIEW requires at least one proof_of_work URL');
+      }
+      for (const url of normalizedUrls) {
+        try {
+          new URL(url);
+        } catch {
+          throw new Error(`Invalid proof_of_work URL: ${url}`);
+        }
+      }
+      proof_of_work = normalizedUrls;
+    }
+
     const result = await apiClient.patch<Job>(`/jobs/${job_id}/status`, {
       status,
       proof_of_work,
