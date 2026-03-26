@@ -24,7 +24,7 @@ export const api = {
   },
 
   // Jobs - with optimized caching and priorities
-  async createJob(data: CreateJobRequest): Promise<ApiResponse<{ job: Job; client_secret: string }>> {
+  async createJob(data: CreateJobRequest): Promise<ApiResponse<{ job: Job; transactionId: string }>> {
     if (!data.address || data.address.trim().length === 0) {
       throw new Error('Invalid job address');
     }
@@ -35,7 +35,7 @@ export const api = {
       throw new Error('Invalid price amount');
     }
 
-    const result = await apiClient.post<{ job: Job; client_secret: string }>('/jobs', data, { priority: RequestPriority.HIGH });
+    const result = await apiClient.post<{ job: Job; transactionId: string }>('/jobs', data, { priority: RequestPriority.HIGH });
     // Invalidate the jobs/feed and jobs list caches since a new OPEN job has been added
     // usePattern so any query‑param variants (e.g. "/jobs{}" or "/jobs?status=...") are removed
     if (result.success) {
