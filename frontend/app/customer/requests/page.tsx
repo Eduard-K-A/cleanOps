@@ -15,6 +15,7 @@ export default function RequestsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -66,10 +67,29 @@ export default function RequestsPage() {
       toast.success('Job approved. Payout completed.');
       await fetchJobs();
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { error?: string } } };
-      toast.error(err?.response?.data?.error ?? 'Failed to approve');
+      const defaultMsg = 'Failed to approve';
+      if (e instanceof Error) {
+        toast.error(e.message || defaultMsg);
+      } else {
+        const err = e as { response?: { data?: { error?: string } } };
+        toast.error(err?.response?.data?.error ?? defaultMsg);
+      }
     } finally {
       setApproving(null);
+    }
+  }
+
+  async function handleCancel(id: string) {
+    try {
+      setCancelling(id);
+      await api.updateJobStatus(id, 'CANCELLED');
+      toast.success('Job cancelled successfully.');
+      await fetchJobs();
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { error?: string } } };
+      toast.error(err?.response?.data?.error ?? 'Failed to cancel job');
+    } finally {
+      setCancelling(null);
     }
   }
 
@@ -118,6 +138,8 @@ export default function RequestsPage() {
                   <JobCard
                     job={job}
                     onView={(id) => router.push(`/customer/jobs/${id}`)}
+                    onCancel={handleCancel}
+                    isCancelling={cancelling === job.id}
                   />
                   {job.status === 'PENDING_REVIEW' && (
                     <Button

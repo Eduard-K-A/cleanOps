@@ -23,10 +23,24 @@ const DEFAULT_CONFIG: Required<RetryConfig> = {
 /**
  * Check if error is retryable
  */
+function isIdempotentMethod(method?: string): boolean {
+  if (!method) return false;
+  const normalized = method.toUpperCase();
+  return ['GET', 'HEAD', 'OPTIONS'].includes(normalized);
+}
+
 function isRetryableError(error: any, config: Required<RetryConfig>): boolean {
-  // Check HTTP status codes
-  if (error?.response?.status) {
-    return config.retryableStatuses.includes(error.response.status);
+  const status = error?.response?.status;
+  const method: string | undefined = error?.config?.method;
+
+  // Non-idempotent methods should not retry on server errors to avoid side effects
+  if (status && status >= 500 && !isIdempotentMethod(method)) {
+    return false;
+  }
+
+  // Status codes explicitly marked retryable
+  if (status) {
+    return config.retryableStatuses.includes(status);
   }
 
   // Check error codes/messages
@@ -40,17 +54,12 @@ function isRetryableError(error: any, config: Required<RetryConfig>): boolean {
     );
   }
 
-  // Don't retry client errors (4xx except 408, 429)
-  if (error?.response?.status >= 400 && error?.response?.status < 500) {
+  // Don't retry client errors (4xx except 408, 429) explicitly by above status check
+  if (status >= 400 && status < 500) {
     return false;
   }
 
-  // Retry server errors (5xx)
-  if (error?.response?.status >= 500) {
-    return true;
-  }
-
-  // Retry network errors
+  // Retry network-level errors (no response)
   return true;
 }
 

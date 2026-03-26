@@ -24,8 +24,8 @@ export default function Navbar() {
             <Link href="/employee/feed" className="rounded-lg px-2.5 py-2 text-slate-500 no-underline hover:text-slate-700">
               Jobs feed
             </Link>
-              <Link href="/employee/history" className="rounded-lg px-2.5 py-2 text-slate-500 no-underline hover:text-slate-700">
-              My Activities
+              <Link href="/employee/dashboard" className="rounded-lg px-2.5 py-2 text-slate-500 no-underline hover:text-slate-700">
+              Dashboard
             </Link>
             </>
           ) : (

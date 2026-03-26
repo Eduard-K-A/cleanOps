@@ -5,11 +5,13 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { useAuth } from '@/lib/authContext'
 
 function HomePage() {
   const [activeTab, setActiveTab] = useState('residential')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const { profile } = useAuth()
 
   async function handleNavigate(path: string) {
     setIsLoading(true)
@@ -49,28 +51,53 @@ function HomePage() {
   return (
     <div className="w-full overflow-hidden bg-slate-50">
       {/* Hero Section */}
-      <section className="bg-linear-to-br from-sky-500 to-cyan-500 text-white px-5 py-32 min-h-96 flex items-center justify-center">
-        <div className="max-w-2xl text-center">
-          <h1 className="text-6xl font-bold mb-5 leading-tight">Professional Cleaning Services</h1>
-          <p className="text-2xl mb-10 opacity-95 font-light">Transform your space into a clean, healthy environment</p>
-          <div className="flex gap-5 justify-center flex-wrap">
-            {isLoading ? (
-              <div className="flex items-center justify-center px-10 py-4">
-                <LoadingSpinner size="lg" />
-              </div>
-            ) : (
-              <>
-                <button onClick={() => handleNavigate('/customer/order')} className="bg-white text-sky-500 px-10 py-4 rounded-lg text-lg font-semibold shadow-lg hover:shadow-xl transition-all">
-                  Book Now
-                </button>
-                <button onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })} className="bg-transparent text-white px-10 py-4 rounded-lg text-lg font-semibold border-2 border-white hover:bg-white hover:text-sky-500 transition-all">
-                  Learn More
-                </button>
-              </>
-            )}
+      {profile?.role === 'employee' ? (
+        <section className="bg-linear-to-br from-green-500 to-emerald-500 text-white px-5 py-32 min-h-96 flex items-center justify-center">
+          <div className="max-w-2xl text-center">
+            <h1 className="text-6xl font-bold mb-5 leading-tight">Welcome to Your Workspace</h1>
+            <p className="text-2xl mb-10 opacity-95 font-light">Find jobs, manage your schedule, and grow your cleaning business</p>
+            <div className="flex gap-5 justify-center flex-wrap">
+              {isLoading ? (
+                <div className="flex items-center justify-center px-10 py-4">
+                  <LoadingSpinner size="lg" />
+                </div>
+              ) : (
+                <>
+                  <button onClick={() => handleNavigate('/employee/feed')} className="bg-white text-green-500 px-10 py-4 rounded-lg text-lg font-semibold shadow-lg hover:shadow-xl transition-all">
+                    Browse Jobs
+                  </button>
+                  <button onClick={() => handleNavigate('/employee/dashboard')} className="bg-transparent text-white px-10 py-4 rounded-lg text-lg font-semibold border-2 border-white hover:bg-white hover:text-green-500 transition-all">
+                    View Dashboard
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : (
+        <section className="bg-linear-to-br from-sky-500 to-cyan-500 text-white px-5 py-32 min-h-96 flex items-center justify-center">
+          <div className="max-w-2xl text-center">
+            <h1 className="text-6xl font-bold mb-5 leading-tight">Professional Cleaning Services</h1>
+            <p className="text-2xl mb-10 opacity-95 font-light">Transform your space into a clean, healthy environment</p>
+            <div className="flex gap-5 justify-center flex-wrap">
+              {isLoading ? (
+                <div className="flex items-center justify-center px-10 py-4">
+                  <LoadingSpinner size="lg" />
+                </div>
+              ) : (
+                <>
+                  <button onClick={() => handleNavigate('/customer/order')} className="bg-white text-sky-500 px-10 py-4 rounded-lg text-lg font-semibold shadow-lg hover:shadow-xl transition-all">
+                    Book Now
+                  </button>
+                  <button onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })} className="bg-transparent text-white px-10 py-4 rounded-lg text-lg font-semibold border-2 border-white hover:bg-white hover:text-sky-500 transition-all">
+                    Learn More
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Services Section */}
       <section id="services" className="px-5 py-32 bg-white">
@@ -149,21 +176,39 @@ function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-linear-to-br from-cyan-500 to-sky-500 text-white px-5 py-32 text-center">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-5xl font-bold mb-4">Ready to Experience Cleanliness?</h2>
-          <p className="text-xl mb-10 opacity-95">Get started with a free quote today</p>
-          {isLoading ? (
-            <div className="inline-block">
-              <LoadingSpinner size="lg" />
-            </div>
-          ) : (
-            <button onClick={() => handleNavigate('/customer/order')} className="inline-block bg-white text-sky-500 px-16 py-5 rounded-lg text-lg font-semibold shadow-lg hover:shadow-xl transition-all">
-              Schedule Your Cleaning
-            </button>
-          )}
-        </div>
-      </section>
+      {profile?.role === 'employee' ? (
+        <section className="bg-linear-to-br from-emerald-500 to-green-500 text-white px-5 py-32 text-center">
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-5xl font-bold mb-4">Ready to Start Working?</h2>
+            <p className="text-xl mb-10 opacity-95">Find your next cleaning job and earn money</p>
+            {isLoading ? (
+              <div className="inline-block">
+                <LoadingSpinner size="lg" />
+              </div>
+            ) : (
+              <button onClick={() => handleNavigate('/employee/feed')} className="inline-block bg-white text-green-500 px-16 py-5 rounded-lg text-lg font-semibold shadow-lg hover:shadow-xl transition-all">
+                Browse Available Jobs
+              </button>
+            )}
+          </div>
+        </section>
+      ) : (
+        <section className="bg-linear-to-br from-cyan-500 to-sky-500 text-white px-5 py-32 text-center">
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-5xl font-bold mb-4">Ready to Experience Cleanliness?</h2>
+            <p className="text-xl mb-10 opacity-95">Get started with a free quote today</p>
+            {isLoading ? (
+              <div className="inline-block">
+                <LoadingSpinner size="lg" />
+              </div>
+            ) : (
+              <button onClick={() => handleNavigate('/customer/order')} className="inline-block bg-white text-sky-500 px-16 py-5 rounded-lg text-lg font-semibold shadow-lg hover:shadow-xl transition-all">
+                Schedule Your Cleaning
+              </button>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Info Section */}
       <section className="px-5 py-32 bg-slate-50">
