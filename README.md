@@ -1,11 +1,11 @@
 # CleanOps
 
-Production-ready service marketplace for cleaning jobs: real-time geolocation, Stripe Connect escrow, and job dispatching.
+Service marketplace mockup for cleaning jobs: real-time geolocation, mock money escrow system, and job dispatching.
 
 ## Stack
 
 - **Frontend:** Next.js (App Router), TypeScript, Tailwind, Lucide, Shadcn-style UI, Zustand, Supabase Auth
-- **Backend:** Node.js, Express, Supabase (PostgreSQL + Auth), Socket.io, Stripe Connect, node-cron
+- **Backend:** Node.js, Express, Supabase (PostgreSQL + Auth), Socket.io, node-cron
 
 ## Setup
 
@@ -25,21 +25,19 @@ supabase db push
 ```bash
 cd backend
 cp .env.example .env
-# Fill SUPABASE_*, STRIPE_*, ALLOWED_ORIGINS
+# Fill SUPABASE_*, ALLOWED_ORIGINS
 npm install
 npm run dev
 ```
 
 Backend runs on `http://localhost:5000` (API under `/api`, health check at `/health`).
 
-See `backend/.env.example` for all variables. Stripe webhook: `POST /api/webhooks/stripe` (raw body, use Stripe CLI for local testing).
-
 ### 3. Frontend
 
 ```bash
 cd frontend
 cp .env.local.example .env.local
-# Fill NEXT_PUBLIC_SUPABASE_*, NEXT_PUBLIC_API_URL, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+# Fill NEXT_PUBLIC_SUPABASE_*, NEXT_PUBLIC_API_URL
 npm install
 npm run dev
 ```
@@ -51,15 +49,16 @@ Frontend runs on `http://localhost:3000`.
 - **Customer vs Employee**: some endpoints are role-protected (e.g. employee job feed).
 - **Signup**: the signup page lets you choose an **Account type** (`customer` or `employee`) and stores it in the Supabase `profiles` table.
 
-### 4. Stripe Connect
+### 5. Mock Money System
 
-- Use **Custom** Connect accounts for workers.
-- Create PaymentIntents with `capture_method: 'manual'` (escrow). Capture on customer approval, then Transfer to connected account.
-- Configure webhook for `payment_intent.succeeded`, etc.
+- This system uses a **mock money** system (not real payments).
+- Users can add money to their account via the user profile button.
+- When booking a job, the money is held in escrow (simulated).
+- Money can be transferred between users for job payments.
 
 ## Structure
 
-- `backend/` — Express API, Socket.io, cron, Stripe webhooks
+- `backend/` — Express API, Socket.io, cron, mock money system
 - `frontend/` — Next.js App Router, Supabase Auth, booking flow, job feed
 - `supabase/migrations/` — Schema, RLS, RPCs
 
@@ -67,9 +66,10 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for details.
 
 ## Main flows
 
-1. **Book & escrow:** Customer completes multi-step form → `POST /api/jobs` → Stripe PaymentIntent (manual capture) → redirect to payment page → authorize card.
-2. **Employee feed:** `GET /api/jobs/feed` → open jobs by proximity. Claim → `POST /api/jobs/claim`.
-3. **Complete & pay:** Worker uploads proof → `PATCH /api/jobs/:job_id/status` (`PENDING_REVIEW` + `proof_of_work`) → customer approves → `POST /api/jobs/:job_id/approve` → capture PaymentIntent → Transfer to worker (minus platform fee).
+1. **Add money:** User clicks their profile → "Balance" section → enter amount → "Add" button.
+2. **Book & escrow:** Customer completes multi-step form → `POST /api/jobs` → mock money transaction → redirect to payment page → authorize payment.
+3. **Employee feed:** `GET /api/jobs/feed` → open jobs by proximity. Claim → `POST /api/jobs/claim`.
+4. **Complete & pay:** Worker uploads proof → `PATCH /api/jobs/:job_id/status` (`PENDING_REVIEW` + `proof_of_work`) → customer approves → mock money transfer to worker.
 
 ## Troubleshooting
 
@@ -78,14 +78,12 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for details.
 - **`net::ERR_CONNECTION_REFUSED` calling the API**
   - The backend is not running or crashed. Restart `backend` and check the server logs.
 - **500 "Failed to create job"**
-  - Usually Stripe is not configured. Ensure `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are set to valid values (test keys are fine for local).
+  - Check that the backend is running and Supabase is properly configured.
 
 ## Env summary
 
 | Variable | Where | Purpose |
 |----------|--------|---------|
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY` | Backend + Frontend | DB and Auth |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Backend | Payments |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Frontend | Stripe Elements |
 | `ALLOWED_ORIGINS` | Backend | CORS |
 | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SOCKET_URL` | Frontend | API and Socket.io |
