@@ -21,7 +21,6 @@
     "expressjs": "^1.0.1",
     "node-cron": "^3.0.3",
     "socket.io": "^4.6.1",
-    "stripe": "^14.25.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
