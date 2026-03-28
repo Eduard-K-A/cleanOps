@@ -53,25 +53,38 @@ export async function createJob(
     console.log('Created mock transaction (escrow):', { mockTxnId, amount: jobData.price_amount, customerId: userId });
 
     // Create job in database. We store the user-provided address as `location_address`.
+    const insertPayload = {
+      customer_id: userId,
+      urgency: jobData.urgency,
+      price_amount: jobData.price_amount,
+      money_transaction_id: mockTxnId,
+      location_address: (jobData as any).address,
+      tasks: jobData.tasks,
+      proof_of_work: [],
+      status: 'OPEN',
+    };
+    
+    console.log('Creating job with payload:', JSON.stringify(insertPayload, null, 2));
+    
     const { data: job, error: jobError } = await supabase
       .from('jobs')
-      .insert({
-        customer_id: userId,
-        urgency: jobData.urgency,
-        price_amount: jobData.price_amount,
-        money_transaction_id: mockTxnId,
-        location_address: (jobData as any).address,
-        tasks: jobData.tasks,
-        proof_of_work: [],
-        status: 'OPEN',
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
     if (jobError || !job) {
-      console.error('Job insert failed:', jobError);
-      throw new AppError('Failed to create job', 500);
+      console.error('❌ Job insert FAILED');
+      console.error('  Supabase Error:', {
+        message: jobError?.message,
+        details: jobError?.details,
+        hint: jobError?.hint,
+        code: jobError?.code,
+      });
+      console.error('  Payload was:', JSON.stringify(insertPayload, null, 2));
+      throw new AppError(`Failed to create job: ${jobError?.message || 'Unknown error'}`, 500);
     }
+    
+    console.log('✅ Job created successfully:', job);
 
     res.status(201).json({
       success: true,
