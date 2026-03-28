@@ -15,7 +15,7 @@ type Transfer = {
   metadata?: Record<string, any>;
 };
 
-type StripeAccount = {
+type PaymentAccount = {
   id: string;
   type: 'express';
   country: string;
@@ -37,7 +37,7 @@ type AccountLink = {
 
 const paymentIntents = new Map<string, PaymentIntent>();
 const transfers = new Map<string, Transfer>();
-const stripeAccounts = new Map<string, StripeAccount>();
+const paymentAccounts = new Map<string, PaymentAccount>();
 const accountLinks = new Map<string, AccountLink>();
 
 function genId(prefix = 'pi') {
@@ -108,9 +108,9 @@ export async function createExpressAccount(opts: {
     transfers: { requested: boolean };
   };
   business_type: 'individual' | 'company';
-}): Promise<StripeAccount> {
+}): Promise<PaymentAccount> {
   const id = genId('acct');
-  const account: StripeAccount = {
+  const account: PaymentAccount = {
     id,
     type: opts.type,
     country: opts.country,
@@ -121,7 +121,7 @@ export async function createExpressAccount(opts: {
     charges_enabled: false,
     payouts_enabled: false,
   };
-  stripeAccounts.set(id, account);
+  paymentAccounts.set(id, account);
   return account;
 }
 
@@ -131,7 +131,7 @@ export async function createAccountLink(opts: {
   return_url: string;
   type: 'account_onboarding';
 }): Promise<AccountLink> {
-  const account = stripeAccounts.get(opts.account);
+  const account = paymentAccounts.get(opts.account);
   if (!account) {
     throw new Error('Account not found');
   }
@@ -140,7 +140,7 @@ export async function createAccountLink(opts: {
   account.details_submitted = true;
   account.charges_enabled = true;
   account.payouts_enabled = true;
-  stripeAccounts.set(opts.account, account);
+  paymentAccounts.set(opts.account, account);
 
   const link: AccountLink = {
     url: `${opts.return_url}?onboarding=completed`,
@@ -151,15 +151,15 @@ export async function createAccountLink(opts: {
   return link;
 }
 
-export async function retrieveAccount(accountId: string): Promise<StripeAccount> {
-  const account = stripeAccounts.get(accountId);
+export async function retrieveAccount(accountId: string): Promise<PaymentAccount> {
+  const account = paymentAccounts.get(accountId);
   if (!account) {
     throw new Error('Account not found');
   }
   return account;
 }
 
-// Mimic Stripe's webhook constructEvent signature. For the mock we simply parse the body.
+// Mock webhook constructEvent signature. For the mock we simply parse the body.
 export function constructEvent(rawBody: any, _sig: any, _secret: any) {
   // If body is raw buffer (express.raw), try to parse; if already object, return.
   try {
@@ -189,7 +189,7 @@ export default {
   _resetMocks,
 };
 
-// Expose platform fee helper so callers don't need stripe config
+// Expose platform fee helper so callers don't need payment config
 import { getEnv } from './env';
 
 export function getPlatformFeePercent(): number {

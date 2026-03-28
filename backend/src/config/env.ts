@@ -10,7 +10,7 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   SUPABASE_ANON_KEY: z.string().min(1),
   
-  // Stripe
+  // Payment System (Mock)
   PLATFORM_FEE_PERCENT: z.string().default('15'),
   
   // CORS
