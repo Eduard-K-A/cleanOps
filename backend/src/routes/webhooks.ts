@@ -8,11 +8,11 @@ const router = Router();
 const supabase = getSupabaseAdmin();
 
 /**
- * Stripe webhook endpoint
- * Handles payment events
+ * Mock webhook endpoint
+ * Handles payment events for the mock payment system
  */
 router.post(
-  '/stripe',
+  '/payment',
   express.raw({ type: 'application/json' }),
   async (req: Request, res: Response<ApiResponse>) => {
     // For the mock payment provider we do not enforce signatures; parse body.
