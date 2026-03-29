@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { api, cacheManager } from '@/lib/api';
+import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,8 +35,6 @@ export default function LoginPage() {
 
       // Fetch user profile from backend to get role and other details
       try {
-        // Invalidate cached profile to ensure fresh role for the current account
-        try { cacheManager.invalidate('/auth/me'); } catch (e) {}
         const profileResponse = await api.getProfile();
         console.log('[DEBUG-LOGIN] User authenticated:', { email: email.trim() });
         if (profileResponse.success && profileResponse.data) {
