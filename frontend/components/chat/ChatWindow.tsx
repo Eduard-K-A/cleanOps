@@ -3,8 +3,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { Message } from '@/types';
 import { api } from '@/lib/api';
-import { getSocket } from '@/lib/socket';
 import { useAuth } from '@/lib/authContext';
+import { useJobMessages } from '@/hooks/realtime/useJobMessages';
 import { Button } from '@/components/ui/button';
 import { Send, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -15,51 +15,17 @@ interface ChatWindowProps {
 
 export function ChatWindow({ jobId }: ChatWindowProps) {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const socket = getSocket();
 
-  useEffect(() => {
-    // Load existing messages
-    loadMessages();
-
-    // Join socket room
-    if (user && jobId) {
-      socket.emit('join_room', { job_id: jobId, user_id: user.id });
-
-      // Listen for new messages
-      socket.on('new_message', (message: Message) => {
-        setMessages((prev) => [...prev, message]);
-      });
-
-      return () => {
-        socket.emit('leave_room', { job_id: jobId });
-        socket.off('new_message');
-      };
-    }
-  }, [jobId, user]);
+  // Use the new Supabase Realtime hook for messages
+  const { messages, loading } = useJobMessages(jobId);
 
   useEffect(() => {
     // Scroll to bottom when new messages arrive
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  const loadMessages = async () => {
-    setLoading(true);
-    try {
-      const response = await api.getMessages(jobId);
-      if (response.success && response.data) {
-        setMessages(response.data);
-      }
-    } catch (error) {
-      console.error('Error loading messages:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !user) return;
@@ -67,8 +33,8 @@ export function ChatWindow({ jobId }: ChatWindowProps) {
     setSending(true);
     try {
       const response = await api.sendMessage(jobId, newMessage);
-      if (response.success && response.data) {
-        // Message will be added via socket event
+      if (response.success) {
+        // Message will be added via Realtime subscription
         setNewMessage('');
       } else {
         throw new Error(response.error || 'Failed to send message');

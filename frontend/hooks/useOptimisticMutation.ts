@@ -3,7 +3,6 @@
  */
 
 import { useState, useCallback } from 'react';
-import { executeOptimisticUpdate } from '@/lib/api/optimistic';
 import type { ApiResponse } from '@/types';
 
 export interface UseOptimisticMutationOptions<TData, TVariables> {
@@ -31,42 +30,16 @@ export function useOptimisticMutation<TData, TVariables = void>({
       setError(null);
 
       try {
-        // If no optimistic update provided, just execute mutation
-        if (!optimisticUpdate || !currentData) {
-          const response = await mutationFn(variables);
-          if (response.success && response.data) {
-            const result = response.data as Data;
-            setData(result);
-            onSuccess?.(result);
-          } else {
-            throw new Error(response.error || 'Mutation failed');
-          }
-          return;
+        // Execute mutation
+        const response = await mutationFn(variables);
+        if (response.success && response.data) {
+          const result = response.data as Data;
+          setData(result);
+          onSuccess?.(result);
+        } else {
+          throw new Error(response.error || 'Mutation failed');
         }
-
-        // Execute with optimistic update
-        const result = await executeOptimisticUpdate({
-          currentData,
-          optimisticUpdate: (current) => optimisticUpdate(variables, current),
-          apiCall: () =>
-            mutationFn(variables).then((res) => {
-              if (res.success && res.data) {
-                return res.data as Data;
-              }
-              throw new Error(res.error || 'Mutation failed');
-            }),
-          onSuccess: (result) => {
-            setData(result);
-            onSuccess?.(result);
-          },
-          onError: (err) => {
-            setError(err);
-            onError?.(err);
-          },
-        });
-
-        setData(result);
-      } catch (err) {
+      } catch (err: any) {
         const error = err instanceof Error ? err : new Error('Mutation failed');
         setError(error);
         onError?.(error);
@@ -75,7 +48,7 @@ export function useOptimisticMutation<TData, TVariables = void>({
         setIsLoading(false);
       }
     },
-    [mutationFn, optimisticUpdate, onSuccess, onError]
+    [mutationFn, onSuccess, onError]
   );
 
   return {

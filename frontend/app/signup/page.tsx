@@ -14,15 +14,18 @@ export default function SignupPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<'customer' | 'employee'>('customer');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
+    const normalizedFullName = fullName.trim();
     const normalizedRole = (role ?? 'customer').toString().trim().toLowerCase() as 'customer' | 'employee';
-    if (!normalizedEmail || !password) {
-      toast.error('Email and password required');
+    
+    if (!normalizedEmail || !password || !normalizedFullName) {
+      toast.error('Email, password, and full name required');
       return;
     }
     if (password.length < 6) {
@@ -31,9 +34,9 @@ export default function SignupPage() {
     }
     setLoading(true);
     try {
-      console.log('[DEBUG-SIGNUP] Form data received:', { email: normalizedEmail, role: normalizedRole });
-      console.log('Signing up payload:', { email: normalizedEmail, role: normalizedRole });
-      const response = await api.signup(normalizedEmail, password, normalizedRole);
+      console.log('[DEBUG-SIGNUP] Form data received:', { email: normalizedEmail, fullName: normalizedFullName, role: normalizedRole });
+      console.log('Signing up payload:', { email: normalizedEmail, fullName: normalizedFullName, role: normalizedRole });
+      const response = await api.signUp(normalizedEmail, password, normalizedFullName, normalizedRole);
       console.log('[DEBUG-SIGNUP] Post-save response from API:', response);
       if (!response.success) {
         toast.error(response.error ?? 'Sign up failed');
@@ -68,6 +71,17 @@ export default function SignupPage() {
                 <option value="customer">Customer</option>
                 <option value="employee">Employee</option>
               </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                id="fullName"
+                type="text"
+                autoComplete="name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="John Doe"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

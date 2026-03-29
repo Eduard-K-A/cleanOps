@@ -30,22 +30,29 @@ const axiosInstance: AxiosInstance = axios.create({
 
 // Request interceptor - add auth token and debug logging
 axiosInstance.interceptors.request.use(async (config) => {
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      console.warn('No auth token available - user may not be logged in');
+    }
+  } catch (err) {
+    console.error('Failed to retrieve auth token:', err);
   }
 
   // Mask Authorization when logging
   const maskedAuth = config.headers?.Authorization
     ? `${String(config.headers.Authorization).slice(0, 12)}...${String(config.headers.Authorization).slice(-6)}`
-    : undefined;
+    : 'No token';
 
   console.debug('API Request', {
     method: config.method,
     url: `${config.baseURL ?? ''}${config.url ?? ''}`,
     params: config.params,
-    headers: { ...config.headers, Authorization: maskedAuth },
+    authorization: maskedAuth,
     timestamp: new Date().toISOString(),
   });
 

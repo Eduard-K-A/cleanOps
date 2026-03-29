@@ -162,15 +162,13 @@ export function UserProfileButton() {
     }
     try {
       setAddingMoney(true);
-      const response = await api.post('/payments/add-money', {
-        amount: Number(moneyAmount),
-      });
-      if (response.success) {
-        await refetchProfile();
-        setMoneyAmount('');
-      } else {
-        throw new Error(response.error || 'Failed to add money');
-      }
+      const { addMoney } = await import('@/app/actions/payments');
+      await addMoney(Number(moneyAmount));
+      await refetchProfile();
+      setMoneyAmount('');
+    } catch (error: any) {
+      console.error('Error adding money:', error);
+      alert(error.message || 'Failed to add money');
     } finally {
       setAddingMoney(false);
     }

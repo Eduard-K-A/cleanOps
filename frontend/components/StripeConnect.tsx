@@ -20,8 +20,9 @@ export function StripeConnect() {
 
   const loadBalance = async () => {
     try {
-      const response = await api.get<{ balance: number; currency: string }>('/payments/balance');
-      setStatus(response.data ?? null);
+      const { getBalance } = await import('@/app/actions/payments');
+      const balance = await getBalance();
+      setStatus({ balance, currency: 'USD' });
     } catch (error) {
       console.error('Failed to load balance:', error);
       toast.error('Failed to load account balance');

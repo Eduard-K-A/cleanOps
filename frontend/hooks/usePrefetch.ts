@@ -3,28 +3,30 @@
  */
 
 import { useCallback } from 'react';
-import { prefetch, createHoverPrefetch, prefetchNextPage, prefetchOnIdle } from '@/lib/api/prefetch';
-import { RequestPriority } from '@/lib/api/requestQueue';
 
 export function usePrefetch<T>(
   url: string,
   fetchFn: () => Promise<T>,
   options?: {
-    priority?: RequestPriority;
+    priority?: 'low' | 'medium' | 'high' | 'critical';
     ttl?: number;
   }
 ) {
   const prefetchData = useCallback(() => {
-    return prefetch(url, fetchFn, options);
-  }, [url, fetchFn, options]);
+    return fetchFn();
+  }, [fetchFn]);
 
   const prefetchOnHover = useCallback(() => {
-    return createHoverPrefetch(url, fetchFn, options);
-  }, [url, fetchFn, options]);
+    return fetchFn();
+  }, [fetchFn]);
 
   const prefetchIdle = useCallback(() => {
-    prefetchOnIdle(url, fetchFn, options);
-  }, [url, fetchFn, options]);
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      window.requestIdleCallback(() => fetchFn());
+    } else {
+      setTimeout(() => fetchFn(), 0);
+    }
+  }, [fetchFn]);
 
   return {
     prefetch: prefetchData,
@@ -36,15 +38,15 @@ export function usePrefetch<T>(
 export function usePrefetchPagination<T>(
   fetchPageFn: (page: number) => Promise<T>,
   options?: {
-    priority?: RequestPriority;
+    priority?: 'low' | 'medium' | 'high' | 'critical';
     ttl?: number;
   }
 ) {
   const prefetchNext = useCallback(
     (currentPage: number) => {
-      prefetchNextPage(currentPage, fetchPageFn, options);
+      return fetchPageFn(currentPage + 1);
     },
-    [fetchPageFn, options]
+    [fetchPageFn]
   );
 
   return { prefetchNext };

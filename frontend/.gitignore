@@ -32,6 +32,7 @@ yarn-error.log*
 # environment variables - local only
 .env.local
 .env.*.local
+.env*
 
 # backend files - should never be bundled with frontend
 ../backend/
@@ -53,9 +54,7 @@ build/
 
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env.local
-.env
+
 
 # vercel
 .vercel

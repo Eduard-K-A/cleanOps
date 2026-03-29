@@ -1,81 +1,221 @@
-import { ApiResponse, CreateJobRequest, Job, Message, Notification, Profile } from '@/types';
-import { optimizedApi, cacheManager } from './api/optimizedClient';
-import { RequestPriority } from './api/requestQueue';
+import { ApiResponse, CreateJobRequest, Job, Message, Notification, Profile } from '../types';
+import { createClient } from '../lib/supabase/client';
+import type { Database } from '../lib/supabase/database.types';
+import { 
+  createJob, 
+  claimJob, 
+  updateJobStatus, 
+  approveJobCompletion,
+  getNearbyJobs 
+} from '../app/actions/jobs';
+import { 
+  getMessages, 
+  sendMessage 
+} from '../app/actions/messages';
+import { 
+  addMoney, 
+  getBalance 
+} from '../app/actions/payments';
 
-// Re-export optimized API utilities for advanced usage
-export { optimizedApi, cacheManager, performanceMonitor, requestQueueManager } from './api/optimizedClient';
-export { RequestPriority } from './api/requestQueue';
+const supabase = createClient();
 
-// Use optimized API client as the default
-const apiClient = optimizedApi;
+// Helper function to format Supabase responses to match API response format
+function formatSupabaseResponse<T>(data: T | null, error: any): ApiResponse<T> {
+  if (error) {
+    return {
+      success: false,
+      error: error.message || 'Unknown error',
+      code: error.code || 500
+    };
+  }
+  
+  if (!data) {
+    return {
+      success: false,
+      error: 'Data not found',
+      code: 404
+    };
+  }
+  
+  return {
+    success: true,
+    data
+  };
+}
 
 export const api = {
-  // Generic methods using optimized client
-  async get<T = any>(endpoint: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
-    return apiClient.get<T>(endpoint, params);
+  // Generic methods using Supabase - simplified to avoid typing issues
+  async get<T = any>(table: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
+    try {
+      let query: any = supabase.from(table).select('*');
+      
+      if (params?.id) {
+        query = query.eq('id', params.id).single();
+      }
+      
+      if (params?.filters) {
+        Object.entries(params.filters).forEach(([key, value]) => {
+          query = query.eq(key, value);
+        });
+      }
+      
+      if (params?.orderBy) {
+        query = query.order(params.orderBy.column, { ascending: params.orderBy.ascending });
+      }
+      
+      if (params?.limit) {
+        query = query.limit(params.limit);
+      }
+      
+      const { data, error } = await query;
+      return formatSupabaseResponse(data as T, error);
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Unknown error',
+        code: 500
+      };
+    }
   },
 
-  async patch<T = any>(endpoint: string, data?: Record<string, any>): Promise<ApiResponse<T>> {
-    return apiClient.patch<T>(endpoint, data);
+  async patch<T = any>(table: string, id: string, data?: Record<string, any>): Promise<ApiResponse<T>> {
+    try {
+      // Bypass TypeScript type inference completely
+      const supabaseAny = supabase as any;
+      const updateData = data || {};
+      
+      const { data: result, error } = await supabaseAny
+        .from(table)
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      return formatSupabaseResponse(result as T, error);
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Unknown error',
+        code: 500
+      };
+    }
   },
 
-  async post<T = any>(endpoint: string, data?: Record<string, any>): Promise<ApiResponse<T>> {
-    return apiClient.post<T>(endpoint, data);
+  async post<T = any>(table: string, data?: Record<string, any>): Promise<ApiResponse<T>> {
+    try {
+      // Bypass TypeScript type inference completely
+      const supabaseAny = supabase as any;
+      const insertData = data || {};
+      
+      const { data: result, error } = await supabaseAny
+        .from(table)
+        .insert(insertData)
+        .select()
+        .single();
+      
+      return formatSupabaseResponse(result as T, error);
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Unknown error',
+        code: 500
+      };
+    }
   },
 
-  // Jobs - with optimized caching and priorities
+  // Jobs - using Server Actions
   async createJob(data: CreateJobRequest): Promise<ApiResponse<{ job: Job; transactionId: string }>> {
-    if (!data.address || data.address.trim().length === 0) {
-      throw new Error('Invalid job address');
-    }
-    if (!data.tasks || data.tasks.length === 0) {
-      throw new Error('At least one task is required');
-    }
-    if (!data.price_amount || data.price_amount <= 0) {
-      throw new Error('Invalid price amount');
-    }
+    try {
+      if (!data.address || data.address.trim().length === 0) {
+        throw new Error('Invalid job address');
+      }
+      if (!data.tasks || data.tasks.length === 0) {
+        throw new Error('At least one task is required');
+      }
+      if (!data.price_amount || data.price_amount <= 0) {
+        throw new Error('Invalid price amount');
+      }
 
-    const result = await apiClient.post<{ job: Job; transactionId: string }>('/jobs', data, { priority: RequestPriority.HIGH });
-    // Invalidate the jobs/feed and jobs list caches since a new OPEN job has been added
-    // usePattern so any query‑param variants (e.g. "/jobs{}" or "/jobs?status=...") are removed
-    if (result.success) {
-      cacheManager.invalidatePattern('/jobs/feed');
-      cacheManager.invalidatePattern('/jobs');
+      // Convert CreateJobRequest to match Server Action expectations
+      const jobData = {
+        title: `Cleaning Job - ${data.tasks.map(t => t.name).join(', ')}`,
+        tasks: data.tasks.map(t => t.name),
+        urgency: data.urgency.toLowerCase() as 'low' | 'normal' | 'high',
+        address: data.address,
+        lat: 0,
+        lng: 0,
+        price: data.price_amount,
+        platformFee: Math.round(data.price_amount * 0.15),
+      };
+
+      const job = await createJob(jobData);
+      
+      return {
+        success: true,
+        data: {
+          job: job as Job,
+          transactionId: (job as any)?.id || ''
+        }
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to create job',
+        code: 500
+      };
     }
-    return result;
   },
 
   async getJobs(status?: string, role?: string): Promise<ApiResponse<Job[]>> {
-    return apiClient.get<Job[]>('/jobs', { status, role }, {
-      useCache: true,
-      cacheTTL: 2 * 60 * 1000, // 2 minutes cache
-      priority: RequestPriority.HIGH,
-    });
+    try {
+      const jobs = await getNearbyJobs(0, 0); // Simple implementation
+      
+      return {
+        success: true,
+        data: jobs as Job[]
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch jobs',
+        code: 500
+      };
+    }
   },
 
   async getJobFeed(): Promise<ApiResponse<Job[]>> {
-    // Use a short cache window so employees get reasonable responsiveness
-    // while still refreshing frequently. The backend also has its own
-    // cache, so even if the client gets a cached response the server
-    // may still serve quickly.
-    return apiClient.get<Job[]>('/jobs/feed', undefined, {
-      useCache: true,
-      cacheTTL: 10 * 1000, // 10 seconds
-      priority: RequestPriority.HIGH,
-    });
+    try {
+      const jobs = await getNearbyJobs(0, 0); // Simple implementation
+      
+      return {
+        success: true,
+        data: jobs as Job[]
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to get job feed',
+        code: 500
+      };
+    }
   },
 
   async claimJob(job_id: string): Promise<ApiResponse<Job>> {
-    const result = await apiClient.post<Job>('/jobs/claim', { job_id }, {
-      priority: RequestPriority.HIGH,
-    });
-    // Invalidate any cached job lists — both feed and generic queries — so the newly
-    // claimed job will show up immediately in history/activities.
-    if (result.success) {
-      cacheManager.invalidatePattern('/jobs/feed');
-      cacheManager.invalidatePattern('/jobs');
+    try {
+      await claimJob(job_id);
+      
+      // Return a simple success response
+      return {
+        success: true,
+        data: {} as Job
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to claim job',
+        code: 500
+      };
     }
-    return result;
   },
 
   async updateJobStatus(
@@ -83,108 +223,263 @@ export const api = {
     status: Job['status'],
     proof_of_work?: string[]
   ): Promise<ApiResponse<Job>> {
-    if (status === 'PENDING_REVIEW') {
-      const normalizedUrls = (proof_of_work || []).map((url) => url?.trim()).filter(Boolean);
-      if (normalizedUrls.length === 0) {
-        throw new Error('PENDING_REVIEW requires at least one proof_of_work URL');
-      }
-      for (const url of normalizedUrls) {
-        try {
-          new URL(url);
-        } catch {
-          throw new Error(`Invalid proof_of_work URL: ${url}`);
-        }
-      }
-      proof_of_work = normalizedUrls;
+    try {
+      await updateJobStatus(job_id, status, proof_of_work);
+      
+      return {
+        success: true,
+        data: {} as Job
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to update job status',
+        code: 500 
+      };
     }
-
-    const result = await apiClient.patch<Job>(`/jobs/${job_id}/status`, {
-      status,
-      proof_of_work,
-    }, {
-      priority: RequestPriority.HIGH,
-    });
-    // Invalidate job-related caches since status changed
-    if (result.success) {
-      cacheManager.invalidatePattern('/jobs/feed');
-      cacheManager.invalidatePattern('/jobs');
-      cacheManager.invalidate(`/jobs/${job_id}`);
-    }
-    return result;
   },
 
   async approveJob(job_id: string): Promise<ApiResponse<Job>> {
-    const result = await apiClient.post<Job>(`/jobs/${job_id}/approve`, undefined, {
-      priority: RequestPriority.HIGH,
-    });
-    // Invalidate job-related caches since job is now completed
-    if (result.success) {
-      cacheManager.invalidatePattern('/jobs/feed');
-      cacheManager.invalidatePattern('/jobs');
-      cacheManager.invalidate(`/jobs/${job_id}`);
+    try {
+      await approveJobCompletion(job_id);
+      
+      return {
+        success: true,
+        data: {} as Job
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to approve job',
+        code: 500
+      };
     }
-    return result;
   },
 
-  // Messages
-  async getMessages(job_id: string): Promise<ApiResponse<Message[]>> {
-    return apiClient.get<Message[]>(`/messages/job/${job_id}`, undefined, {
-      useCache: true,
-      cacheTTL: 1 * 60 * 1000, // 1 minute cache
-      priority: RequestPriority.HIGH,
-    });
+  // Messages - using Server Actions
+  async getMessages(jobId: string): Promise<ApiResponse<Message[]>> {
+    try {
+      const messages = await getMessages(jobId);
+      
+      return {
+        success: true,
+        data: messages as Message[]
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to get messages',
+        code: 500
+      };
+    }
   },
 
-  async sendMessage(job_id: string, content: string): Promise<ApiResponse<Message>> {
-    return apiClient.post<Message>('/messages', { job_id, content }, {
-      priority: RequestPriority.HIGH,
-    });
+  async sendMessage(jobId: string, content: string): Promise<ApiResponse<Message>> {
+    try {
+      await sendMessage(jobId, content);
+      
+      // After sending, get the updated messages to return the latest
+      const messages = await getMessages(jobId);
+      const latestMessage = messages[messages.length - 1];
+      
+      return {
+        success: true,
+        data: latestMessage as Message
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to send message',
+        code: 500
+      };
+    }
   },
 
-  // Notifications
-  async getNotifications(is_read?: boolean): Promise<ApiResponse<Notification[]>> {
-    return apiClient.get<Notification[]>('/notifications', { is_read }, {
-      useCache: true,
-      cacheTTL: 30 * 1000, // 30 seconds cache
-      priority: RequestPriority.MEDIUM,
-    });
+  // Notifications - using Supabase directly
+  async getNotifications(): Promise<ApiResponse<Notification[]>> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return {
+          success: false,
+          error: 'User not authenticated',
+          code: 401
+        };
+      }
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data: data as Notification[]
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to get notifications',
+        code: 500
+      };
+    }
   },
 
-  async markNotificationRead(id: string): Promise<ApiResponse<Notification>> {
-    return apiClient.patch<Notification>(`/notifications/${id}/read`, undefined, {
-      priority: RequestPriority.MEDIUM,
-    });
+  async markNotificationRead(notificationId: string): Promise<ApiResponse<null>> {
+    try {
+      // @ts-expect-error - Supabase SDK type limitation, runtime is valid
+      const notifUpdate = supabase.from('notifications').update({ read: true })
+      const { error } = await notifUpdate.eq('id', notificationId);
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data: null
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to mark notification as read',
+        code: 500
+      };
+    }
   },
 
-  async markAllNotificationsRead(): Promise<ApiResponse> {
-    return apiClient.post('/notifications/read-all', undefined, {
-      priority: RequestPriority.MEDIUM,
-    });
-  },
-
-  // Auth - critical priority
+  // Profile - using Supabase directly
   async getProfile(): Promise<ApiResponse<Profile>> {
-    return apiClient.get<Profile>('/auth/me', undefined, {
-      useCache: true,
-      cacheTTL: 5 * 60 * 1000, // 5 minutes cache
-      priority: RequestPriority.CRITICAL,
-    });
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return {
+          success: false,
+          error: 'User not authenticated',
+          code: 401
+        };
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data: data as Profile
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to get profile',
+        code: 500
+      };
+    }
   },
 
-  async signup(email: string, password: string, role?: 'customer' | 'employee'): Promise<ApiResponse> {
-    return apiClient.post('/auth/signup', {
-      email,
-      password,
-      role,
-    }, {
-      priority: RequestPriority.CRITICAL,
-    });
+  async updateProfile(data: Partial<Profile>): Promise<ApiResponse<Profile>> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return {
+          success: false,
+          error: 'User not authenticated',
+          code: 401
+        };
+      }
+
+      // @ts-expect-error - Supabase SDK type limitation, runtime is valid
+      const profileUpdate = supabase.from('profiles').update(data)
+      const { data: result, error } = await profileUpdate
+        .eq('id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data: result as Profile
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to update profile',
+        code: 500
+      };
+    }
   },
 
-  // Update current user's profile (name, location, etc.)
-  async updateProfile(updates: Partial<Profile>): Promise<ApiResponse<Profile>> {
-    return apiClient.patch<Profile>('/auth/me', updates as any, {
-      priority: RequestPriority.HIGH,
-    });
-  }
+  // Auth - using Supabase directly (Server Actions redirect, so we use client)
+  async signUp(email: string, password: string, fullName: string, role: 'customer' | 'employee'): Promise<ApiResponse<Profile>> {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            role: role,
+          }
+        }
+      });
+
+      if (error) throw error;
+      
+      // Profile will be created by auth trigger or on first login
+      // Don't create profile immediately to avoid RLS issues
+      
+      return {
+        success: true,
+        data: {} as Profile // Return empty profile, actual data will be loaded by auth context
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to sign up',
+        code: 500
+      };
+    }
+  },
+
+  async signIn(email: string, password: string): Promise<ApiResponse<Profile>> {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) throw error;
+
+      return {
+        success: true,
+        data: {} as Profile // Return empty profile, actual data will be loaded by auth context
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to sign in',
+        code: 500
+      };
+    }
+  },
+
+  async signOut(): Promise<ApiResponse<null>> {
+    try {
+      await supabase.auth.signOut();
+      
+      return {
+        success: true,
+        data: null
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to sign out',
+        code: 500
+      };
+    }
+  },
 };

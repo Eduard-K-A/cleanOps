@@ -3,8 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { type User, type Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import { api, cacheManager, requestQueueManager } from './api';
-import { requestDeduplicationManager } from './api/requestDeduplication';
+import { api } from './api';
 import type { Profile } from '@/types';
 
 interface AuthContextType {
@@ -77,12 +76,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user?.id) {
-        // Ensure stale cached profile is cleared when session changes
-        try {
-          cacheManager.invalidate('/auth/me');
-        } catch (e) {
-          // ignore cache errors
-        }
         await fetchProfile(s.user.id);
       } else {
         setProfile(null);
@@ -97,28 +90,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     console.log('[DEBUG-LOGOUT] Pre-logout auth state:', { user, profile, session });
     await supabase.auth.signOut();
-    // Clear optimized client caches so no user data persists
-    try {
-      // Target the specific endpoint mentioned in the report
-      cacheManager.invalidate('/customer/order');
-      // Invalidate patterns (covers parameterized keys)
-      cacheManager.invalidatePattern('^/customer/order');
-      // Also ensure auth/profile entries are cleared
-      cacheManager.invalidate('/auth/me');
-      // As a defensive fallback, clear the entire cache manager (memory + localStorage)
-      cacheManager.clear();
-    } catch (e) {
-      // swallow cache errors
-    }
-
-    // Clear request utilities that may hold in-flight or deduplication state
-    try {
-      requestQueueManager.clear();
-    } catch (e) {}
-    try {
-      requestDeduplicationManager.clear();
-    } catch (e) {}
-
     // Clear any user-specific storage (sessionStorage/localStorage)
     if (typeof window !== 'undefined') {
       try {
@@ -129,8 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (e) {}
 
       try {
-        // Local storage entries prefixed by cache manager will be removed by cacheManager.clear(),
-        // but clear any other obvious user-scoped keys as a precaution
+        // Local storage entries
         for (const k of Object.keys(localStorage)) {
           if (k.startsWith('cleanops_') || k.includes('payment') || k.includes('user')) localStorage.removeItem(k);
         }
