@@ -1,23 +1,7 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+// Re-export the browser client for backward compatibility
+export { createClient } from './supabase/client';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// For direct imports, use the browser client
+import { createClient as createBrowserClient } from './supabase/client';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Missing Supabase environment variables');
-  }
-  console.warn('⚠️ Supabase env vars missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
-}
-
-export const supabase: SupabaseClient = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder',
-  {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true,
-    },
-  }
-);
+export const supabase = createBrowserClient();
