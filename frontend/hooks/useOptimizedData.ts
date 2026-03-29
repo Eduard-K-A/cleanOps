@@ -4,8 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { optimizedApi } from '@/lib/api/optimizedClient';
-import { cacheManager } from '@/lib/api/cache';
+import { api } from '@/lib/api';
 import type { ApiResponse } from '@/types';
 
 export interface UseOptimizedDataOptions<T> {
@@ -45,8 +44,8 @@ export function useOptimizedData<T>({
   // Get fetch function
   const getFetchFn = useCallback(() => {
     if (fetchFn) return fetchFn;
-    return () => optimizedApi.get<T>(endpoint, params, { cacheTTL });
-  }, [endpoint, params, fetchFn, cacheTTL]);
+    return () => api.get<T>(endpoint, params);
+  }, [endpoint, params, fetchFn]);
 
   // Fetch data
   const fetchData = useCallback(
@@ -56,22 +55,6 @@ export function useOptimizedData<T>({
       try {
         setIsValidating(true);
         setError(null);
-
-        // Try cache first if not skipping
-        if (!skipCache) {
-          const cached = cacheManager.get<T>(endpoint, params);
-          if (cached) {
-            setData(cached);
-            setLoading(false);
-            setIsValidating(false);
-            // Still fetch in background for revalidation
-            if (revalidateInterval > 0 || revalidateOnFocus || revalidateOnReconnect) {
-              // Continue to fetch fresh data
-            } else {
-              return;
-            }
-          }
-        }
 
         const response = await getFetchFn()();
         
@@ -91,7 +74,7 @@ export function useOptimizedData<T>({
         setIsValidating(false);
       }
     },
-    [endpoint, params, getFetchFn, enabled, onSuccess, onError, revalidateInterval, revalidateOnFocus, revalidateOnReconnect]
+    [endpoint, params, getFetchFn, enabled, onSuccess, onError]
   );
 
   // Initial fetch
