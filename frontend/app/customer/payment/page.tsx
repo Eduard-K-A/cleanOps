@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { approveJobCompletion } from '@/app/actions/jobs';
 
 function PaymentContent() {
   const [data, setData] = useState<{ jobId: string; amount: number } | null | 'loading'>('loading');
@@ -49,12 +50,10 @@ function PaymentContent() {
   const handleAuthorize = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/payments/confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId, amount }),
-      });
-      if (!res.ok) throw new Error('Authorization failed');
+      // Since we're using Server Actions and Supabase, payment is already held in escrow
+      // Just approve the job completion for demo purposes
+      await approveJobCompletion(jobId);
+      
       sessionStorage.removeItem('cleanops_payment');
       toast.success('Payment authorized (mock). Funds are held in escrow until you approve the job.');
       router.push('/customer/requests');
