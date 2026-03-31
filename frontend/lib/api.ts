@@ -141,9 +141,7 @@ export const api = {
         title: `Cleaning Job - ${data.tasks.map(t => t.name).join(', ')}`,
         tasks: data.tasks.map(t => t.name),
         urgency: data.urgency.toLowerCase() as 'low' | 'normal' | 'high',
-        address: data.address,
-        lat: 0,
-        lng: 0,
+        address: data.address, // Pass user's address
         price: data.price_amount,
         platformFee: Math.round(data.price_amount * 0.15),
       };
@@ -365,9 +363,17 @@ export const api = {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle(); // ✅ Use maybeSingle() instead of single()
 
       if (error) throw error;
+      
+      if (!data) {
+        return {
+          success: false,
+          error: 'Profile not found',
+          code: 404
+        };
+      }
 
       return {
         success: true,

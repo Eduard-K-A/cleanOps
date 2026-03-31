@@ -11,6 +11,7 @@ import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { JobUrgency } from '@/types';
 import { ChevronLeft, ChevronRight, MapPin, Zap, Ruler } from 'lucide-react';
+import { validateAddressFormat } from '@/lib/mockLocations';
 
 const SIZES = ['Small (1–2 rooms)', 'Medium (3–4 rooms)', 'Large (5+ rooms)'];
 const URGENCIES: { value: JobUrgency; label: string }[] = [
@@ -68,8 +69,10 @@ function StepLocation() {
   const [addr, setAddr] = useState(address);
 
   const handleNext = () => {
-    if (!addr || addr.trim().length === 0) {
-      toast.error('Please enter an address for the job.');
+    // Use strict address validation
+    const validation = validateAddressFormat(addr);
+    if (!validation.isValid) {
+      toast.error(validation.error || 'Invalid address format');
       return;
     }
     setLocation(addr.trim());
@@ -82,18 +85,20 @@ function StepLocation() {
         <CardTitle className="flex items-center gap-2">
           <MapPin className="h-5 w-5" /> Location
         </CardTitle>
-        <CardDescription>Job location (coordinates). Mapbox/Google Maps can be wired here.</CardDescription>
+        <CardDescription>Enter job location in "Street Address, City, ZIP" format.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-2">
           <Label>Address</Label>
           <Input
-            placeholder="123 Main St, City"
+            placeholder="123 Main St, New York, 10001"
             value={addr}
             onChange={(e) => setAddr(e.target.value)}
           />
         </div>
-        <div className="text-sm text-slate-500">We only collect an address for scheduling. Geocoding is optional internally.</div>
+        <div className="text-sm text-slate-500">
+          Format: "Street Address, City, ZIP" (e.g., "123 Main St, New York, 10001")
+        </div>
         <div className="flex justify-between">
           <Button variant="outline" onClick={() => setStep('size')}>
             <ChevronLeft className="h-4 w-4" /> Back
@@ -189,10 +194,18 @@ function StepPayment() {
   const router = useRouter();
 
   const handleCreate = async () => {
-    if (!address || address.trim().length === 0 || tasks.length === 0 || price_amount < 100) {
-      toast.error('Missing address, tasks, or invalid price.');
+    // Validate address format before creating job
+    const addressValidation = validateAddressFormat(address);
+    if (!addressValidation.isValid) {
+      toast.error(addressValidation.error || 'Invalid address format');
       return;
     }
+    
+    if (tasks.length === 0 || price_amount < 100) {
+      toast.error('Missing tasks or invalid price.');
+      return;
+    }
+    
     setLoading(true);
     try {
       const response = await api.createJob({

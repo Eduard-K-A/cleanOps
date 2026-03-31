@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/authContext';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { generateMockCoordinates, validateAddressFormat } from '@/lib/mockLocations';
 
 type Step = 'name' | 'location' | 'confirm';
 
@@ -107,7 +108,11 @@ export default function EmployeeOnboardingModal() {
   }
 
   function validateLocation(): string | null {
-    if (!locationText || !locationLat || !locationLng) return 'Please select or enter a valid location.';
+    if (!locationText || locationText.trim().length === 0) return 'Please enter a location.';
+    const validation = validateAddressFormat(locationText);
+    if (!validation.isValid) {
+      return validation.error || 'Invalid address format. Use "Street Address, City, ZIP" format.';
+    }
     return null;
   }
 
@@ -130,13 +135,16 @@ export default function EmployeeOnboardingModal() {
 
     setLoading(true);
     try {
+      // Generate mock coordinates for the employee's address
+      const coordinates = generateMockCoordinates(locationText);
+      
       const payload: any = {
         full_name: fullName.trim(),
-        location_lat: locationLat,
-        location_lng: locationLng,
+        location_lat: coordinates.lat,
+        location_lng: coordinates.lng,
         onboarding_completed: true,
       };
-      const res = await api.patch('/auth/me', payload);
+      const res = await api.updateProfile(payload); // ✅ Use updateProfile instead of patch
       if (!res.success) {
         setError(res.error || 'Failed to save profile');
         setLoading(false);
@@ -213,7 +221,7 @@ export default function EmployeeOnboardingModal() {
                 className="w-full border px-3 py-2 rounded"
                 value={locationText}
                 onChange={(e) => setLocationText(e.target.value)}
-                placeholder="Type an address or neighborhood"
+                placeholder="123 Main St, New York, 10001"
                 onKeyDown={(e) => {
                   if (e.key === 'ArrowDown') {
                     // focus first suggestion if exists
@@ -240,7 +248,7 @@ export default function EmployeeOnboardingModal() {
                 </ul>
               )}
 
-              <div className="mt-2 text-xs text-muted">You can also enter your address manually.</div>
+              <div className="mt-2 text-xs text-muted">Format: "Street Address, City, ZIP" (e.g., "123 Main St, New York, 10001")</div>
             </div>
           )}
 
