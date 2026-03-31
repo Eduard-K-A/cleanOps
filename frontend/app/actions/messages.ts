@@ -17,12 +17,14 @@ export async function sendMessage(jobId: string, content: string) {
   if (!user) throw new Error('Unauthorized')
 
   // @ts-expect-error - Supabase SDK type limitation, runtime is valid
-  const { error } = await supabase.from('messages').insert([
+  const { data, error } = await supabase.from('messages').insert([
     {
       job_id: jobId,
       sender_id: user.id,
       content,
     },
-  ])
+  ]).select().single()
+  
   if (error) throw error
+  return data
 }

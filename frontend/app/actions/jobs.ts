@@ -5,21 +5,29 @@ import { generateMockCoordinates } from '@/lib/mockLocations'
 export async function createJob(jobData: {
   title: string
   tasks: string[]
-  urgency: 'low' | 'normal' | 'high'
+  urgency: 'LOW' | 'NORMAL' | 'HIGH'  // Changed to uppercase to match JobUrgency type
   address: string
   price: number
   platformFee: number
 }) {
+  console.log('createJob server action called with:', jobData);
+  
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
+  if (!user) {
+    console.error('User not authenticated');
+    throw new Error('Unauthorized')
+  }
 
   try {
+    console.log('Starting job creation process...');
+    
     // Generate mock coordinates for the user's address
     const coordinates = generateMockCoordinates(jobData.address)
     console.log('Using user address:', jobData.address, 'with mock coordinates:', coordinates)
 
     // Hold escrow first - check balance
+    console.log('Checking user balance...');
     const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('money_balance')
@@ -27,20 +35,24 @@ export async function createJob(jobData: {
       .single()
     
     if (profileError || !profile) {
-      console.error('Profile error:', profileError)
+      console.error('Profile error:', profileError);
       throw new Error('Failed to fetch profile')
     }
     
     const profileData = profile as any
     console.log('User balance:', profileData.money_balance, 'Job price:', jobData.price)
     
-    if (profileData.money_balance < jobData.price) {
+    // Convert price to decimal format for comparison with money_balance
+    const priceAsDecimal = Number(jobData.price) / 100 // Convert cents to dollars
+    console.log('Price as decimal:', priceAsDecimal)
+    
+    if (profileData.money_balance < priceAsDecimal) {
       // For development, let's add balance if insufficient
       console.log('Insufficient balance, adding funds for development')
       const { error: addFundsError } = await (supabase as any)
         .from('profiles')
         .update({ 
-          money_balance: jobData.price + 1000 // Add enough for job + buffer
+          money_balance: priceAsDecimal + 1000 // Add enough for job + buffer
         })
         .eq('id', user.id)
       
@@ -60,11 +72,11 @@ export async function createJob(jobData: {
     const updatedProfileData = updatedProfile as any
     console.log('Updated balance:', updatedProfileData.money_balance)
 
-    // Deduct from balance
+    // Deduct from balance using decimal format
     const { error: updateError } = await (supabase as any)
       .from('profiles')
       .update({ 
-        money_balance: updatedProfileData.money_balance - jobData.price 
+        money_balance: updatedProfileData.money_balance - priceAsDecimal 
       })
       .eq('id', user.id)
     
@@ -74,12 +86,13 @@ export async function createJob(jobData: {
     }
 
     // Create the job with user's address and mock coordinates
+    console.log('Creating job in database...');
     const { data, error } = await (supabase as any)
       .from('jobs')
       .insert([
         {
           customer_id: user.id,
-          urgency: jobData.urgency.toUpperCase() as 'LOW' | 'NORMAL' | 'HIGH',
+          urgency: jobData.urgency, // Already uppercase (LOW, NORMAL, HIGH)
           location_address: jobData.address,
           location_lat: coordinates.lat,
           location_lng: coordinates.lng,
@@ -102,6 +115,26 @@ export async function createJob(jobData: {
     console.error('Job creation failed:', error)
     throw error
   }
+}
+
+export async function getCustomerJobs(status?: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  let query = supabase
+    .from('jobs')
+    .select('*')
+    .eq('customer_id', user.id)
+    .order('created_at', { ascending: false })
+
+  if (status) {
+    query = query.eq('status', status)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  return data
 }
 
 export async function claimJob(jobId: string) {
