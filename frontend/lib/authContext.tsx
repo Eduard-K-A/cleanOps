@@ -11,7 +11,8 @@ interface AuthContextType {
   profile: Profile | null;
   session: Session | null;
   mounted: boolean;
-  loading: boolean; // Added for compatibility
+  loading: boolean; // Initial auth loading only
+  profileLoading: boolean; // Profile-specific loading
   isLoggedIn: boolean;
   logout: () => Promise<void>;
   signOut: () => Promise<void>; // Alias for compatibility
@@ -27,10 +28,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
 
-  const fetchProfile = useCallback(async (_userId: string) => {
+  const fetchProfile = useCallback(async (userId: string) => {
     try {
-      setLoading(true);
+      setProfileLoading(true);
       const response = await api.getProfile();
       if (response.success && response.data) {
         setProfile(response.data as Profile);
@@ -40,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       setProfile(null);
     } finally {
-      setLoading(false);
+      setProfileLoading(false);
     }
   }, []);
 
@@ -69,6 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (s.user.id) {
         await fetchProfile(s.user.id);
       }
+      
+      // Set loading to false after initial auth check
+      setLoading(false);
     });
 
     (async () => {
@@ -79,8 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await fetchProfile(s.user.id);
       } else {
         setProfile(null);
-        setLoading(false);
       }
+      setLoading(false); // Set loading to false after initial check
       setMounted(true);
     })();
 
@@ -144,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         mounted,
         loading,
+        profileLoading,
         isLoggedIn: !!user,
         logout,
         signOut,
