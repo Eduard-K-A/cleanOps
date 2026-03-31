@@ -431,12 +431,29 @@ export const api = {
 
       if (error) throw error;
       
-      // Profile will be created by auth trigger or on first login
-      // Don't create profile immediately to avoid RLS issues
+      let profileData = {} as Profile;
       
+      if (data.user) {
+        // Create profile using Server Action to avoid RLS issues
+        const { createProfile } = await import('../app/actions/auth');
+        const profileResult = await createProfile({
+          id: data.user.id,
+          fullName: fullName,
+          role: role,
+        });
+        
+        if (!profileResult.success) {
+          throw new Error(profileResult.error || 'Failed to create profile');
+        }
+        
+        if (profileResult.data) {
+          profileData = profileResult.data as unknown as Profile;
+        }
+      }
+
       return {
         success: true,
-        data: {} as Profile // Return empty profile, actual data will be loaded by auth context
+        data: profileData
       };
     } catch (error: any) {
       return {
