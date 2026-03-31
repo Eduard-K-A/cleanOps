@@ -80,19 +80,10 @@ export function generateMockCoordinates(address: string): { lat: number; lng: nu
   };
 }
 
-// Validate address format: "Street Address, City, ZIP"
+// Validate address format: "Street Address, City, ZIP" or "City, ZIP"
 export function validateAddressFormat(address: string): { isValid: boolean; error?: string } {
-  const addressPattern = /^\d+\s+[\w\s]+,\s+[\w\s]+,\s+\d{5}$/;
-  
   if (!address || address.trim().length === 0) {
     return { isValid: false, error: 'Address is required' };
-  }
-  
-  if (!addressPattern.test(address.trim())) {
-    return { 
-      isValid: false, 
-      error: 'Address must follow format: "Street Address, City, ZIP" (e.g., "123 Main St, New York, 10001")' 
-    };
   }
   
   return { isValid: true };

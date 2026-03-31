@@ -2,11 +2,11 @@ import { ApiResponse, CreateJobRequest, Job, Message, Notification, Profile } fr
 import { createClient } from '../lib/supabase/client';
 import type { Database } from '../lib/supabase/database.types';
 import { 
-  createJob, 
   claimJob, 
   updateJobStatus, 
   approveJobCompletion,
-  getNearbyJobs 
+  getNearbyJobs,
+  getCustomerJobs
 } from '../app/actions/jobs';
 import { 
   getMessages, 
@@ -123,39 +123,29 @@ export const api = {
     }
   },
 
-  // Jobs - using Server Actions
+  // Jobs - using API routes
   async createJob(data: CreateJobRequest): Promise<ApiResponse<{ job: Job; transactionId: string }>> {
     try {
-      if (!data.address || data.address.trim().length === 0) {
-        throw new Error('Invalid job address');
-      }
-      if (!data.tasks || data.tasks.length === 0) {
-        throw new Error('At least one task is required');
-      }
-      if (!data.price_amount || data.price_amount <= 0) {
-        throw new Error('Invalid price amount');
+      const response = await fetch('/api/customer/order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+      console.log('API response result:', result);
+
+      if (!response.ok) {
+        const errorMessage = result.error || result.details || 'Failed to create job';
+        console.error('API Error:', errorMessage);
+        throw new Error(errorMessage);
       }
 
-      // Convert CreateJobRequest to match Server Action expectations
-      const jobData = {
-        title: `Cleaning Job - ${data.tasks.map(t => t.name).join(', ')}`,
-        tasks: data.tasks.map(t => t.name),
-        urgency: data.urgency.toLowerCase() as 'low' | 'normal' | 'high',
-        address: data.address, // Pass user's address
-        price: data.price_amount,
-        platformFee: Math.round(data.price_amount * 0.15),
-      };
-
-      const job = await createJob(jobData);
-      
-      return {
-        success: true,
-        data: {
-          job: job as Job,
-          transactionId: (job as any)?.id || ''
-        }
-      };
+      return result;
     } catch (error: any) {
+      console.error('createJob API error:', error);
       return {
         success: false,
         error: error.message || 'Failed to create job',
@@ -166,6 +156,16 @@ export const api = {
 
   async getJobs(status?: string, role?: string): Promise<ApiResponse<Job[]>> {
     try {
+      // If role is 'customer', get customer's own jobs
+      if (role === 'customer') {
+        const jobs = await getCustomerJobs(status);
+        return {
+          success: true,
+          data: jobs as Job[]
+        };
+      }
+      
+      // Otherwise, get nearby jobs for employees
       const jobs = await getNearbyJobs(0, 0); // Simple implementation
       
       return {
