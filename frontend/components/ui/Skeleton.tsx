@@ -106,3 +106,51 @@ export function TableSkeleton({ rows = 5, columns = 4 }: { rows?: number; column
     </div>
   );
 }
+
+/**
+ * Skeleton for navbar
+ */
+export function NavbarSkeleton() {
+  return (
+    <header className="w-full border-b border-slate-200 bg-white">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3">
+        {/* Logo skeleton */}
+        <Skeleton variant="rectangular" width={80} height={24} />
+        
+        {/* Nav items skeleton */}
+        <nav className="flex items-center gap-1">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} variant="rectangular" width={64} height={32} />
+          ))}
+        </nav>
+        
+        {/* Auth button skeleton */}
+        <Skeleton variant="rectangular" width={80} height={32} />
+      </div>
+    </header>
+  );
+}
+
+/**
+ * Skeleton for page content
+ */
+export function PageSkeleton() {
+  return (
+    <main className="mx-auto max-w-5xl p-5">
+      <div className="space-y-4">
+        {/* Header skeleton */}
+        <Skeleton variant="text" width="50%" height={32} />
+        <Skeleton variant="text" width="40%" height={20} />
+        
+        {/* Content skeleton */}
+        <div className="grid gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-32">
+              <Skeleton variant="rectangular" width="100%" height="100%" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </main>
+  );
+}
