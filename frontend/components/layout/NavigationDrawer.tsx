@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
 import {
   LayoutDashboard,
@@ -13,7 +13,15 @@ import {
   Menu,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Home,
+  Calendar,
+  FileText,
+  BarChart3,
+  Sparkles,
+  LogOut,
+  User,
+  LogOut as SignOutIcon
 } from 'lucide-react';
 
 interface NavigationItem {
@@ -22,57 +30,161 @@ interface NavigationItem {
   icon: React.ReactNode;
   href: string;
   badge?: number;
+  requiredRole?: 'customer' | 'employee';
 }
 
-const navigationItems: NavigationItem[] = [
-  {
-    id: 'dashboard',
-    label: 'Dashboard',
-    icon: <LayoutDashboard size={20} />,
-    href: '/dashboard'
-  },
-  {
-    id: 'jobs',
-    label: 'Jobs',
-    icon: <Briefcase size={20} />,
-    href: '/jobs'
-  },
-  {
-    id: 'analytics',
-    label: 'Analytics',
-    icon: <TrendingUp size={20} />,
-    href: '/analytics'
-  },
-  {
-    id: 'clients',
-    label: 'Clients',
-    icon: <Users size={20} />,
-    href: '/clients'
-  },
-  {
-    id: 'settings',
-    label: 'Settings',
-    icon: <Settings size={20} />,
-    href: '/settings'
-  }
-];
+const getNavigationItems = (role?: string): NavigationItem[] => {
+  const customerItems: NavigationItem[] = [
+    {
+      id: 'home',
+      label: 'Home',
+      icon: <Home size={20} />,
+      href: '/homepage'
+    },
+    {
+      id: 'book',
+      label: 'Book Service',
+      icon: <Calendar size={20} />,
+      href: '/customer/order',
+      requiredRole: 'customer'
+    },
+    {
+      id: 'requests',
+      label: 'My Requests',
+      icon: <FileText size={20} />,
+      href: '/customer/requests',
+      requiredRole: 'customer'
+    },
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: <LayoutDashboard size={20} />,
+      href: '/dashboard'
+    }
+  ];
 
-export function NavigationDrawer() {
+  const employeeItems: NavigationItem[] = [
+    {
+      id: 'home',
+      label: 'Home',
+      icon: <Home size={20} />,
+      href: '/homepage'
+    },
+    {
+      id: 'jobs',
+      label: 'Jobs Feed',
+      icon: <Briefcase size={20} />,
+      href: '/employee/feed',
+      requiredRole: 'employee'
+    },
+    {
+      id: 'history',
+      label: 'History',
+      icon: <FileText size={20} />,
+      href: '/employee/history',
+      requiredRole: 'employee'
+    },
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: <LayoutDashboard size={20} />,
+      href: '/dashboard'
+    }
+  ];
+
+  const adminItems: NavigationItem[] = [
+    {
+      id: 'home',
+      label: 'Home',
+      icon: <Home size={20} />,
+      href: '/homepage'
+    },
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: <LayoutDashboard size={20} />,
+      href: '/dashboard'
+    },
+    {
+      id: 'analytics',
+      label: 'Analytics',
+      icon: <TrendingUp size={20} />,
+      href: '/analytics'
+    },
+    {
+      id: 'users',
+      label: 'Users',
+      icon: <Users size={20} />,
+      href: '/admin/users'
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: <Settings size={20} />,
+      href: '/settings'
+    }
+  ];
+
+  return role === 'employee' ? employeeItems : role === 'admin' ? adminItems : customerItems;
+};
+
+export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOpen?: boolean; setIsMobileOpen?: (open: boolean) => void } = {}) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [internalMobileOpen, setInternalMobileOpen] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const pathname = usePathname();
-  const { profile } = useAuth();
+  const router = useRouter();
+  const { profile, user, logout } = useAuth();
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Use external mobile state if provided, otherwise use internal state
+  const mobileOpen = isMobileOpen !== undefined ? isMobileOpen : internalMobileOpen;
+  const handleSetMobileOpen = (open: boolean) => {
+    if (setIsMobileOpen) {
+      setIsMobileOpen(open);
+    } else {
+      setInternalMobileOpen(open);
+    }
+  };
 
   const drawerWidth = isCollapsed ? '72px' : '256px';
   const isActive = (href: string) => pathname === href;
+  const navigationItems = getNavigationItems(profile?.role);
+  const userInitial = profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U';
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  // Filter navigation items based on user role
+  const filteredNavItems = navigationItems.filter(item => 
+    !item.requiredRole || item.requiredRole === profile?.role
+  );
 
   return (
     <>
       {/* Mobile overlay */}
-      {isMobileOpen && (
+      {mobileOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setIsMobileOpen(false)}
+          onClick={() => handleSetMobileOpen(false)}
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
         />
       )}
@@ -82,7 +194,7 @@ export function NavigationDrawer() {
         className={`
           fixed left-0 top-0 h-full bg-white z-50 transform transition-transform duration-300 ease-in-out
           lg:relative lg:transform-none
-          ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
         style={{
           width: drawerWidth,
@@ -96,12 +208,12 @@ export function NavigationDrawer() {
             <div className="flex items-center gap-3">
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: 'var(--md-primary-500)' }}
+                style={{ backgroundColor: 'var(--blue-500)' }}
               >
-                <span className="text-white font-bold text-sm">CO</span>
+                <Sparkles className="w-4 h-4 text-white" />
               </div>
-              <span className="font-semibold" style={{ color: 'var(--md-on-surface)' }}>
-                cleanOps
+              <span className="font-semibold text-gray-900">
+                CleanOps
               </span>
             </div>
           )}
@@ -117,7 +229,7 @@ export function NavigationDrawer() {
 
           {/* Mobile close */}
           <button
-            onClick={() => setIsMobileOpen(false)}
+            onClick={() => handleSetMobileOpen(false)}
             className="lg:hidden flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors"
             style={{ color: 'var(--md-on-surface-muted)' }}
           >
@@ -127,7 +239,7 @@ export function NavigationDrawer() {
 
         {/* Navigation Items */}
         <nav className="flex-1 p-2">
-          {navigationItems.map((item) => (
+          {filteredNavItems.map((item: NavigationItem) => (
             <Link
               key={item.id}
               href={item.href}
@@ -140,15 +252,15 @@ export function NavigationDrawer() {
                 ${isCollapsed ? 'justify-center' : ''}
               `}
               style={{
-                backgroundColor: isActive(item.href) ? 'var(--md-primary-50)' : 'transparent',
-                color: isActive(item.href) ? 'var(--md-primary-700)' : 'var(--md-on-surface-muted)'
+                backgroundColor: isActive(item.href) ? 'var(--blue-50)' : 'transparent',
+                color: isActive(item.href) ? 'var(--blue-600)' : 'var(--gray-600)'
               }}
             >
               {/* Active indicator */}
               {isActive(item.href) && !isCollapsed && (
                 <div
                   className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full"
-                  style={{ backgroundColor: 'var(--md-primary-500)' }}
+                  style={{ backgroundColor: 'var(--blue-500)' }}
                 />
               )}
 
@@ -161,8 +273,8 @@ export function NavigationDrawer() {
                     <span
                       className="ml-auto text-xs px-2 py-0.5 rounded-full"
                       style={{
-                        backgroundColor: 'var(--md-primary-100)',
-                        color: 'var(--md-primary-700)'
+                        backgroundColor: 'var(--blue-100)',
+                        color: 'var(--blue-700)'
                       }}
                     >
                       {item.badge}
@@ -176,33 +288,76 @@ export function NavigationDrawer() {
 
         {/* User Section */}
         <div className="p-3 border-t" style={{ borderColor: 'var(--md-divider)' }}>
-          {!isCollapsed ? (
-            <div className="flex items-center gap-3">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm"
-                style={{ backgroundColor: 'var(--md-primary-500)' }}
+          <div className="relative" ref={userMenuRef}>
+            {!isCollapsed ? (
+              <div 
+                className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 rounded-lg p-2 transition-colors"
+                onClick={() => setShowUserMenu(!showUserMenu)}
               >
-                {(profile as any)?.email?.charAt(0).toUpperCase() || 'U'}
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm"
+                  style={{ backgroundColor: 'var(--blue-500)' }}
+                >
+                  {userInitial}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate text-gray-900">
+                    {profile?.full_name || 'User'}
+                  </p>
+                  <p className="text-xs truncate text-gray-500">
+                    {user?.email || 'user@example.com'}
+                  </p>
+                </div>
+                <ChevronRight 
+                  className={`w-4 h-4 text-gray-400 transition-transform ${
+                    showUserMenu ? 'rotate-90' : ''
+                  }`} 
+                />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: 'var(--md-on-surface)' }}>
-                  {(profile as any)?.email?.split('@')[0] || 'User'}
-                </p>
-                <p className="text-xs truncate" style={{ color: 'var(--md-on-surface-muted)' }}>
-                  {profile?.role || 'Guest'}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex justify-center">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm"
-                style={{ backgroundColor: 'var(--md-primary-500)' }}
+            ) : (
+              <div 
+                className="flex justify-center cursor-pointer hover:bg-gray-50 rounded-lg p-2 transition-colors"
+                onClick={() => setShowUserMenu(!showUserMenu)}
               >
-                {(profile as any)?.email?.charAt(0).toUpperCase() || 'U'}
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm"
+                  style={{ backgroundColor: 'var(--blue-500)' }}
+                >
+                  {userInitial}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* User Menu Dropdown */}
+            {showUserMenu && (
+              <div className="absolute bottom-full left-0 mb-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                <Link
+                  href="/profile"
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  onClick={() => setShowUserMenu(false)}
+                >
+                  <User className="h-4 w-4" />
+                  Profile
+                </Link>
+                <Link
+                  href="/settings"
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  onClick={() => setShowUserMenu(false)}
+                >
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </Link>
+                <div className="border-t border-gray-100 my-1"></div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full"
+                >
+                  <SignOutIcon className="h-4 w-4" />
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </>

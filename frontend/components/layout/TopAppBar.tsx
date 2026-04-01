@@ -32,15 +32,7 @@ export function TopAppBar({
     >
       {/* Left section */}
       <div className="flex items-center gap-4">
-        {/* Menu button - mobile only */}
-        <button
-          onClick={onMenuClick}
-          className="lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors"
-          style={{ color: 'var(--md-on-surface)' }}
-        >
-          <Menu size={20} />
-        </button>
-
+       
         {/* Page title */}
         <h1 
           className="text-xl font-semibold"
