@@ -72,9 +72,24 @@ function RedirectingSkeleton({ label = 'Redirecting…' }: { label?: string }) {
 // ---------------------------------------------------------------------------
 // ProtectedRoute
 // ---------------------------------------------------------------------------
-// ⚠️  IMPORTANT: no localStorage or window checks in render body — that causes
-//     SSR / client mismatch (hydration errors).  All client-only reads happen
-//     in useEffect inside AuthProvider; this component just consumes context.
+//
+// Rendering strategy:
+//
+//   Phase 1 — pre-mount (SSR + first client frame)
+//     mounted=false, loading=true, profile=null  →  LoadingSkeleton
+//     (server and client agree → no hydration mismatch)
+//
+//   Phase 1b — cache seeded (useEffect in AuthProvider fires, ~0ms)
+//     mounted=false, loading=true, profile={role}
+//     If the cached role satisfies the requiredRole → render children OPTIMISTICALLY.
+//     This eliminates the visible skeleton flash on hard refresh / navigation.
+//
+//   Phase 2 — Supabase getSession() resolves (~100-500ms)
+//     mounted=true, loading=false, isLoggedIn=true/false
+//     Now we have the ground truth. If expired/unauthenticated → redirect.
+//
+// Key rule: NEVER redirect before `loading=false`. Doing so causes false
+// redirects to /login on hard refresh because user is null until getSession resolves.
 // ---------------------------------------------------------------------------
 
 export function ProtectedRoute({ children, requiredRole, redirectTo }: ProtectedRouteProps) {
@@ -83,17 +98,18 @@ export function ProtectedRoute({ children, requiredRole, redirectTo }: Protected
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
-    // Only act once auth state is fully known.
-    if (!mounted) return;
+    // Wait until Supabase has fully resolved the session.
+    // `mounted` becomes true only after getSession() completes in AuthProvider.
+    // Checking `loading` as well guards against any edge cases where mounted
+    // flips before loading finishes.
+    if (!mounted || loading) return;
 
-    // Unauthenticated user — send to login.
     if (!isLoggedIn) {
       setIsRedirecting(true);
       router.push('/login');
       return;
     }
 
-    // Wrong role (fully confirmed from server) — redirect.
     if (requiredRole && profile?.role && profile.role !== requiredRole) {
       setIsRedirecting(true);
       router.push(redirectTo ?? '/');
@@ -101,30 +117,36 @@ export function ProtectedRoute({ children, requiredRole, redirectTo }: Protected
     }
 
     setIsRedirecting(false);
-  }, [isLoggedIn, mounted, profile?.role, router, requiredRole, redirectTo, loading]);
+  }, [isLoggedIn, mounted, loading, profile?.role, router, requiredRole, redirectTo]);
 
-  // Before mounting: server and client agree — both render the same skeleton.
-  // AuthProvider's useEffect populates mounted+profile from localStorage almost
-  // instantly after first paint, so this flash is imperceptible in practice.
-  if (!mounted) {
+  // ── Phase 1b: Optimistic render from localStorage cache ──────────────────
+  // profile is populated immediately by the cache useEffect in AuthProvider
+  // (before getSession resolves). If it passes the role check, render children
+  // right away — Supabase validation still runs in background.
+  const cachedRolePasses = profile?.role !== undefined &&
+    (!requiredRole || profile.role === requiredRole);
+
+  if (cachedRolePasses && !isRedirecting) {
+    return <>{children}</>;
+  }
+
+  // ── Phase 1: No cached info yet — show skeleton (SSR-safe) ───────────────
+  if (!mounted || loading) {
     return <LoadingSkeleton />;
   }
 
-  // Actively redirecting (useEffect above triggered a push).
+  // ── Phase 2: Supabase resolved ────────────────────────────────────────────
   if (isRedirecting) {
     return <RedirectingSkeleton />;
   }
 
-  // Mounted + confirmed unauthenticated.
   if (!isLoggedIn) {
     return <RedirectingSkeleton label="Redirecting to sign in…" />;
   }
 
-  // Mounted + wrong role confirmed.
   if (requiredRole && profile?.role && profile.role !== requiredRole) {
     return <RedirectingSkeleton />;
   }
 
-  // All checks passed — render page content.
   return <>{children}</>;
 }

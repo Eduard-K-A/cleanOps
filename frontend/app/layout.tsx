@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ClientToaster } from "@/components/ClientToaster";
 import { AuthProvider } from "@/lib/authContext";
-import EmployeeOnboardingModal from '@/components/onboarding/EmployeeOnboardingModal';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,7 +31,6 @@ export default function RootLayout({
       >
         <AuthProvider>
           <ClientToaster />
-          <EmployeeOnboardingModal />
           <div className="min-h-main-content">{children}</div>
         </AuthProvider>
       </body>

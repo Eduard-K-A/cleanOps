@@ -34,16 +34,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profileLoading, setProfileLoading] = useState(false);
 
   // ── Client-only cache seed ────────────────────────────────────────────────
-  // Runs immediately after the first paint (before any network round-trip).
-  // Sets profile + mounted from localStorage so protected pages skip the
-  // loading skeleton on refresh / navigation without causing hydration errors.
+  // Runs immediately after first paint. Seeds `profile` from localStorage so
+  // pages can render content without waiting for the Supabase network call.
+  // IMPORTANT: does NOT set `mounted` — that is exclusively managed by the
+  // getSession() callback below. Premature mounted=true with isLoggedIn=false
+  // would cause ProtectedRoute to redirect to /login on every hard refresh.
   useEffect(() => {
     try {
       const role = localStorage.getItem('cleanops_role');
       const id   = localStorage.getItem('cleanops_role_id');
       if (role && id) {
         setProfile((prev) => prev ?? ({ role } as Profile));
-        setMounted(true);
+        // intentionally NOT calling setMounted(true) here
       }
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
