@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { ClientToaster } from "@/components/ClientToaster";
 import { AuthProvider } from "@/lib/authContext";
 import EmployeeOnboardingModal from '@/components/onboarding/EmployeeOnboardingModal';
@@ -34,10 +32,8 @@ export default function RootLayout({
       >
         <AuthProvider>
           <ClientToaster />
-          <Navbar />
           <EmployeeOnboardingModal />
           <div className="min-h-main-content">{children}</div>
-          <Footer />
         </AuthProvider>
       </body>
     </html>
