@@ -26,12 +26,8 @@ export default function Navbar() {
     { href: '/customer/dashboard', label: 'Dashboard' },
   ];
 
-  const publicLinks = [
-    // No links for non-logged-in users
-  ];
-
   const links = !mounted || !isLoggedIn
-    ? publicLinks
+    ? customerLinks
     : profile?.role === 'employee'
     ? employeeLinks
     : customerLinks;
