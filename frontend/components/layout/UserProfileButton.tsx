@@ -189,8 +189,8 @@ export function UserProfileButton() {
           {initials}
         </div>
         <div className="hidden flex-col text-left text-xs sm:flex">
-          <span className="max-w-[160px] truncate font-medium text-slate-900">{displayName}</span>
-          <span className="max-w-[160px] truncate text-[11px] text-slate-500">{email}</span>
+          <span className="max-w-40 truncate font-medium text-slate-900">{displayName}</span>
+          <span className="max-w-40 truncate text-[11px] text-slate-500">{email}</span>
         </div>
         <ChevronDown className="h-4 w-4 text-slate-400" />
       </button>
