@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { JobCard } from '@/components/jobs/JobCard';
+import { CleaningJobCard } from '@/components/jobs/CleaningJobCard';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import type { Job } from '@/types';
@@ -177,7 +177,7 @@ export default function RequestsPage() {
             <div className="grid gap-6 sm:grid-cols-2">
               {jobs.map((job) => (
                 <div key={job.id} className="relative">
-                  <JobCard
+                  <CleaningJobCard
                     job={job}
                     onView={(id) => router.push(`/customer/jobs/${id}`)}
                     onCancel={handleCancel}

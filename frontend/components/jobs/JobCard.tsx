@@ -1,110 +1,315 @@
 'use client';
 
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import type { Job } from '@/types';
-import { MapPin, DollarSign, ChevronRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  MapPin, 
+  DollarSign, 
+  Clock, 
+  Bookmark, 
+  Building,
+  Home
+} from 'lucide-react';
 
 interface JobCardProps {
-  job: Job;
-  onClaim?: (id: string) => void;
-  onView?: (id: string) => void;
-  onCancel?: (id: string) => void;
-  showClaim?: boolean;
-  isClaiming?: boolean;
-  isCancelling?: boolean;
+  id: string;
+  company: string;
+  companyLogo?: string;
+  postedDate: string;
+  title: string;
+  location: string;
+  workMode: 'Remote' | 'Hybrid' | 'On-site';
+  salaryRange: string;
+  skills: string[];
+  status: 'active' | 'urgent' | 'featured';
+  isSaved?: boolean;
+  isApplied?: boolean;
+  onSave?: (id: string) => void;
+  onApply?: (id: string) => void;
 }
 
-const urgencyVariant = { LOW: 'secondary', NORMAL: 'default', HIGH: 'destructive' } as const;
-const statusVariant = {
-  OPEN: 'default',
-  IN_PROGRESS: 'warning',
-  PENDING_REVIEW: 'secondary',
-  COMPLETED: 'success',
-  CANCELLED: 'outline',
-} as const;
+export function JobCard({
+  id,
+  company,
+  companyLogo,
+  postedDate,
+  title,
+  location,
+  workMode,
+  salaryRange,
+  skills,
+  status,
+  isSaved = false,
+  isApplied = false,
+  onSave,
+  onApply
+}: JobCardProps) {
+  const [saved, setSaved] = useState(isSaved);
+  const [applied, setApplied] = useState(isApplied);
 
-function parseCoords(job: { location_coordinates?: unknown; location_lat?: number | null; location_lng?: number | null; location_address?: string | null }): [number | null, number | null] {
-  if (job.location_lat != null && job.location_lng != null)
-    return [job.location_lng, job.location_lat];
-  const loc = job.location_coordinates;
-  if (!loc) return [null, null];
-  const o = loc as { coordinates?: [number, number] };
-  if (Array.isArray(o.coordinates) && o.coordinates.length >= 2)
-    return [o.coordinates[0], o.coordinates[1]];
-  return [null, null];
-}
+  const handleSave = () => {
+    setSaved(!saved);
+    onSave?.(id);
+  };
 
-export function JobCard({ job, onClaim, onView, onCancel, showClaim, isClaiming, isCancelling }: JobCardProps) {
-  const [lng, lat] = parseCoords(job);
-  const canClaim = showClaim && job.status === 'OPEN' && !!onClaim;
-  const canCancel = job.status === 'OPEN' && !!onCancel;
+  const handleApply = () => {
+    setApplied(true);
+    onApply?.(id);
+  };
+
+  const getStatusColor = () => {
+    switch (status) {
+      case 'active':
+        return 'var(--md-primary-500)';
+      case 'urgent':
+        return 'var(--md-error)';
+      case 'featured':
+        return 'var(--md-warning)';
+      default:
+        return 'var(--md-primary-500)';
+    }
+  };
+
+  const getWorkModeIcon = () => {
+    switch (workMode) {
+      case 'Remote':
+        return <Home size={14} />;
+      case 'Hybrid':
+        return <Building size={14} />;
+      case 'On-site':
+        return <MapPin size={14} />;
+      default:
+        return <MapPin size={14} />;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return `${Math.floor(diffDays / 30)} months ago`;
+  };
 
   return (
-    <Card className="overflow-hidden transition-shadow hover:shadow-md">
-      <CardHeader className="flex flex-row items-start justify-between gap-4 pb-2">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={urgencyVariant[job.urgency]}>{job.urgency}</Badge>
-            <Badge variant={statusVariant[job.status]}>{job.status.replace('_', ' ')}</Badge>
+    <div
+      className={`relative bg-white rounded-xl overflow-hidden transition-all duration-200 cursor-pointer
+        ${saved ? 'border-2' : ''}
+        ${applied ? '' : 'hover:shadow-lg'}
+      `}
+      style={{
+        backgroundColor: applied ? 'var(--md-primary-50)' : 'var(--md-surface)',
+        boxShadow: 'var(--md-elevation-1)',
+        borderLeft: `4px solid ${getStatusColor()}`,
+        borderColor: saved ? 'var(--md-primary-300)' : 'transparent',
+        borderRadius: 'var(--md-radius-lg)',
+        transition: 'all var(--md-duration-short) var(--md-motion-standard)'
+      }}
+      onMouseEnter={(e) => {
+        if (!applied) {
+          e.currentTarget.style.boxShadow = 'var(--md-elevation-3)';
+          e.currentTarget.style.transform = 'translateY(-2px)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!applied) {
+          e.currentTarget.style.boxShadow = 'var(--md-elevation-1)';
+          e.currentTarget.style.transform = 'translateY(0)';
+        }
+      }}
+    >
+      {/* Card Content */}
+      <div className="p-6">
+        {/* Header: Company Logo + Name + Posted Date */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            {/* Company Logo */}
+            <div
+              className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-semibold text-sm"
+              style={{ 
+                backgroundColor: companyLogo ? 'transparent' : 'var(--md-primary-100)',
+                color: companyLogo ? 'inherit' : 'var(--md-primary-700)'
+              }}
+            >
+              {companyLogo ? (
+                <img src={companyLogo} alt={company} className="w-10 h-10 rounded-lg object-cover" />
+              ) : (
+                company.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2)
+              )}
+            </div>
+            
+            {/* Company Name */}
+            <div>
+              <p 
+                className="font-medium text-sm"
+                style={{ color: 'var(--md-on-surface)' }}
+              >
+                {company}
+              </p>
+              <p 
+                className="text-xs"
+                style={{ color: 'var(--md-on-surface-muted)' }}
+              >
+                {formatDate(postedDate)}
+              </p>
+            </div>
           </div>
-          <p className="mt-1 text-xs text-slate-500">
-            {job.created_at ? new Date(job.created_at).toLocaleString() : ''}
-          </p>
         </div>
-        <div className="flex items-center gap-1 text-slate-700">
-          <DollarSign className="h-4 w-4" />
-          <span className="font-semibold">{(job.price_amount / 100).toFixed(2)}</span>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {(lat != null && lng != null) ? (
-          <p className="flex items-center gap-1.5 text-sm text-slate-600">
-            <MapPin className="h-4 w-4 shrink-0" />
-            {lat.toFixed(4)}, {lng.toFixed(4)}
-          </p>
-        ) : job.location_address ? (
-          <p className="flex items-center gap-1.5 text-sm text-slate-600">
-            <MapPin className="h-4 w-4 shrink-0" />
-            {job.location_address}
-          </p>
-        ) : null}
-        {Array.isArray(job.tasks) && job.tasks.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {job.tasks.slice(0, 5).map((t) => {
-              // Tasks may be strings (older clients) or objects { id, name }.
-              const key = typeof t === 'string' ? t : (t as any).id ?? JSON.stringify(t);
-              const label = typeof t === 'string' ? t : (t as any).name ?? String(t);
-              return (
-                <span key={key} className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
-                  {label}
-                </span>
-              );
-            })}
-            {(job.tasks.length > 5) && (
-              <span className="text-xs text-slate-400">+{job.tasks.length - 5}</span>
-            )}
+
+        {/* Job Title */}
+        <h3 
+          className="font-bold text-lg mb-3 line-clamp-2"
+          style={{ 
+            color: 'var(--md-on-surface)',
+            fontFamily: 'var(--md-font-display)',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden'
+          }}
+        >
+          {title}
+        </h3>
+
+        {/* Location + Work Mode Chips */}
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          {/* Location Chip */}
+          <div
+            className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border"
+            style={{
+              backgroundColor: 'var(--md-surface)',
+              borderColor: 'var(--md-divider)',
+              color: 'var(--md-on-surface-muted)'
+            }}
+          >
+            <MapPin size={14} />
+            {location}
           </div>
-        )}
-      </CardContent>
-      <CardFooter className="flex justify-end gap-2 border-t bg-slate-50/50">
-        {onView && (
-          <Button variant="outline" size="sm" onClick={() => onView(job.id)}>
-            View <ChevronRight className="h-4 w-4" />
-          </Button>
-        )}
-        {canCancel && onCancel && (
-          <Button variant="destructive" size="sm" onClick={() => onCancel(job.id)} disabled={isCancelling}>
-            {isCancelling ? 'Cancelling…' : 'Cancel'}
-          </Button>
-        )}
-        {canClaim && onClaim && (
-          <Button size="sm" onClick={() => onClaim(job.id)} disabled={isClaiming}>
-            {isClaiming ? 'Claiming…' : 'Claim job'}
-          </Button>
-        )}
-      </CardFooter>
-    </Card>
+
+          {/* Work Mode Chip */}
+          <div
+            className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border"
+            style={{
+              backgroundColor: 'var(--md-surface)',
+              borderColor: 'var(--md-divider)',
+              color: 'var(--md-on-surface-muted)'
+            }}
+          >
+            {getWorkModeIcon()}
+            {workMode}
+          </div>
+        </div>
+
+        {/* Salary Range */}
+        <div className="flex items-center gap-2 mb-4">
+          <DollarSign 
+            size={16} 
+            style={{ color: 'var(--md-primary-600)' }}
+          />
+          <span 
+            className="font-bold text-base"
+            style={{ color: 'var(--md-primary-600)' }}
+          >
+            {salaryRange}
+          </span>
+          <span 
+            className="text-sm"
+            style={{ color: 'var(--md-on-surface-muted)' }}
+          >
+            per year
+          </span>
+        </div>
+
+        {/* Skill Tags */}
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {skills.slice(0, 5).map((skill, index) => (
+            <span
+              key={index}
+              className="px-2 py-1 rounded-full text-xs font-medium"
+              style={{
+                backgroundColor: 'var(--md-primary-50)',
+                color: 'var(--md-primary-800)',
+                fontSize: '11px'
+              }}
+            >
+              {skill}
+            </span>
+          ))}
+          {skills.length > 5 && (
+            <span
+              className="px-2 py-1 rounded-full text-xs font-medium"
+              style={{
+                backgroundColor: 'var(--md-surface-variant)',
+                color: 'var(--md-on-surface-muted)',
+                fontSize: '11px'
+              }}
+            >
+              +{skills.length - 5}
+            </span>
+          )}
+        </div>
+
+        {/* Horizontal Divider */}
+        <div 
+          className="h-px mb-4"
+          style={{ backgroundColor: 'var(--md-divider)' }}
+        />
+
+        {/* Footer Row */}
+        <div className="flex items-center justify-between">
+          {/* Apply Button or Applied Status */}
+          {applied ? (
+            <div
+              className="px-4 py-2 rounded-lg text-sm font-medium"
+              style={{
+                backgroundColor: 'var(--md-success)',
+                color: 'white'
+              }}
+            >
+              Applied
+            </div>
+          ) : (
+            <button
+              onClick={handleApply}
+              className="px-6 py-2 rounded-lg text-sm font-semibold transition-colors"
+              style={{
+                backgroundColor: 'var(--md-primary-500)',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--md-primary-600)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--md-primary-500)';
+              }}
+            >
+              Apply Now
+            </button>
+          )}
+
+          {/* Save Button */}
+          <button
+            onClick={handleSave}
+            className="p-2 rounded-lg transition-colors"
+            style={{
+              backgroundColor: 'var(--md-surface-variant)',
+              color: saved ? 'var(--md-primary-500)' : 'var(--md-on-surface-muted)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--md-primary-50)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--md-surface-variant)';
+            }}
+          >
+            {saved ? <Bookmark size={20} /> : <Bookmark size={20} />}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -2,88 +2,331 @@
 
 @layer base {
   :root {
-    /* Colors */
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    
-    --radius: 0.5rem;
+    /* ─── Material Design Blue & White — CSS Design Tokens ─── */
+    /* Primary Blue Ramp */
+    --md-primary-900: #0D2B5E;
+    --md-primary-800: #1A3F7A;
+    --md-primary-700: #1565C0;
+    --md-primary-600: #1976D2;
+    --md-primary-500: #2196F3;  /* Brand Blue */
+    --md-primary-400: #42A5F5;
+    --md-primary-200: #90CAF9;
+    --md-primary-100: #BBDEFB;
+    --md-primary-50 : #E3F2FD;
+
+    /* Surface & Background */
+    --md-surface         : #FFFFFF;
+    --md-surface-variant  : #F8FBFF;
+    --md-background      : #F5F5F5;
+    --md-on-surface      : #212121;
+    --md-on-surface-muted: #37474F;
+    --md-divider         : #E0E7F0;
+
+    /* Semantic */
+    --md-success: #00897B;
+    --md-warning: #F57C00;
+    --md-error  : #D32F2F;
+    --md-info   : #0288D1;
+
+    /* Elevation (Material shadows) */
+    --md-elevation-1: 0 1px 3px rgba(25,118,210,0.10), 0 1px 2px rgba(0,0,0,0.06);
+    --md-elevation-2: 0 3px 8px rgba(25,118,210,0.12), 0 2px 4px rgba(0,0,0,0.06);
+    --md-elevation-3: 0 6px 16px rgba(25,118,210,0.14), 0 3px 6px rgba(0,0,0,0.07);
+
+    /* Typography Scale */
+    --md-font-display: 'Google Sans', 'DM Sans', sans-serif;
+    --md-font-body   : 'Roboto', 'Inter', sans-serif;
+    --md-font-mono   : 'Roboto Mono', monospace;
+
+    /* Type Scale */
+    --md-text-display-lg : 57px; --md-lh-display-lg : 64px;
+    --md-text-display-md : 45px; --md-lh-display-md : 52px;
+    --md-text-headline-lg: 32px; --md-lh-headline-lg: 40px;
+    --md-text-headline-md: 28px; --md-lh-headline-md: 36px;
+    --md-text-headline-sm: 24px; --md-lh-headline-sm: 32px;
+    --md-text-title-lg   : 22px; --md-lh-title-lg   : 28px;
+    --md-text-title-md   : 16px; --md-lh-title-md   : 24px;
+    --md-text-body-lg    : 16px; --md-lh-body-lg    : 24px;
+    --md-text-body-md    : 14px; --md-lh-body-md    : 20px;
+    --md-text-label-lg   : 14px; --md-lh-label-lg   : 20px;
+    --md-text-label-sm   : 11px; --md-lh-label-sm   : 16px;
+
+    /* Spacing (8pt grid) */
+    --md-space-1: 4px;  --md-space-2: 8px;  --md-space-3: 12px;
+    --md-space-4: 16px; --md-space-5: 20px; --md-space-6: 24px;
+    --md-space-8: 32px; --md-space-10: 40px; --md-space-12: 48px;
+
+    /* Shape (Border Radius) */
+    --md-radius-xs  : 4px;
+    --md-radius-sm  : 8px;
+    --md-radius-md  : 12px;
+    --md-radius-lg  : 16px;
+    --md-radius-xl  : 28px;
+    --md-radius-full: 100px;
+
+    /* Motion */
+    --md-motion-standard   : cubic-bezier(0.2, 0, 0, 1);
+    --md-motion-emphasized : cubic-bezier(0.05, 0.7, 0.1, 1.0);
+    --md-motion-decelerate : cubic-bezier(0, 0, 0, 1);
+    --md-duration-short    : 200ms;
+    --md-duration-medium   : 300ms;
+    --md-duration-long     : 500ms;
+
+    /* Tailwind compatibility tokens */
+    --background: var(--md-background);
+    --foreground: var(--md-on-surface);
+    --card: var(--md-surface);
+    --card-foreground: var(--md-on-surface);
+    --popover: var(--md-surface);
+    --popover-foreground: var(--md-on-surface);
+    --primary: var(--md-primary-500);
+    --primary-foreground: var(--md-surface);
+    --secondary: var(--md-surface-variant);
+    --secondary-foreground: var(--md-on-surface);
+    --muted: var(--md-surface-variant);
+    --muted-foreground: var(--md-on-surface-muted);
+    --accent: var(--md-primary-100);
+    --accent-foreground: var(--md-primary-900);
+    --destructive: var(--md-error);
+    --destructive-foreground: var(--md-surface);
+    --border: var(--md-divider);
+    --input: var(--md-divider);
+    --ring: var(--md-primary-500);
+    --radius: var(--md-radius-sm);
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    /* Dark mode Material Design tokens */
+    --md-surface         : #121212;
+    --md-surface-variant  : #1E1E1E;
+    --md-background      : #000000;
+    --md-on-surface      : #FFFFFF;
+    --md-on-surface-muted: #B3B3B3;
+    --md-divider         : #2C2C2C;
+
+    /* Tailwind compatibility for dark mode */
+    --background: var(--md-background);
+    --foreground: var(--md-on-surface);
+    --card: var(--md-surface);
+    --card-foreground: var(--md-on-surface);
+    --popover: var(--md-surface);
+    --popover-foreground: var(--md-on-surface);
+    --primary: var(--md-primary-400);
+    --primary-foreground: var(--md-primary-900);
+    --secondary: var(--md-surface-variant);
+    --secondary-foreground: var(--md-on-surface);
+    --muted: var(--md-surface-variant);
+    --muted-foreground: var(--md-on-surface-muted);
+    --accent: var(--md-primary-800);
+    --accent-foreground: var(--md-primary-100);
+    --destructive: var(--md-error);
+    --destructive-foreground: var(--md-surface);
+    --border: var(--md-divider);
+    --input: var(--md-divider);
+    --ring: var(--md-primary-400);
   }
 }
 
 @layer base {
   * {
-    @apply border-[hsl(var(--border))];
+    border-color: var(--md-divider);
   }
   
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-family: var(--md-font-body);
   }
 
   body {
-    @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))];
+    background-color: var(--md-background);
+    color: var(--md-on-surface);
     line-height: 1.5;
+    font-family: var(--md-font-body);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--md-font-display);
+    font-weight: 400;
+  }
+
+  h1 { font-size: var(--md-text-display-md); line-height: var(--md-lh-display-md); }
+  h2 { font-size: var(--md-text-headline-lg); line-height: var(--md-lh-headline-lg); }
+  h3 { font-size: var(--md-text-headline-md); line-height: var(--md-lh-headline-md); }
+  h4 { font-size: var(--md-text-headline-sm); line-height: var(--md-lh-headline-sm); }
+  h5 { font-size: var(--md-text-title-lg); line-height: var(--md-lh-title-lg); }
+  h6 { font-size: var(--md-text-title-md); line-height: var(--md-lh-title-md); }
+
+  p, span, div {
+    font-size: var(--md-text-body-md);
+    line-height: var(--md-lh-body-md);
+  }
+
+  small, .text-sm {
+    font-size: var(--md-text-label-lg);
+    line-height: var(--md-lh-label-lg);
+  }
+
+  .text-xs {
+    font-size: var(--md-text-label-sm);
+    line-height: var(--md-lh-label-sm);
   }
 }
 
 @layer utilities {
   .min-h-main-content {
     min-height: calc(100vh - 160px);
+  }
+
+  /* Material Design elevation utilities */
+  .md-elevation-1 { box-shadow: var(--md-elevation-1); }
+  .md-elevation-2 { box-shadow: var(--md-elevation-2); }
+  .md-elevation-3 { box-shadow: var(--md-elevation-3); }
+
+  /* Material Design spacing utilities */
+  .md-space-1 { margin: var(--md-space-1); }
+  .md-space-2 { margin: var(--md-space-2); }
+  .md-space-3 { margin: var(--md-space-3); }
+  .md-space-4 { margin: var(--md-space-4); }
+  .md-space-6 { margin: var(--md-space-6); }
+  .md-space-8 { margin: var(--md-space-8); }
+
+  .md-space-y-1 > * + * { margin-top: var(--md-space-1); }
+  .md-space-y-2 > * + * { margin-top: var(--md-space-2); }
+  .md-space-y-3 > * + * { margin-top: var(--md-space-3); }
+  .md-space-y-4 > * + * { margin-top: var(--md-space-4); }
+  .md-space-y-6 > * + * { margin-top: var(--md-space-6); }
+
+  /* Material Design radius utilities */
+  .md-radius-xs { border-radius: var(--md-radius-xs); }
+  .md-radius-sm { border-radius: var(--md-radius-sm); }
+  .md-radius-md { border-radius: var(--md-radius-md); }
+  .md-radius-lg { border-radius: var(--md-radius-lg); }
+  .md-radius-xl { border-radius: var(--md-radius-xl); }
+  .md-radius-full { border-radius: var(--md-radius-full); }
+
+  /* Material Design color utilities */
+  .md-surface { background-color: var(--md-surface); color: var(--md-on-surface); }
+  .md-surface-variant { background-color: var(--md-surface-variant); color: var(--md-on-surface); }
+  .md-primary { background-color: var(--md-primary-500); color: white; }
+  .md-primary-600 { background-color: var(--md-primary-600); color: white; }
+  .md-primary-700 { background-color: var(--md-primary-700); color: white; }
+  .md-primary-container { background-color: var(--md-primary-100); color: var(--md-primary-900); }
+
+  /* Material Design motion utilities */
+  .md-motion-standard { transition: all var(--md-duration-short) var(--md-motion-standard); }
+  .md-motion-emphasized { transition: all var(--md-duration-medium) var(--md-motion-emphasized); }
+  .md-motion-decelerate { transition: all var(--md-duration-long) var(--md-motion-decelerate); }
+
+  /* Hover effects */
+  .md-hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--md-elevation-2);
+    transition: all var(--md-duration-short) var(--md-motion-standard);
+  }
+
+  .md-hover-scale:hover {
+    transform: scale(1.02);
+    transition: all var(--md-duration-short) var(--md-motion-emphasized);
+  }
+
+  /* Ripple effect */
+  .md-ripple {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .md-ripple::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    transform: translate(-50%, -50%);
+    transition: width var(--md-duration-medium) var(--md-motion-emphasized),
+                height var(--md-duration-medium) var(--md-motion-emphasized);
+  }
+
+  .md-ripple:active::before {
+    width: 300px;
+    height: 300px;
+  }
+
+  /* Focus states */
+  .md-focus-ring:focus-visible {
+    outline: 2px solid var(--md-primary-500);
+    outline-offset: 2px;
+    border-radius: var(--md-radius-sm);
+  }
+
+  /* Loading shimmer */
+  @keyframes md-shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+    100% {
+      background-position: 1000px 0;
+    }
+  }
+
+  .md-shimmer {
+    animation: md-shimmer 2s infinite;
+    background: linear-gradient(
+      90deg,
+      var(--md-surface-variant) 0%,
+      var(--md-divider) 50%,
+      var(--md-surface-variant) 100%
+    );
+    background-size: 1000px 100%;
+  }
+
+  /* Fade in animation */
+  @keyframes md-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .md-fade-in {
+    animation: md-fade-in var(--md-duration-medium) var(--md-motion-decelerate);
+  }
+
+  /* Slide in animation */
+  @keyframes md-slide-in {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  .md-slide-in {
+    animation: md-slide-in var(--md-duration-medium) var(--md-motion-emphasized);
+  }
+
+  /* Scale in animation */
+  @keyframes md-scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .md-scale-in {
+    animation: md-scale-in var(--md-duration-short) var(--md-motion-emphasized);
   }
 }
 
@@ -101,10 +344,10 @@
     animation: shimmer 2s infinite;
     background: linear-gradient(
       to right,
-      #f0f0f0 0%,
-      #e0e0e0 20%,
-      #f0f0f0 40%,
-      #f0f0f0 100%
+      var(--md-surface-variant) 0%,
+      var(--md-divider) 20%,
+      var(--md-surface-variant) 40%,
+      var(--md-surface-variant) 100%
     );
     background-size: 1000px 100%;
   }
@@ -112,12 +355,68 @@
   .dark .animate-shimmer {
     background: linear-gradient(
       to right,
-      #374151 0%,
-      #4b5563 20%,
-      #374151 40%,
-      #374151 100%
+      var(--md-surface-variant) 0%,
+      var(--md-divider) 20%,
+      var(--md-surface-variant) 40%,
+      var(--md-surface-variant) 100%
     );
     background-size: 1000px 100%;
+  }
+
+  /* Material Design button styles */
+  .md-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--md-space-3) var(--md-space-4);
+    border-radius: var(--md-radius-sm);
+    font-family: var(--md-font-body);
+    font-size: var(--md-text-label-lg);
+    font-weight: 500;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all var(--md-duration-short) var(--md-motion-standard);
+    min-height: 40px;
+  }
+
+  .md-btn-primary {
+    background-color: var(--md-primary-500);
+    color: white;
+    box-shadow: var(--md-elevation-1);
+  }
+
+  .md-btn-primary:hover {
+    background-color: var(--md-primary-600);
+    box-shadow: var(--md-elevation-2);
+  }
+
+  .md-btn-secondary {
+    background-color: transparent;
+    color: var(--md-primary-500);
+    border: 1px solid var(--md-divider);
+  }
+
+  .md-btn-secondary:hover {
+    background-color: var(--md-primary-50);
+    border-color: var(--md-primary-500);
+  }
+
+  /* Material Design card styles */
+  .md-card {
+    background-color: var(--md-surface);
+    border-radius: var(--md-radius-lg);
+    box-shadow: var(--md-elevation-1);
+    padding: var(--md-space-6);
+    transition: box-shadow var(--md-duration-short) var(--md-motion-standard);
+  }
+
+  .md-card:hover {
+    box-shadow: var(--md-elevation-2);
+  }
+
+  .dark .md-card {
+    background-color: var(--md-surface);
   }
 }
 
