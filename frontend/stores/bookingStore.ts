@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { BookingStep as StepType, JobUrgency } from '@/types';
+import type { BookingStep as StepType, JobUrgency } from '@/types/index';
 
 type Step = 'size' | 'location' | 'urgency' | 'payment';
 
