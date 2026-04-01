@@ -1,18 +1,40 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { api } from '@/lib/api';
+import { useAuth } from '@/lib/authContext';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { profile } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [awaitingRedirect, setAwaitingRedirect] = useState(false);
+
+  // Once auth context populates the profile, navigate to the correct dashboard.
+  // This avoids the duplicate api.getProfile() call that races with onAuthStateChange.
+  useEffect(() => {
+    if (!awaitingRedirect) return;
+
+    if (profile) {
+      const dashboardPath = profile.role === 'employee' ? '/homepage' : '/dashboard';
+      router.push(dashboardPath);
+      return;
+    }
+
+    // Safety fallback: if profile hasn't loaded in 5s, redirect to root and
+    // let the app's route guards determine the correct destination.
+    const timer = setTimeout(() => {
+      router.push('/');
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [awaitingRedirect, profile, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,7 +44,7 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
@@ -31,23 +53,19 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-      try {
-        const profileResponse = await api.getProfile(data.user?.id);
-        if (profileResponse.success && profileResponse.data) {
-          const profile = profileResponse.data;
-          const dashboardPath =
-            profile.role === 'employee' ? '/homepage' : '/dashboard';
-          toast.success('Signed in successfully');
-          router.push(dashboardPath);
-        } else {
-          toast.error(profileResponse.error || 'Failed to load profile');
-          setLoading(false);
-        }
-      } catch (err: any) {
-        toast.error(err?.message || 'Failed to load profile');
-        setLoading(false);
-      }
+      // Sign-in succeeded. The authContext onAuthStateChange listener will
+      // fetch the profile automatically. We just set a flag and the useEffect
+      // above will redirect once profile is available.
+      toast.success('Signed in successfully');
+      setAwaitingRedirect(true);
     } catch (err: any) {
+      // AbortError is thrown by the Supabase SDK when it cleans up internal
+      // abort signals after a successful auth. The sign-in still succeeded.
+      if (err?.name === 'AbortError') {
+        toast.success('Signed in successfully');
+        setAwaitingRedirect(true);
+        return;
+      }
       toast.error(err?.message || 'Sign in failed');
       setLoading(false);
     }
