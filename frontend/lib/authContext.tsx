@@ -87,28 +87,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, s) => {
-      setSession(s ?? null);
-      setUser(s?.user ?? null);
+      try {
+        setSession(s ?? null);
+        setUser(s?.user ?? null);
 
-      // Signed out or no session — clear everything.
-      if (event === 'SIGNED_OUT' || !s?.user?.id) {
-        setProfile(null);
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('cleanops_role');
-          localStorage.removeItem('cleanops_role_id');
+        // Signed out or no session — clear everything.
+        if (event === 'SIGNED_OUT' || !s?.user?.id) {
+          setProfile(null);
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('cleanops_role');
+            localStorage.removeItem('cleanops_role_id');
+          }
+          setLoading(false);
+          setMounted(true);
+          return;
+        }
+
+        // Signed in — fetch fresh profile (single call, no duplicate).
+        // onAuthStateChange fires INITIAL_SESSION on first registration in
+        // Supabase v2, so the separate getSession() IIFE is no longer needed
+        // and was causing a double fetchProfile → AbortError race condition.
+        await fetchProfile(s.user.id);
+        setLoading(false);
+        setMounted(true);
+      } catch (err: any) {
+        if (err?.name === 'AbortError') {
+          console.warn('[DEBUG] Suppressing AbortError during onAuthStateChange');
+        } else {
+          console.error('[DEBUG] Error during onAuthStateChange:', err);
         }
         setLoading(false);
         setMounted(true);
-        return;
       }
-
-      // Signed in — fetch fresh profile (single call, no duplicate).
-      // onAuthStateChange fires INITIAL_SESSION on first registration in
-      // Supabase v2, so the separate getSession() IIFE is no longer needed
-      // and was causing a double fetchProfile → AbortError race condition.
-      await fetchProfile(s.user.id);
-      setLoading(false);
-      setMounted(true);
     });
 
     return () => subscription.unsubscribe();
