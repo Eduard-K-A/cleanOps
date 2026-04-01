@@ -155,39 +155,6 @@ export default function RequestsPage() {
           </div>
         )}
 
-        {/* Stats Pills */}
-        <div className="stats-strip mb-6">
-          <div className="stat-pill">
-            <div className="stat-pill-dot" style={{ background: "#fff" }}></div>
-            <span className="stat-pill-val">{statusCounts.total}</span>
-            <span className="stat-pill-label">Total</span>
-          </div>
-          <div className="stat-pill">
-            <div
-              className="stat-pill-dot"
-              style={{ background: "var(--blue-200)" }}
-            ></div>
-            <span className="stat-pill-val">{statusCounts.open}</span>
-            <span className="stat-pill-label">Open</span>
-          </div>
-          <div className="stat-pill">
-            <div
-              className="stat-pill-dot"
-              style={{ background: "#FFCC80" }}
-            ></div>
-            <span className="stat-pill-val">{statusCounts.progress}</span>
-            <span className="stat-pill-label">In Progress</span>
-          </div>
-          <div className="stat-pill">
-            <div
-              className="stat-pill-dot"
-              style={{ background: "#80CBC4" }}
-            ></div>
-            <span className="stat-pill-val">{statusCounts.completed}</span>
-            <span className="stat-pill-label">Completed</span>
-          </div>
-        </div>
-
         {/* Filter Tabs */}
         <div className="mb-6">
           <div className="flex items-center gap-1.5 flex-wrap bg-gray-100/70 border border-gray-200/60 rounded-xl p-1.5">
