@@ -36,8 +36,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await api.getProfile();
       if (response.success && response.data) {
         setProfile(response.data as Profile);
+        // Cache the role for faster startup on next refresh
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('cleanops_role', response.data.role);
+          localStorage.setItem('cleanops_role_id', userId);
+        }
       } else {
         setProfile(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('cleanops_role');
+          localStorage.removeItem('cleanops_role_id');
+        }
       }
     } catch {
       setProfile(null);
@@ -63,6 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Clear profile on sign out or when there is no session
       if (event === 'SIGNED_OUT' || !s?.user?.id) {
         setProfile(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('cleanops_role');
+          localStorage.removeItem('cleanops_role_id');
+        }
         setLoading(false);
         return;
       }
@@ -80,7 +93,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data: { session: s } } = await supabase.auth.getSession();
       setSession(s);
       setUser(s?.user ?? null);
+      
       if (s?.user?.id) {
+        // Try to load cached role FIRST for instant access
+        if (typeof window !== 'undefined') {
+          const cachedRole = localStorage.getItem('cleanops_role');
+          const cachedId = localStorage.getItem('cleanops_role_id');
+          if (cachedRole && cachedId === s.user.id) {
+            console.log('[AUTH] Role cache hit:', cachedRole);
+            setProfile({ role: cachedRole } as Profile);
+          }
+        }
+        
+        // Then fetch fresh profile in background
         await fetchProfile(s.user.id);
       } else {
         setProfile(null);

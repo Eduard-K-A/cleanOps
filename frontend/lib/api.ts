@@ -6,7 +6,9 @@ import {
   updateJobStatus, 
   approveJobCompletion,
   getNearbyJobs,
-  getCustomerJobs
+  getCustomerJobs,
+  getEmployeeJobs,
+  getAllOpenJobs
 } from '../app/actions/jobs';
 import { 
   getMessages, 
@@ -165,12 +167,13 @@ export const api = {
         };
       }
       
-      // Otherwise, get nearby jobs for employees
-      const jobs = await getNearbyJobs(0, 0); // Simple implementation
+      // Otherwise, get all available jobs for employees (removed distance filtering)
+      const jobs = await getAllOpenJobs();
+      console.debug('api.getJobs: getAllOpenJobs result', jobs);
       
       return {
         success: true,
-        data: jobs as Job[]
+        data: (jobs || []) as Job[]
       };
     } catch (error: any) {
       return {
@@ -181,13 +184,29 @@ export const api = {
     }
   },
 
-  async getJobFeed(): Promise<ApiResponse<Job[]>> {
+  async getEmployeeJobs(status?: string): Promise<ApiResponse<Job[]>> {
     try {
-      const jobs = await getNearbyJobs(0, 0); // Simple implementation
-      
+      const jobs = await getEmployeeJobs(status);
       return {
         success: true,
         data: jobs as Job[]
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch employee jobs',
+        code: 500
+      };
+    }
+  },
+
+  async getJobFeed(): Promise<ApiResponse<Job[]>> {
+    try {
+      const jobs = await getAllOpenJobs();
+      
+      return {
+        success: true,
+        data: (jobs || []) as Job[]
       };
     } catch (error: any) {
       return {
