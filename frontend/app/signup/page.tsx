@@ -33,13 +33,13 @@ export default function SignupPage() {
     try {
       const response = await api.signUp(normalizedEmail, password, normalizedFullName, normalizedRole);
       if (!response.success) {
-        toast.error(response.error ?? 'Sign up failed');
+        toast.error(response.error || 'Sign up failed');
         return;
       }
       toast.success('Account created. Sign in to continue.');
       router.push('/login');
-    } catch {
-      toast.error('Sign up failed');
+    } catch (err: any) {
+      toast.error(err?.message || 'Sign up failed');
     } finally {
       setLoading(false);
     }

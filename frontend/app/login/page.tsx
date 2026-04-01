@@ -40,15 +40,15 @@ export default function LoginPage() {
           toast.success('Signed in successfully');
           router.push(dashboardPath);
         } else {
-          toast.error('Failed to load profile');
+          toast.error(profileResponse.error || 'Failed to load profile');
           setLoading(false);
         }
-      } catch {
-        toast.error('Failed to load profile');
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to load profile');
         setLoading(false);
       }
-    } catch {
-      toast.error('Sign in failed');
+    } catch (err: any) {
+      toast.error(err?.message || 'Sign in failed');
       setLoading(false);
     }
   }
