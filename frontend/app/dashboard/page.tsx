@@ -22,9 +22,13 @@ export default function Dashboard() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { profile, user } = useAuth();
   const [greeting, setGreeting] = useState({ text: 'Welcome', icon: Sun });
+  const [currentDate, setCurrentDate] = useState<string>('');
 
   useEffect(() => {
+    // Set greeting based on current time (client-side only)
     setGreeting(getGreeting());
+    // Set current date (client-side only)
+    setCurrentDate(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }));
   }, []);
 
   const userName = profile?.full_name || user?.email?.split('@')[0] || 'there';
@@ -80,7 +84,7 @@ export default function Dashboard() {
                   !
                 </h1>
                 <p className="text-blue-100 text-lg">
-                  {`Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`}
+                  {currentDate ? `Today is ${currentDate}` : 'Loading date...'}
                 </p>
               </div>
             </div>

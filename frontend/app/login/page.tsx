@@ -36,7 +36,7 @@ export default function LoginPage() {
         if (profileResponse.success && profileResponse.data) {
           const profile = profileResponse.data;
           const dashboardPath =
-            profile.role === 'employee' ? '/employee/feed' : '/dashboard';
+            profile.role === 'employee' ? '/homepage' : '/dashboard';
           toast.success('Signed in successfully');
           router.push(dashboardPath);
         } else {

@@ -208,3 +208,34 @@ export async function getNearbyJobs(lat: number, lng: number, radiusMeters = 500
   if (error) throw error
   return data
 }
+
+export async function getAllOpenJobs() {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('jobs')
+    .select('*')
+    .eq('status', 'OPEN')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function getEmployeeJobs(status?: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  let query = supabase
+    .from('jobs')
+    .select('*')
+    .eq('worker_id', user.id)
+    .order('created_at', { ascending: false })
+
+  if (status) {
+    query = query.eq('status', status)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  return data
+}
