@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
-import { NavbarSkeleton, PageSkeleton } from '@/components/ui/Skeleton';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -39,9 +38,34 @@ export function ProtectedRoute({ children, requiredRole, redirectTo }: Protected
   // Show skeleton while auth state is loading
   if (!mounted || loading) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <NavbarSkeleton />
-        <PageSkeleton />
+      <div className="shell">
+        <nav className="topnav">
+          <div className="nav-brand">
+            <div className="nav-brand-icon shimmer"></div>
+            <span className="nav-brand-text">CleanOps</span>
+          </div>
+          <div className="nav-links">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-9 w-20 bg-gray-200 rounded-full animate-pulse"></div>
+            ))}
+          </div>
+          <div className="nav-user">
+            <div className="nav-avatar bg-gray-200 animate-pulse"></div>
+            <div className="nav-user-info">
+              <div className="h-4 w-16 bg-gray-200 rounded animate-pulse mb-1"></div>
+              <div className="h-3 w-24 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </nav>
+        <div className="page-body">
+          <div className="content-area">
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-64 bg-gray-200 rounded-lg animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -49,9 +73,32 @@ export function ProtectedRoute({ children, requiredRole, redirectTo }: Protected
   // Show skeleton while redirecting
   if (isRedirecting) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <NavbarSkeleton />
-        <PageSkeleton />
+      <div className="shell">
+        <nav className="topnav">
+          <div className="nav-brand">
+            <div className="nav-brand-icon shimmer"></div>
+            <span className="nav-brand-text">CleanOps</span>
+          </div>
+          <div className="nav-links">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-9 w-20 bg-gray-200 rounded-full animate-pulse"></div>
+            ))}
+          </div>
+          <div className="nav-user">
+            <div className="nav-avatar bg-gray-200 animate-pulse"></div>
+            <div className="nav-user-info">
+              <div className="h-4 w-16 bg-gray-200 rounded animate-pulse mb-1"></div>
+              <div className="h-3 w-24 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </nav>
+        <div className="page-body">
+          <div className="content-area">
+            <div className="flex items-center justify-center min-h-64 text-gray-500">
+              Redirecting...
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -59,13 +106,32 @@ export function ProtectedRoute({ children, requiredRole, redirectTo }: Protected
   // Show redirect message for unauthenticated users
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <NavbarSkeleton />
-        <main className="mx-auto max-w-5xl p-5">
-          <div className="flex min-h-[60vh] items-center justify-center text-slate-500">
-            Redirecting to sign in…
+      <div className="shell">
+        <nav className="topnav">
+          <div className="nav-brand">
+            <div className="nav-brand-icon shimmer"></div>
+            <span className="nav-brand-text">CleanOps</span>
           </div>
-        </main>
+          <div className="nav-links">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-9 w-20 bg-gray-200 rounded-full animate-pulse"></div>
+            ))}
+          </div>
+          <div className="nav-user">
+            <div className="nav-avatar bg-gray-200 animate-pulse"></div>
+            <div className="nav-user-info">
+              <div className="h-4 w-16 bg-gray-200 rounded animate-pulse mb-1"></div>
+              <div className="h-3 w-24 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </nav>
+        <div className="page-body">
+          <div className="content-area">
+            <div className="flex items-center justify-center min-h-64 text-gray-500">
+              Redirecting to sign in…
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -73,13 +139,32 @@ export function ProtectedRoute({ children, requiredRole, redirectTo }: Protected
   // Show redirect message for wrong role
   if (requiredRole && profile?.role && profile.role !== requiredRole) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <NavbarSkeleton />
-        <main className="mx-auto max-w-5xl p-5">
-          <div className="flex min-h-[60vh] items-center justify-center text-slate-500">
-            Redirecting…
+      <div className="shell">
+        <nav className="topnav">
+          <div className="nav-brand">
+            <div className="nav-brand-icon shimmer"></div>
+            <span className="nav-brand-text">CleanOps</span>
           </div>
-        </main>
+          <div className="nav-links">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-9 w-20 bg-gray-200 rounded-full animate-pulse"></div>
+            ))}
+          </div>
+          <div className="nav-user">
+            <div className="nav-avatar bg-gray-200 animate-pulse"></div>
+            <div className="nav-user-info">
+              <div className="h-4 w-16 bg-gray-200 rounded animate-pulse mb-1"></div>
+              <div className="h-3 w-24 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </nav>
+        <div className="page-body">
+          <div className="content-area">
+            <div className="flex items-center justify-center min-h-64 text-gray-500">
+              Redirecting…
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
