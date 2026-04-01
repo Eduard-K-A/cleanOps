@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { JobCard } from '@/components/jobs/JobCard';
+import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
+import { TopAppBar } from '@/components/layout/TopAppBar';
+import { EmployeeJobCard } from '@/components/jobs/EmployeeJobCard';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
@@ -19,20 +21,18 @@ import toast from 'react-hot-toast';
 export default function EmployeeHistoryPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [markingDone, setMarkingDone] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [proofDescription, setProofDescription] = useState('');
   const [proofUrls, setProofUrls] = useState<string[]>(['']);
 
-  const { data: allJobs, loading, refetch } = useAsyncData<Job[]>({
-    fetchFn: () => api.getJobs(),
+  const { data: historyJobs, loading, refetch } = useAsyncData<Job[]>({
+    fetchFn: () => api.getEmployeeJobs(),
     defaultValue: [],
     errorMessage: 'Failed to load history',
   });
-
-  // Filter jobs explicitly to only those claimed by this worker
-  const historyJobs = allJobs.filter((job) => job.worker_id === user?.id);
 
   function handleMarkDone(job: Job) {
     setSelectedJob(job);
@@ -97,10 +97,37 @@ export default function EmployeeHistoryPage() {
 
   return (
     <ProtectedRoute requiredRole="employee" redirectTo="/customer/dashboard">
-      <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-8">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <h1 className="mb-2 text-3xl font-bold text-slate-900">Your History</h1>
-          <p className="mb-8 text-slate-600">Jobs you have claimed or completed.</p>
+      <div className="flex h-screen overflow-hidden" style={{ fontFamily: 'var(--md-font-body)' }}>
+        {/* Navigation Drawer */}
+        <NavigationDrawer />
+
+        {/* Mobile Menu Overlay */}
+        {isMobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
+          {/* Top App Bar */}
+          <TopAppBar 
+            onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            title="Your History"
+          />
+
+          {/* Page Content */}
+          <main 
+            className="flex-1 overflow-auto p-6"
+            style={{ 
+              backgroundColor: 'var(--md-background)',
+              padding: 'var(--md-space-6)'
+            }}
+          >
+            <div className="mx-auto max-w-4xl">
+              <h1 className="mb-2 text-3xl font-bold text-slate-900">Your History</h1>
+              <p className="mb-8 text-slate-600">Jobs you have claimed or completed.</p>
 
           {loading && historyJobs.length === 0 ? (
             <LoadingSpinner size="lg" className="py-16" />
@@ -123,10 +150,11 @@ export default function EmployeeHistoryPage() {
               <div className="grid gap-6 sm:grid-cols-2">
                 {historyJobs.map((job) => (
                   <div key={job.id}>
-                    <JobCard
+                    <EmployeeJobCard
                       job={job}
                       showClaim={false}
-                      onView={(id) => router.push(`/employee/jobs/${id}`)}
+                      onClaim={() => {}}
+                      onView={(id: string) => router.push(`/employee/jobs/${id}`)}
                     />
                     {job.status === 'IN_PROGRESS' && (
                       <Button
@@ -142,8 +170,10 @@ export default function EmployeeHistoryPage() {
               </div>
             </div>
           )}
+            </div>
+          </main>
         </div>
-      </main>
+      </div>
 
       <Modal
         isOpen={modalOpen}
