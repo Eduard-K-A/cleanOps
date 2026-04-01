@@ -22,31 +22,32 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// ---------------------------------------------------------------------------
-// Synchronous cache helpers — read localStorage in useState initializers so
-// the very first render already has the role, eliminating the skeleton flash.
-// ---------------------------------------------------------------------------
-function readCachedRole(): Profile | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const role = localStorage.getItem('cleanops_role');
-    const id   = localStorage.getItem('cleanops_role_id');
-    if (role && id) return { role } as Profile;
-  } catch {}
-  return null;
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
+  // ⚠️  Initial state MUST match server render (null / false) to avoid
+  //     hydration mismatches.  localStorage is read in a useEffect below,
+  //     which only runs on the client after hydration.
   const [user, setUser] = useState<User | null>(null);
-  // Seed profile synchronously from localStorage so ProtectedRoute has the
-  // role on the VERY FIRST render — no async round-trip required.
-  const [profile, setProfile] = useState<Profile | null>(readCachedRole);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  // If we have a cached role we treat the auth state as already known and
-  // skip the loading skeleton.  The async getSession() will validate & refresh.
-  const [mounted, setMounted] = useState(() => readCachedRole() !== null);
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+
+  // ── Client-only cache seed ────────────────────────────────────────────────
+  // Runs immediately after the first paint (before any network round-trip).
+  // Sets profile + mounted from localStorage so protected pages skip the
+  // loading skeleton on refresh / navigation without causing hydration errors.
+  useEffect(() => {
+    try {
+      const role = localStorage.getItem('cleanops_role');
+      const id   = localStorage.getItem('cleanops_role_id');
+      if (role && id) {
+        setProfile((prev) => prev ?? ({ role } as Profile));
+        setMounted(true);
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once, on mount only
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
