@@ -44,16 +44,16 @@ export default function RequestsPage() {
   useEffect(() => {
     fetchJobs();
 
-    // Auto-refresh jobs every 5 seconds to sync status changes
+    // Auto-refresh jobs every 5 seconds to sync status changes - always fetch all jobs for accurate counts
     const interval = setInterval(fetchJobs, 5000);
     return () => clearInterval(interval);
-  }, [statusFilter, searchQuery]); // Re-fetch when filter or search changes
+  }, []); // Empty dependency - fetch all jobs regardless of filter changes
 
   async function fetchJobs() {
     try {
       setError(null);
-      const status = statusFilter === "all" ? undefined : statusFilter;
-      const response = await api.getJobs(status, "customer"); // Pass status filter and customer role
+      // Always fetch ALL jobs (no status filter) to calculate accurate counts
+      const response = await api.getJobs(undefined, "customer");
       setJobs(response.data ?? []);
     } catch (e: unknown) {
       const err = e as {

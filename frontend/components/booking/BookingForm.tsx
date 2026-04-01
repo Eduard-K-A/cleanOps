@@ -471,13 +471,12 @@ function StepPayment() {
       });
       if (!response.data?.job?.id || !response.data?.job?.price_amount) throw new Error('Create job failed');
       sessionStorage.setItem('cleanops_payment', JSON.stringify({ jobId: response.data.job.id, amount: response.data.job.price_amount }));
-      toast.success('Job created. Redirecting to payment…');
+      toast.success('Job created successfully! Redirecting to payment...');
       reset();
       router.push('/customer/payment');
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Failed to create job';
       toast.error(message);
-    } finally {
       setLoading(false);
     }
   };
