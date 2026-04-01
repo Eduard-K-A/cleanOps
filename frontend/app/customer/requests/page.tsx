@@ -1,23 +1,32 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { CleaningJobCard } from '@/components/jobs/CleaningJobCard';
-import { Button } from '@/components/ui/button';
-import { api } from '@/lib/api';
-import type { Job } from '@/types';
-import toast from 'react-hot-toast';
-import { Loader2, RefreshCw, Filter } from 'lucide-react';
-import type { JobStatus } from '@/types';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { ModernCleaningJobCard } from "@/components/jobs/ModernCleaningJobCard";
+import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api";
+import type { Job } from "@/types";
+import toast from "react-hot-toast";
+import {
+  Loader2,
+  RefreshCw,
+  Filter,
+  Search,
+  ArrowUpDown,
+  Grid3X3,
+  List,
+} from "lucide-react";
+import type { JobStatus } from "@/types";
 
 const STATUS_OPTIONS: { value: string; label: string; color: string }[] = [
-  { value: 'all', label: 'All Requests', color: 'bg-slate-100' },
-  { value: 'OPEN', label: 'Open', color: 'bg-blue-100' },
-  { value: 'IN_PROGRESS', label: 'In Progress', color: 'bg-yellow-100' },
-  { value: 'PENDING_REVIEW', label: 'Pending Review', color: 'bg-orange-100' },
-  { value: 'COMPLETED', label: 'Completed', color: 'bg-green-100' },
-  { value: 'CANCELLED', label: 'Cancelled', color: 'bg-red-100' },
+  { value: "all", label: "All Requests", color: "bg-slate-100" },
+  { value: "OPEN", label: "Open", color: "bg-blue-100" },
+  { value: "IN_PROGRESS", label: "In Progress", color: "bg-yellow-100" },
+  { value: "PENDING_REVIEW", label: "Pending Review", color: "bg-orange-100" },
+  { value: "COMPLETED", label: "Completed", color: "bg-green-100" },
+  { value: "CANCELLED", label: "Cancelled", color: "bg-red-100" },
 ];
 
 export default function RequestsPage() {
@@ -28,21 +37,23 @@ export default function RequestsPage() {
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>('OPEN'); // Default to show open requests
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("recent");
+  const [statusFilter, setStatusFilter] = useState<string>("OPEN"); // Default to show open requests
 
   useEffect(() => {
     fetchJobs();
-    
+
     // Auto-refresh jobs every 5 seconds to sync status changes
     const interval = setInterval(fetchJobs, 5000);
     return () => clearInterval(interval);
-  }, [statusFilter]); // Re-fetch when filter changes
+  }, [statusFilter, searchQuery]); // Re-fetch when filter or search changes
 
   async function fetchJobs() {
     try {
       setError(null);
-      const status = statusFilter === 'all' ? undefined : statusFilter;
-      const response = await api.getJobs(status, 'customer'); // Pass status filter and customer role
+      const status = statusFilter === "all" ? undefined : statusFilter;
+      const response = await api.getJobs(status, "customer"); // Pass status filter and customer role
       setJobs(response.data ?? []);
     } catch (e: unknown) {
       const err = e as {
@@ -51,13 +62,13 @@ export default function RequestsPage() {
         response?: { data?: { error?: string } };
       };
       const isNetworkError =
-        err?.code === 'ERR_NETWORK' ||
-        err?.message?.includes('Network Error') ||
-        err?.message?.includes('ERR_CONNECTION_REFUSED');
+        err?.code === "ERR_NETWORK" ||
+        err?.message?.includes("Network Error") ||
+        err?.message?.includes("ERR_CONNECTION_REFUSED");
 
       const message = isNetworkError
-        ? 'Cannot reach the backend server. Make sure it is running on http://localhost:5000 and that NEXT_PUBLIC_API_URL is set correctly.'
-        : err?.response?.data?.error ?? 'Failed to load your requests.';
+        ? "Cannot reach the backend server. Make sure it is running on http://localhost:5000 and that NEXT_PUBLIC_API_URL is set correctly."
+        : (err?.response?.data?.error ?? "Failed to load your requests.");
 
       setError(message);
       setJobs([]);
@@ -66,6 +77,32 @@ export default function RequestsPage() {
       setIsRefreshing(false);
     }
   }
+
+  const filteredJobs = jobs.filter((job) => {
+    const matchesStatus = statusFilter === "all" || job.status === statusFilter;
+    const matchesSearch =
+      searchQuery === "" ||
+      job.tasks.some((task) =>
+        task.toLowerCase().includes(searchQuery.toLowerCase()),
+      ) ||
+      job.location_address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.id.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+
+  const getStatusCounts = () => {
+    const counts = {
+      total: jobs.length,
+      open: jobs.filter((j) => j.status === "OPEN").length,
+      progress: jobs.filter((j) => j.status === "IN_PROGRESS").length,
+      pending: jobs.filter((j) => j.status === "PENDING_REVIEW").length,
+      completed: jobs.filter((j) => j.status === "COMPLETED").length,
+      cancelled: jobs.filter((j) => j.status === "CANCELLED").length,
+    };
+    return counts;
+  };
+
+  const statusCounts = getStatusCounts();
 
   async function handleRefresh() {
     setIsRefreshing(true);
@@ -76,10 +113,10 @@ export default function RequestsPage() {
     try {
       setApproving(id);
       await api.approveJob(id);
-      toast.success('Job approved. Payout completed.');
+      toast.success("Job approved. Payout completed.");
       await fetchJobs();
     } catch (e: unknown) {
-      const defaultMsg = 'Failed to approve';
+      const defaultMsg = "Failed to approve";
       if (e instanceof Error) {
         toast.error(e.message || defaultMsg);
       } else {
@@ -94,12 +131,12 @@ export default function RequestsPage() {
   async function handleCancel(id: string) {
     try {
       setCancelling(id);
-      await api.updateJobStatus(id, 'CANCELLED');
-      toast.success('Job cancelled successfully.');
+      await api.updateJobStatus(id, "CANCELLED");
+      toast.success("Job cancelled successfully.");
       await fetchJobs();
     } catch (e: unknown) {
       const err = e as { response?: { data?: { error?: string } } };
-      toast.error(err?.response?.data?.error ?? 'Failed to cancel job');
+      toast.error(err?.response?.data?.error ?? "Failed to cancel job");
     } finally {
       setCancelling(null);
     }
@@ -107,97 +144,220 @@ export default function RequestsPage() {
 
   return (
     <ProtectedRoute>
-      <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-8">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h1 className="mb-2 text-3xl font-bold text-slate-900">My requests</h1>
-                <p className="text-slate-600">Track and manage your cleaning jobs.</p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="gap-2"
-              >
-                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? 'Refreshing…' : 'Refresh'}
-              </Button>
-            </div>
-
-            {/* Status Filter */}
-            <div className="flex items-center gap-2 mb-6">
-              <Filter className="h-4 w-4 text-slate-500" />
-              <span className="text-sm font-medium text-slate-700">Filter by status:</span>
-              <div className="flex flex-wrap gap-2">
-                {STATUS_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => setStatusFilter(option.value)}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                      statusFilter === option.value
-                        ? `${option.color} ring-2 ring-offset-2 ring-slate-400`
-                        : `${option.color} hover:opacity-80`
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+      <MainLayout
+        title="My Requests"
+        subtitle="Track and manage all your cleaning service jobs"
+        breadcrumb="Service Management"
+      >
+        {error && !loading && (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {error}
           </div>
+        )}
 
-          {error && !loading && (
-            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-              {error}
-            </div>
-          )}
-
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-10 w-10 animate-spin text-sky-600" />
-            </div>
-          ) : jobs.length === 0 ? (
-            <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/50 p-12 text-center space-y-4">
-              <p className="text-slate-600">
-                {statusFilter === 'all' 
-                  ? "You don't have any job requests yet."
-                  : `You don't have any ${STATUS_OPTIONS.find(opt => opt.value === statusFilter)?.label.toLowerCase()} requests.`
-                }
-              </p>
-              {statusFilter === 'all' && (
-                <Button onClick={() => router.push('/customer/order')}>
-                  Create your first order
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="grid gap-6 sm:grid-cols-2">
-              {jobs.map((job) => (
-                <div key={job.id} className="relative">
-                  <CleaningJobCard
-                    job={job}
-                    onView={(id) => router.push(`/customer/jobs/${id}`)}
-                    onCancel={handleCancel}
-                    isCancelling={cancelling === job.id}
-                  />
-                  {job.status === 'PENDING_REVIEW' && (
-                    <Button
-                      className="mt-2 w-full"
-                      onClick={() => handleApprove(job.id)}
-                      disabled={!!approving}
-                    >
-                      {approving === job.id ? 'Approving…' : 'Approve & complete'}
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+        {/* Stats Pills */}
+        <div className="stats-strip mb-6">
+          <div className="stat-pill">
+            <div className="stat-pill-dot" style={{ background: "#fff" }}></div>
+            <span className="stat-pill-val">{statusCounts.total}</span>
+            <span className="stat-pill-label">Total</span>
+          </div>
+          <div className="stat-pill">
+            <div
+              className="stat-pill-dot"
+              style={{ background: "var(--blue-200)" }}
+            ></div>
+            <span className="stat-pill-val">{statusCounts.open}</span>
+            <span className="stat-pill-label">Open</span>
+          </div>
+          <div className="stat-pill">
+            <div
+              className="stat-pill-dot"
+              style={{ background: "#FFCC80" }}
+            ></div>
+            <span className="stat-pill-val">{statusCounts.progress}</span>
+            <span className="stat-pill-label">In Progress</span>
+          </div>
+          <div className="stat-pill">
+            <div
+              className="stat-pill-dot"
+              style={{ background: "#80CBC4" }}
+            ></div>
+            <span className="stat-pill-val">{statusCounts.completed}</span>
+            <span className="stat-pill-label">Completed</span>
+          </div>
         </div>
-      </main>
+
+        {/* Filter Tabs */}
+        <div className="mb-6">
+          <div className="flex items-center gap-1.5 flex-wrap bg-gray-100/70 border border-gray-200/60 rounded-xl p-1.5">
+            <button
+              onClick={() => setStatusFilter("all")}
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm transition-all duration-100 whitespace-nowrap
+        ${
+          statusFilter === "all"
+            ? "bg-white border border-gray-200 shadow-sm font-medium text-gray-900"
+            : "text-gray-500 hover:bg-white/60 hover:text-gray-800"
+        }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0" />
+              All requests
+              <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-600 leading-tight">
+                {statusCounts.total}
+              </span>
+            </button>
+
+            <div className="w-px h-5 bg-gray-300 mx-0.5 shrink-0" />
+
+            {[
+              {
+                value: "OPEN",
+                label: "Open",
+                count: statusCounts.open,
+                dot: "bg-blue-500",
+                pill: "bg-blue-50 text-blue-800",
+              },
+              {
+                value: "IN_PROGRESS",
+                label: "In progress",
+                count: statusCounts.progress,
+                dot: "bg-amber-400",
+                pill: "bg-amber-50 text-amber-900",
+              },
+              {
+                value: "PENDING_REVIEW",
+                label: "Pending review",
+                count: statusCounts.pending,
+                dot: "bg-pink-500",
+                pill: "bg-pink-50 text-pink-900",
+              },
+              {
+                value: "COMPLETED",
+                label: "Completed",
+                count: statusCounts.completed,
+                dot: "bg-green-500",
+                pill: "bg-green-50 text-green-900",
+              },
+              {
+                value: "CANCELLED",
+                label: "Cancelled",
+                count: statusCounts.cancelled,
+                dot: "bg-red-500",
+                pill: "bg-red-50 text-red-800",
+              },
+            ].map(({ value, label, count, dot, pill }) => (
+              <button
+                key={value}
+                onClick={() => setStatusFilter(value)}
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm transition-all duration-100 whitespace-nowrap
+          ${
+            statusFilter === value
+              ? "bg-white border border-gray-200 shadow-sm font-medium text-gray-900"
+              : "text-gray-500 hover:bg-white/60 hover:text-gray-800"
+          }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${dot} shrink-0`} />
+                {label}
+                <span
+                  className={`text-[11px] font-medium px-1.5 py-0.5 rounded-full leading-tight ${pill}`}
+                >
+                  {count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Toolbar */}
+        <div className="toolbar mb-6">
+          <div className="search-wrap">
+            <Search className="search-icon h-5 w-5" />
+            <input
+              className="search-input"
+              type="text"
+              placeholder="Search requests…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="toolbar-spacer"></div>
+          <button className="btn-sort">
+            <ArrowUpDown className="h-4 w-4" />
+            Most Recent
+          </button>
+          <button className="btn-view active" title="Grid view">
+            <Grid3X3 className="h-5 w-5" />
+          </button>
+          <button className="btn-view" title="List view">
+            <List className="h-5 w-5" />
+          </button>
+          <button className="btn-refresh ripple-parent" onClick={handleRefresh}>
+            <RefreshCw
+              className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </button>
+        </div>
+
+        {/* Cards Grid or Empty State */}
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-10 w-10 animate-spin text-sky-600" />
+          </div>
+        ) : filteredJobs.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-illustration">
+              <Filter className="h-12 w-12" />
+            </div>
+            <div className="empty-title">No requests found</div>
+            <p className="empty-sub">
+              {searchQuery || statusFilter !== "all"
+                ? "There are no jobs matching your current filter. Try another status or search term."
+                : "You don't have any job requests yet."}
+            </p>
+            {!searchQuery && statusFilter === "all" && (
+              <button
+                className="btn-primary"
+                onClick={() => router.push("/customer/order")}
+              >
+                Create your first request
+              </button>
+            )}
+            {(searchQuery || statusFilter !== "all") && (
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  setSearchQuery("");
+                  setStatusFilter("all");
+                }}
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="cards-grid">
+            {filteredJobs.map((job, index) => (
+              <div key={job.id} style={{ animationDelay: `${index * 50}ms` }}>
+                <ModernCleaningJobCard
+                  job={job}
+                  onView={(id: string) => router.push(`/customer/jobs/${id}`)}
+                  onCancel={handleCancel}
+                  isCancelling={cancelling === job.id}
+                />
+                {job.status === "PENDING_REVIEW" && (
+                  <Button
+                    className="mt-2 w-full"
+                    onClick={() => handleApprove(job.id)}
+                    disabled={!!approving}
+                  >
+                    {approving === job.id ? "Approving…" : "Approve & complete"}
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </MainLayout>
     </ProtectedRoute>
   );
 }

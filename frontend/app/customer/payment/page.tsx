@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { approveJobCompletion } from '@/app/actions/jobs';
@@ -91,7 +92,13 @@ function PaymentContent() {
 export default function PaymentPage() {
   return (
     <ProtectedRoute>
-      <PaymentContent />
+      <MainLayout
+        title="Complete Payment"
+        subtitle="Authorize payment for your cleaning service"
+        breadcrumb="Payment"
+      >
+        <PaymentContent />
+      </MainLayout>
     </ProtectedRoute>
   );
 }
