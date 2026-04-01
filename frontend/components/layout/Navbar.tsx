@@ -27,7 +27,7 @@ export default function Navbar() {
   ];
 
   const publicLinks = [
-    { href: '/homepage', label: 'Home' },
+    // No links for non-logged-in users
   ];
 
   const links = !mounted || !isLoggedIn

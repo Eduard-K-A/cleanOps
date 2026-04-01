@@ -206,12 +206,7 @@ export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOp
         <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--md-divider)' }}>
           {!isCollapsed && (
             <div className="flex items-center gap-3">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: 'var(--blue-500)' }}
-              >
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
+          
               <span className="font-semibold text-gray-900">
                 CleanOps
               </span>
