@@ -27,7 +27,13 @@ export function useAsyncData<T>({
       setError(null);
       const response = await fetchFn();
       console.debug('useAsyncData: fetchFn response', { response });
+      
       // Support both raw data and ApiResponse wrappers
+      // If response has a `success` field, check it first
+      if (response && typeof response === 'object' && 'success' in response && (response as any).success === false) {
+        throw new Error((response as any).error || errorMessage);
+      }
+
       // If response has a `data` field, prefer it; otherwise assume response is the payload
       const payload = (response && typeof response === 'object' && 'data' in response)
         ? (response as any).data
