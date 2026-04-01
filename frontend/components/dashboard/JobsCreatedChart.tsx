@@ -103,8 +103,8 @@ export function JobsCreatedChart() {
       </div>
 
       {/* Chart */}
-      <div className="h-80">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="h-80 min-h-80">
+        <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={320}>
           <AreaChart data={jobsData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="jobsGradient" x1="0" y1="0" x2="0" y2="1">

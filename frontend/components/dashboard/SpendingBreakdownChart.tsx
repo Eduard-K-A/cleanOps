@@ -92,8 +92,8 @@ export function SpendingBreakdownChart() {
       </div>
 
       {/* Chart */}
-      <div className="h-80">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="h-80 min-h-80">
+        <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={320}>
           <BarChart 
             data={spendingData} 
             margin={{ top: 20, right: 30, left: 20, bottom: 5 }}

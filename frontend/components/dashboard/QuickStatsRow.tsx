@@ -91,8 +91,8 @@ export function QuickStatsRow() {
           </div>
           
           {/* Sparkline chart */}
-          <div className="h-16">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-16 min-h-16">
+            <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={64}>
               <LineChart data={sparklineData}>
                 <Line
                   type="monotone"
@@ -149,8 +149,8 @@ export function QuickStatsRow() {
           </div>
           
           {/* Gauge chart */}
-          <div className="h-16">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-16 min-h-16">
+            <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={64}>
               <PieChart>
                 <Pie
                   data={satisfactionData}
