@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,8 +48,12 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
 
   return (
     <ProtectedRoute>
-      <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-8">
-        <div className="mx-auto max-w-2xl px-4">
+      <MainLayout
+        title="Job Information"
+        subtitle="View and manage job details and progress"
+        breadcrumb="Job Details"
+      >
+        <div className="max-w-2xl mx-auto">
           <Button variant="ghost" className="mb-4" onClick={() => router.push(backPath)}>
             ← Back to {backLabel}
           </Button>
@@ -97,7 +102,7 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
             </CardContent>
           </Card>
         </div>
-      </main>
+      </MainLayout>
     </ProtectedRoute>
   );
 }
