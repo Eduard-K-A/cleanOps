@@ -88,7 +88,7 @@ const getNavigationItems = (role?: string): NavigationItem[] => {
       id: 'dashboard',
       label: 'Dashboard',
       icon: <LayoutDashboard size={20} />,
-      href: '/dashboard'
+      href: '/employee/dashboard'
     }
   ];
 
@@ -132,9 +132,14 @@ export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOp
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [internalMobileOpen, setInternalMobileOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  // Stable role: once a role is known, hold it until a *confirmed* different
+  // role arrives. This prevents the nav from flickering to "customer" during
+  // the brief window where profile is null mid-revalidation.
+  const [stableRole, setStableRole] = useState<string | undefined>(undefined);
+
   const pathname = usePathname();
   const router = useRouter();
-  const { profile, user, logout } = useAuth();
+  const { profile, user, logout, loading, mounted } = useAuth();
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Use external mobile state if provided, otherwise use internal state
@@ -147,9 +152,18 @@ export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOp
     }
   };
 
+  // Update stableRole only when we have a confirmed role AND revalidation is done.
+  // This prevents the nav from flickering during the snapshot → real profile transition.
+  useEffect(() => {
+    if (mounted && !loading && profile?.role) {
+      setStableRole(profile.role);
+    }
+  }, [mounted, loading, profile?.role]);
+
   const drawerWidth = isCollapsed ? '72px' : '256px';
   const isActive = (href: string) => pathname === href;
-  const navigationItems = getNavigationItems(profile?.role);
+  // Use stableRole so the nav doesn't flip mid-revalidation.
+  const navigationItems = getNavigationItems(stableRole);
   const userInitial = profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U';
 
   // Close user menu when clicking outside
@@ -173,9 +187,10 @@ export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOp
     }
   };
 
-  // Filter navigation items based on user role
+  // Filter navigation items based on user role.
+  // Use stableRole so the filter doesn't flip mid-revalidation.
   const filteredNavItems = navigationItems.filter(item => 
-    !item.requiredRole || item.requiredRole === profile?.role
+    !item.requiredRole || item.requiredRole === stableRole
   );
 
   return (

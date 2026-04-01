@@ -7,13 +7,15 @@ import { useAuth } from '@/lib/authContext';
 interface TopAppBarProps {
   onMenuClick?: () => void;
   title?: string;
+  subtitle?: string;
   showSearch?: boolean;
   showNotifications?: boolean;
 }
 
 export function TopAppBar({ 
   onMenuClick, 
-  title = 'Dashboard', 
+  title = 'Dashboard',
+  subtitle = '',
   showSearch = true,
   showNotifications = true 
 }: TopAppBarProps) {
@@ -33,16 +35,29 @@ export function TopAppBar({
       {/* Left section */}
       <div className="flex items-center gap-4">
        
-        {/* Page title */}
-        <h1 
-          className="text-xl font-semibold"
-          style={{ 
-            color: 'var(--md-on-surface)',
-            fontFamily: 'var(--md-font-display)'
-          }}
-        >
-          {title}
-        </h1>
+        {/* Page title and subtitle */}
+        <div>
+          <h1 
+            className="text-xl font-semibold"
+            style={{ 
+              color: 'var(--md-on-surface)',
+              fontFamily: 'var(--md-font-display)'
+            }}
+          >
+            {title}
+          </h1>
+          {subtitle && (
+            <p 
+              className="text-sm"
+              style={{ 
+                color: 'var(--md-on-surface-muted)',
+                marginTop: '4px'
+              }}
+            >
+              {subtitle}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Right section */}

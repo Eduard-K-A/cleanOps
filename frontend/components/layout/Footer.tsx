@@ -1,7 +1,13 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 export default function Footer() {
+  const [year, setYear] = useState<number>(2026);
+
+  useEffect(() => {
+    setYear(new Date().getFullYear());
+  }, []);
+
   return (
     <footer className="border-t border-slate-200 mt-9 bg-white pt-7 pb-4.5">
       <div className="max-w-5xl mx-auto grid grid-cols-4 gap-5 px-5">
@@ -29,7 +35,7 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-5 text-gray-500 text-xs mt-3">© {new Date().getFullYear()} cleanOps — All rights reserved.</div>
+      <div className="max-w-5xl mx-auto px-5 text-gray-500 text-xs mt-3">© {year} cleanOps — All rights reserved.</div>
     </footer>
   )
 }
