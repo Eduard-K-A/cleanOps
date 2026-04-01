@@ -26,7 +26,8 @@ export function ProtectedRoute({ children, requiredRole, redirectTo }: Protected
     }
     
     // Handle role-based access
-    if (requiredRole && !loading && profile?.role && profile.role !== requiredRole) {
+    // allow check if we have a role, even if still loading background profile
+    if (requiredRole && profile?.role && profile.role !== requiredRole) {
       setIsRedirecting(true);
       router.push(redirectTo ?? '/');
       return;
@@ -35,8 +36,8 @@ export function ProtectedRoute({ children, requiredRole, redirectTo }: Protected
     setIsRedirecting(false);
   }, [isLoggedIn, mounted, router, requiredRole, redirectTo, loading, profile?.role]);
 
-  // Show skeleton while auth state is loading
-  if (!mounted || loading) {
+  // Show skeleton while auth state is loading AND we don't have a cached role
+  if (!mounted || (loading && !profile?.role)) {
     return (
       <div className="shell">
         <nav className="topnav">
