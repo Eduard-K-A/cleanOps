@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s ?? null);
       setUser(s?.user ?? null);
 
-      // Clear profile on sign out or when there is no session
+      // Signed out or no session — clear everything.
       if (event === 'SIGNED_OUT' || !s?.user?.id) {
         setProfile(null);
         if (typeof window !== 'undefined') {
@@ -98,45 +98,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem('cleanops_role_id');
         }
         setLoading(false);
+        setMounted(true);
         return;
       }
 
-      // Fetch profile for signed in users
-      if (s.user.id) {
-        await fetchProfile(s.user.id);
-      }
-      
-      // Set loading to false after initial auth check
+      // Signed in — fetch fresh profile (single call, no duplicate).
+      // onAuthStateChange fires INITIAL_SESSION on first registration in
+      // Supabase v2, so the separate getSession() IIFE is no longer needed
+      // and was causing a double fetchProfile → AbortError race condition.
+      await fetchProfile(s.user.id);
       setLoading(false);
-    });
-
-    (async () => {
-      const { data: { session: s } } = await supabase.auth.getSession();
-      setSession(s);
-      setUser(s?.user ?? null);
-      
-      if (s?.user?.id) {
-        // Try to load cached role FIRST for instant access
-        if (typeof window !== 'undefined') {
-          const cachedRole = localStorage.getItem('cleanops_role');
-          const cachedId = localStorage.getItem('cleanops_role_id');
-          if (cachedRole && cachedId === s.user.id) {
-            console.log('[AUTH] Role cache hit:', cachedRole);
-            setProfile({ role: cachedRole } as Profile);
-          }
-        }
-        
-        // Then fetch fresh profile in background
-        await fetchProfile(s.user.id);
-      } else {
-        setProfile(null);
-      }
-      setLoading(false); // Set loading to false after initial check
       setMounted(true);
-    })();
+    });
 
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
+
 
   const logout = useCallback(async () => {
     console.log('[DEBUG-LOGOUT] Pre-logout auth state:', { user, profile, session });
