@@ -1,6 +1,5 @@
 import { ApiResponse, CreateJobRequest, Job, Message, Notification, Profile } from '../types';
-import { createClient } from '../lib/supabase/client';
-import type { Database } from '../lib/supabase/database.types';
+import { supabase } from './supabase';
 import { 
   claimJob, 
   updateJobStatus, 
@@ -19,7 +18,6 @@ import {
   getBalance 
 } from '../app/actions/payments';
 
-const supabase = createClient();
 
 // Helper function to format Supabase responses to match API response format
 function formatSupabaseResponse<T>(data: T | null, error: any): ApiResponse<T> {
@@ -367,21 +365,26 @@ export const api = {
   },
 
   // Profile - using Supabase directly
-  async getProfile(): Promise<ApiResponse<Profile>> {
+  async getProfile(userId?: string): Promise<ApiResponse<Profile>> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        return {
-          success: false,
-          error: 'User not authenticated',
-          code: 401
-        };
+      let finalUserId = userId;
+
+      if (!finalUserId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          return {
+            success: false,
+            error: 'User not authenticated',
+            code: 401
+          };
+        }
+        finalUserId = user.id;
       }
 
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', finalUserId)
         .maybeSingle(); // ✅ Use maybeSingle() instead of single()
 
       if (error) throw error;

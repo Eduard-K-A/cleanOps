@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchProfile = useCallback(async (userId: string) => {
     try {
       setProfileLoading(true);
-      const response = await api.getProfile();
+      const response = await api.getProfile(userId);
       if (response.success && response.data) {
         setProfile(response.data as Profile);
         // Cache the role for faster startup on next refresh

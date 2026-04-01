@@ -22,7 +22,7 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
@@ -32,7 +32,7 @@ export default function LoginPage() {
         return;
       }
       try {
-        const profileResponse = await api.getProfile();
+        const profileResponse = await api.getProfile(data.user?.id);
         if (profileResponse.success && profileResponse.data) {
           const profile = profileResponse.data;
           const dashboardPath =
