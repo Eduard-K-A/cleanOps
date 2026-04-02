@@ -3,8 +3,25 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
+
+// ---------------------------------------------------------------------------
+// SignupPage — refactored for instant redirect.
+//
+// OLD: client signUp → await createProfile server action → toast → router.push
+//      Then onAuthStateChange fires AGAIN → fetchProfile (duplicate DB call)
+//      Total: 3 sequential network round-trips before the user sees anything.
+//
+// NEW: client signUp (sets JWT metadata with role) → router.push immediately
+//      createProfile runs in the BACKGROUND (fire-and-forget)
+//      onAuthStateChange builds optimistic profile from JWT — zero wait.
+//      Total: 1 network call before the user is redirected.
+// ---------------------------------------------------------------------------
+
+function dashboardForRole(role: 'customer' | 'employee') {
+  return role === 'employee' ? '/homepage' : '/dashboard';
+}
 
 export default function SignupPage() {
   const router = useRouter();
@@ -19,25 +36,58 @@ export default function SignupPage() {
     e.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedFullName = fullName.trim();
-    const normalizedRole = (role ?? 'customer').toString().trim().toLowerCase() as 'customer' | 'employee';
 
     if (!normalizedEmail || !password || !normalizedFullName) {
-      toast.error('Email, password, and full name required');
+      toast.error('Email, password, and full name are required');
       return;
     }
     if (password.length < 6) {
       toast.error('Password must be at least 6 characters');
       return;
     }
+
     setLoading(true);
     try {
-      const response = await api.signUp(normalizedEmail, password, normalizedFullName, normalizedRole);
-      if (!response.success) {
-        toast.error(response.error || 'Sign up failed');
+      // ── Step 1: Register with Supabase Auth ──────────────────────────────
+      // user_metadata (role, full_name) is embedded in the JWT and returned
+      // instantly. We don't need to wait for the DB profile to exist before
+      // redirecting — authContext will derive the optimistic profile from it.
+      const { data, error } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password,
+        options: {
+          data: {
+            full_name: normalizedFullName,
+            role,
+          },
+        },
+      });
+
+      if (error) {
+        toast.error(error.message || 'Sign up failed');
         return;
       }
-      toast.success('Account created. Sign in to continue.');
-      router.push('/login');
+
+      // ── Step 2: Fire-and-forget profile creation ─────────────────────────
+      // We do NOT await this. The dashboard will work with the JWT metadata
+      // while the DB row is being created in the background. If it fails,
+      // authContext's fetchProfile will retry on the next page load.
+      if (data.user) {
+        import('@/app/actions/auth').then(({ createProfile }) => {
+          createProfile({
+            id: data.user!.id,
+            fullName: normalizedFullName,
+            role,
+          }).catch((err) => {
+            // Non-fatal: profile can be created on next login via upsert.
+            console.warn('[signup] Background profile creation failed:', err);
+          });
+        });
+      }
+
+      // ── Step 3: Redirect immediately ─────────────────────────────────────
+      toast.success('Account created!');
+      router.push(dashboardForRole(role));
     } catch (err: any) {
       toast.error(err?.message || 'Sign up failed');
     } finally {
@@ -55,8 +105,6 @@ export default function SignupPage() {
           background: var(--bg);
           font-family: var(--font);
         }
-
-        /* ── Left brand panel ── */
         .signup-panel-left {
           position: relative;
           display: flex;
@@ -76,43 +124,29 @@ export default function SignupPage() {
         .signup-panel-left::after {
           content: '';
           position: absolute;
-          bottom: -140px;
-          right: -100px;
-          width: 440px;
-          height: 440px;
+          bottom: -140px; right: -100px;
+          width: 440px; height: 440px;
           border-radius: 50%;
           background: rgba(255,255,255,0.04);
           pointer-events: none;
         }
-
         .signup-brand {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          text-decoration: none;
-          position: relative;
-          z-index: 1;
+          display: flex; align-items: center; gap: 10px;
+          text-decoration: none; position: relative; z-index: 1;
         }
         .signup-brand-icon {
-          width: 38px; height: 38px;
-          border-radius: 10px;
+          width: 38px; height: 38px; border-radius: 10px;
           background: rgba(255,255,255,0.18);
           border: 1.5px solid rgba(255,255,255,0.28);
           display: flex; align-items: center; justify-content: center;
           backdrop-filter: blur(4px);
         }
-        .signup-brand-name {
-          font-size: 18px; font-weight: 700; color: #fff; letter-spacing: -0.3px;
-        }
+        .signup-brand-name { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
 
         .signup-left-content {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          padding: 48px 0;
-          position: relative;
-          z-index: 1;
+          flex: 1; display: flex; flex-direction: column;
+          justify-content: center; padding: 48px 0;
+          position: relative; z-index: 1;
         }
         .signup-eyebrow {
           font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
@@ -127,28 +161,17 @@ export default function SignupPage() {
           margin: 0 0 var(--md-space-6);
         }
         .signup-headline span { opacity: 0.7; font-weight: 300; }
-
         .signup-body-text {
           font-size: 14px; color: rgba(255,255,255,0.65);
-          line-height: 1.7; max-width: 340px;
-          margin-bottom: var(--md-space-8);
+          line-height: 1.7; max-width: 340px; margin-bottom: var(--md-space-8);
         }
-
-        /* Role benefit cards */
-        .signup-benefits {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
+        .signup-benefits { display: flex; flex-direction: column; gap: 10px; }
         .benefit-card {
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
+          display: flex; align-items: flex-start; gap: 12px;
           background: rgba(255,255,255,0.09);
           border: 1px solid rgba(255,255,255,0.14);
           border-radius: var(--r-md);
-          padding: 14px 16px;
-          backdrop-filter: blur(4px);
+          padding: 14px 16px; backdrop-filter: blur(4px);
           transition: background var(--md-duration-short) var(--md-motion-standard);
         }
         .benefit-card.active-benefit {
@@ -156,37 +179,23 @@ export default function SignupPage() {
           border-color: rgba(255,255,255,0.28);
         }
         .benefit-icon {
-          width: 34px; height: 34px;
-          border-radius: 8px;
+          width: 34px; height: 34px; border-radius: 8px;
           background: rgba(255,255,255,0.15);
           display: flex; align-items: center; justify-content: center;
           flex-shrink: 0;
         }
         .benefit-text { flex: 1; }
-        .benefit-title {
-          font-size: 13px; font-weight: 700; color: #fff;
-          margin-bottom: 2px; line-height: 1.3;
-        }
-        .benefit-desc {
-          font-size: 11.5px; color: rgba(255,255,255,0.55); line-height: 1.5;
-        }
+        .benefit-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 2px; line-height: 1.3; }
+        .benefit-desc { font-size: 11.5px; color: rgba(255,255,255,0.55); line-height: 1.5; }
 
-        .signup-left-footer {
-          display: flex;
-          align-items: center;
-          gap: var(--md-space-3);
-          position: relative;
-          z-index: 1;
-        }
+        .signup-left-footer { display: flex; align-items: center; gap: var(--md-space-3); position: relative; z-index: 1; }
         .signup-avatars { display: flex; }
         .signup-avatar {
-          width: 30px; height: 30px;
-          border-radius: 50%;
+          width: 30px; height: 30px; border-radius: 50%;
           border: 2px solid var(--blue-700);
           display: flex; align-items: center; justify-content: center;
           font-size: 10px; font-weight: 700; color: #fff;
-          margin-left: -6px;
-          background: var(--blue-500);
+          margin-left: -6px; background: var(--blue-500);
         }
         .signup-avatar:first-child { margin-left: 0; }
         .signup-avatar-b { background: var(--blue-400); }
@@ -194,30 +203,23 @@ export default function SignupPage() {
         .signup-footer-text { font-size: 12px; color: rgba(255,255,255,0.55); }
         .signup-footer-text strong { color: rgba(255,255,255,0.85); font-weight: 600; }
 
-        /* ── Right form panel ── */
+        /* Right panel */
         .signup-panel-right {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
+          display: flex; flex-direction: column;
+          align-items: center; justify-content: center;
           padding: var(--md-space-12) 48px;
-          background: var(--surface);
-          overflow-y: auto;
+          background: var(--surface); overflow-y: auto;
         }
-
         .signup-form-wrap {
-          width: 100%;
-          max-width: 390px;
+          width: 100%; max-width: 390px;
           animation: md-fade-in var(--md-duration-medium) var(--md-motion-decelerate) both;
         }
-
         .signup-form-header { margin-bottom: var(--md-space-8); }
         .signup-form-title {
           font-family: var(--md-font-display);
           font-size: var(--md-text-headline-md);
           font-weight: 700; color: var(--text-1);
-          margin: 0 0 var(--md-space-2);
-          letter-spacing: -0.3px; line-height: 1.15;
+          margin: 0 0 var(--md-space-2); letter-spacing: -0.3px; line-height: 1.15;
         }
         .signup-form-sub { font-size: var(--md-text-body-md); color: var(--text-3); margin: 0; }
         .signup-form-sub a {
@@ -226,68 +228,46 @@ export default function SignupPage() {
         }
         .signup-form-sub a:hover { color: var(--blue-700); text-decoration: underline; }
 
-        /* Role toggle */
         .role-toggle-wrap { margin-bottom: var(--md-space-5); }
         .role-toggle-label {
-          display: block;
-          font-size: 11px; font-weight: 600; color: var(--text-2);
+          display: block; font-size: 11px; font-weight: 600; color: var(--text-2);
           letter-spacing: 0.07em; text-transform: uppercase;
           margin-bottom: var(--md-space-2);
         }
         .role-toggle {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 6px;
-          background: var(--surface-2);
-          border: 1.5px solid var(--divider);
-          border-radius: var(--r-md);
-          padding: 4px;
+          display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+          background: var(--surface-2); border: 1.5px solid var(--divider);
+          border-radius: var(--r-md); padding: 4px;
         }
         .role-btn {
-          display: flex; align-items: center; justify-content: center;
-          gap: 7px;
-          padding: 10px 14px;
-          border-radius: calc(var(--r-md) - 2px);
-          border: none;
-          background: transparent;
-          font-family: var(--font);
-          font-size: 13px; font-weight: 500;
-          color: var(--text-3);
-          cursor: pointer;
+          display: flex; align-items: center; justify-content: center; gap: 7px;
+          padding: 10px 14px; border-radius: calc(var(--r-md) - 2px);
+          border: none; background: transparent;
+          font-family: var(--font); font-size: 13px; font-weight: 500;
+          color: var(--text-3); cursor: pointer;
           transition: all var(--md-duration-short) var(--md-motion-standard);
         }
         .role-btn:hover:not(.role-btn-active) {
-          background: rgba(25,118,210,0.06);
-          color: var(--text-2);
+          background: rgba(25,118,210,0.06); color: var(--text-2);
         }
         .role-btn-active {
-          background: var(--surface);
-          color: var(--blue-700);
-          font-weight: 700;
-          box-shadow: var(--e1);
-          border: 1px solid var(--divider);
+          background: var(--surface); color: var(--blue-700); font-weight: 700;
+          box-shadow: var(--e1); border: 1px solid var(--divider);
         }
 
-        /* Fields — identical to login */
         .signup-field { margin-bottom: var(--md-space-4); }
         .signup-label {
-          display: block;
-          font-size: 11px; font-weight: 600; color: var(--text-2);
+          display: block; font-size: 11px; font-weight: 600; color: var(--text-2);
           letter-spacing: 0.07em; text-transform: uppercase;
           margin-bottom: var(--md-space-2);
         }
         .signup-input-wrap { position: relative; }
         .signup-input {
-          width: 100%;
-          height: 46px;
-          background: var(--surface-2);
-          border: 1.5px solid var(--divider);
-          border-radius: var(--r-md);
-          color: var(--text-1);
-          font-family: var(--font);
-          font-size: 14px;
-          padding: 0 46px 0 14px;
-          outline: none;
+          width: 100%; height: 46px;
+          background: var(--surface-2); border: 1.5px solid var(--divider);
+          border-radius: var(--r-md); color: var(--text-1);
+          font-family: var(--font); font-size: 14px;
+          padding: 0 46px 0 14px; outline: none;
           transition: border-color var(--md-duration-short) var(--md-motion-standard),
                       box-shadow var(--md-duration-short) var(--md-motion-standard),
                       background var(--md-duration-short) var(--md-motion-standard);
@@ -296,8 +276,7 @@ export default function SignupPage() {
         .signup-input::placeholder { color: var(--text-3); }
         .signup-input:hover { border-color: var(--blue-200); }
         .signup-input:focus {
-          border-color: var(--blue-400);
-          background: var(--surface);
+          border-color: var(--blue-400); background: var(--surface);
           box-shadow: 0 0 0 3px rgba(33,150,243,0.12);
         }
         .signup-input-icon {
@@ -312,12 +291,10 @@ export default function SignupPage() {
         }
         .signup-input-icon.clickable:hover { color: var(--blue-600); }
 
-        /* Password strength */
         .pw-strength { margin-top: 6px; display: flex; align-items: center; gap: 8px; }
         .pw-bars { display: flex; gap: 4px; flex: 1; }
         .pw-bar {
-          flex: 1; height: 3px; border-radius: 2px;
-          background: var(--divider);
+          flex: 1; height: 3px; border-radius: 2px; background: var(--divider);
           transition: background var(--md-duration-short) var(--md-motion-standard);
         }
         .pw-bar.fill-weak   { background: var(--error); }
@@ -328,17 +305,12 @@ export default function SignupPage() {
         .pw-label.fair   { color: var(--warning); }
         .pw-label.strong { color: var(--success); }
 
-        /* Submit */
         .signup-submit {
           width: 100%; height: 46px;
-          background: var(--blue-600);
-          border: none;
+          background: var(--blue-600); border: none;
           border-radius: var(--r-md);
-          font-family: var(--font);
-          font-size: 14px; font-weight: 700;
-          color: #fff;
-          cursor: pointer;
-          margin-top: var(--md-space-2);
+          font-family: var(--font); font-size: 14px; font-weight: 700; color: #fff;
+          cursor: pointer; margin-top: var(--md-space-2);
           box-shadow: 0 4px 14px rgba(25,118,210,0.35);
           transition: background var(--md-duration-short) var(--md-motion-standard),
                       box-shadow var(--md-duration-short) var(--md-motion-standard),
@@ -353,71 +325,49 @@ export default function SignupPage() {
         }
         .signup-submit:active:not(:disabled) { transform: scale(0.99); }
         .signup-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-
         .signup-spinner {
           width: 16px; height: 16px;
           border: 2px solid rgba(255,255,255,0.3);
-          border-top-color: #fff;
-          border-radius: 50%;
+          border-top-color: #fff; border-radius: 50%;
           animation: signup-spin 0.65s linear infinite;
         }
         @keyframes signup-spin { to { transform: rotate(360deg); } }
 
-        /* Divider */
         .signup-divider {
           display: flex; align-items: center;
-          gap: var(--md-space-3);
-          margin: var(--md-space-5) 0;
+          gap: var(--md-space-3); margin: var(--md-space-5) 0;
         }
         .signup-divider-line { flex: 1; height: 1px; background: var(--divider); }
-        .signup-divider-text {
-          font-size: 11px; font-weight: 600;
-          letter-spacing: 0.08em; color: var(--text-3);
-        }
+        .signup-divider-text { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--text-3); }
 
-        /* OAuth */
         .signup-oauth {
           width: 100%; height: 46px;
-          background: var(--surface);
-          border: 1.5px solid var(--divider);
+          background: var(--surface); border: 1.5px solid var(--divider);
           border-radius: var(--r-md);
-          font-family: var(--font);
-          font-size: 13px; font-weight: 600;
-          color: var(--text-2);
+          font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--text-2);
           cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-          gap: 10px;
+          display: flex; align-items: center; justify-content: center; gap: 10px;
           box-shadow: var(--e1);
           transition: border-color var(--md-duration-short) var(--md-motion-standard),
                       box-shadow var(--md-duration-short) var(--md-motion-standard),
                       color var(--md-duration-short);
         }
-        .signup-oauth:hover {
-          border-color: var(--blue-200);
-          box-shadow: var(--e2);
-          color: var(--text-1);
-        }
+        .signup-oauth:hover { border-color: var(--blue-200); box-shadow: var(--e2); color: var(--text-1); }
 
         .signup-login-nudge {
-          margin-top: var(--md-space-6);
-          text-align: center; font-size: 13px; color: var(--text-3);
+          margin-top: var(--md-space-6); text-align: center;
+          font-size: 13px; color: var(--text-3);
         }
         .signup-login-nudge a {
           color: var(--blue-600); text-decoration: none; font-weight: 600;
           transition: color var(--md-duration-short);
         }
         .signup-login-nudge a:hover { color: var(--blue-700); text-decoration: underline; }
-
-        /* Terms */
         .signup-terms {
-          margin-top: var(--md-space-4);
-          font-size: 11.5px; color: var(--text-3);
+          margin-top: var(--md-space-4); font-size: 11.5px; color: var(--text-3);
           text-align: center; line-height: 1.6;
         }
-        .signup-terms a {
-          color: var(--blue-600); text-decoration: none;
-          transition: color var(--md-duration-short);
-        }
+        .signup-terms a { color: var(--blue-600); text-decoration: none; transition: color var(--md-duration-short); }
         .signup-terms a:hover { color: var(--blue-700); text-decoration: underline; }
 
         @media (max-width: 768px) {
@@ -428,8 +378,7 @@ export default function SignupPage() {
       `}</style>
 
       <div className="signup-shell">
-
-        {/* ── Left panel ── */}
+        {/* Left panel */}
         <div className="signup-panel-left">
           <a href="/" className="signup-brand">
             <div className="signup-brand-icon">
@@ -450,8 +399,6 @@ export default function SignupPage() {
             <p className="signup-body-text">
               Whether you're booking a clean or offering your services, CleanOps connects the right people at the right time.
             </p>
-
-            {/* Dynamic benefit cards */}
             <div className="signup-benefits">
               <div className={`benefit-card ${role === 'customer' ? 'active-benefit' : ''}`}>
                 <div className="benefit-icon">
@@ -487,25 +434,20 @@ export default function SignupPage() {
               <div className="signup-avatar signup-avatar-b">ML</div>
               <div className="signup-avatar signup-avatar-c">AK</div>
             </div>
-            <p className="signup-footer-text">
-              Join <strong>2,000+</strong> happy users
-            </p>
+            <p className="signup-footer-text">Join <strong>2,000+</strong> happy users</p>
           </div>
         </div>
 
-        {/* ── Right form panel ── */}
+        {/* Right form panel */}
         <div className="signup-panel-right">
           <div className="signup-form-wrap">
-
             <div className="signup-form-header">
               <h2 className="signup-form-title">Create account</h2>
               <p className="signup-form-sub">
-                Already have an account?{' '}
-                <Link href="/login">Sign in</Link>
+                Already have an account? <Link href="/login">Sign in</Link>
               </p>
             </div>
 
-            {/* Role toggle */}
             <div className="role-toggle-wrap">
               <label className="role-toggle-label">I am a…</label>
               <div className="role-toggle">
@@ -536,18 +478,13 @@ export default function SignupPage() {
             </div>
 
             <form onSubmit={handleSubmit}>
-              {/* Full name */}
               <div className="signup-field">
                 <label className="signup-label" htmlFor="fullName">Full name</label>
                 <div className="signup-input-wrap">
                   <input
-                    id="fullName"
-                    className="signup-input"
-                    type="text"
-                    autoComplete="name"
-                    placeholder="John Doe"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    id="fullName" className="signup-input" type="text"
+                    autoComplete="name" placeholder="John Doe"
+                    value={fullName} onChange={(e) => setFullName(e.target.value)}
                   />
                   <span className="signup-input-icon">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -558,18 +495,13 @@ export default function SignupPage() {
                 </div>
               </div>
 
-              {/* Email */}
               <div className="signup-field">
                 <label className="signup-label" htmlFor="email">Email</label>
                 <div className="signup-input-wrap">
                   <input
-                    id="email"
-                    className="signup-input"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="email" className="signup-input" type="email"
+                    autoComplete="email" placeholder="you@example.com"
+                    value={email} onChange={(e) => setEmail(e.target.value)}
                   />
                   <span className="signup-input-icon">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -580,24 +512,19 @@ export default function SignupPage() {
                 </div>
               </div>
 
-              {/* Password */}
               <div className="signup-field">
                 <label className="signup-label" htmlFor="password">Password</label>
                 <div className="signup-input-wrap">
                   <input
-                    id="password"
-                    className="signup-input"
+                    id="password" className="signup-input"
                     type={showPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    placeholder="Min. 6 characters"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password" placeholder="Min. 6 characters"
+                    value={password} onChange={(e) => setPassword(e.target.value)}
                   />
                   <span
                     className="signup-input-icon clickable"
                     onClick={() => setShowPassword(!showPassword)}
-                    role="button"
-                    aria-label="Toggle password visibility"
+                    role="button" aria-label="Toggle password visibility"
                   >
                     {showPassword ? (
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -613,7 +540,6 @@ export default function SignupPage() {
                   </span>
                 </div>
 
-                {/* Password strength indicator */}
                 {password.length > 0 && (() => {
                   const len = password.length;
                   const strength = len < 6 ? 'weak' : len < 10 ? 'fair' : 'strong';
@@ -622,10 +548,7 @@ export default function SignupPage() {
                     <div className="pw-strength">
                       <div className="pw-bars">
                         {[0, 1, 2].map(i => (
-                          <div
-                            key={i}
-                            className={`pw-bar ${i < fills ? `fill-${strength}` : ''}`}
-                          />
+                          <div key={i} className={`pw-bar ${i < fills ? `fill-${strength}` : ''}`} />
                         ))}
                       </div>
                       <span className={`pw-label ${strength}`}>
@@ -676,10 +599,8 @@ export default function SignupPage() {
               {' '}and{' '}
               <Link href="/privacy">Privacy Policy</Link>.
             </p>
-
           </div>
         </div>
-
       </div>
     </>
   );

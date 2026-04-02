@@ -1,40 +1,34 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/authContext';
 import toast from 'react-hot-toast';
+
+// ---------------------------------------------------------------------------
+// LoginPage — refactored for instant redirect.
+//
+// OLD: signIn → wait for onAuthStateChange → wait for fetchProfile → useEffect
+//      detects profile → router.push                    (up to 2-3s)
+//
+// NEW: signIn → read role from the JWT that Supabase returns RIGHT NOW →
+//      router.push immediately                           (~0ms extra)
+//
+// The authContext picks up the session via onAuthStateChange in the background
+// and loads the full DB profile without blocking the user at all.
+// ---------------------------------------------------------------------------
+
+function dashboardForRole(role?: string) {
+  return role === 'employee' ? '/homepage' : '/dashboard';
+}
 
 export default function LoginPage() {
   const router = useRouter();
-  const { profile } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [awaitingRedirect, setAwaitingRedirect] = useState(false);
-
-  // Once auth context populates the profile, navigate to the correct dashboard.
-  // This avoids the duplicate api.getProfile() call that races with onAuthStateChange.
-  useEffect(() => {
-    if (!awaitingRedirect) return;
-
-    if (profile) {
-      const dashboardPath = profile.role === 'employee' ? '/homepage' : '/dashboard';
-      router.push(dashboardPath);
-      return;
-    }
-
-    // Safety fallback: if profile hasn't loaded in 5s, redirect to root and
-    // let the app's route guards determine the correct destination.
-    const timer = setTimeout(() => {
-      router.push('/');
-    }, 5000);
-
-    return () => clearTimeout(timer);
-  }, [awaitingRedirect, profile, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,29 +38,33 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
         password,
       });
+
       if (error) {
         toast.error(error.message ?? 'Sign in failed');
-        setLoading(false);
         return;
       }
-      // Sign-in succeeded. The authContext onAuthStateChange listener will
-      // fetch the profile automatically. We just set a flag and the useEffect
-      // above will redirect once profile is available.
-      toast.success('Signed in successfully');
-      setAwaitingRedirect(true);
+
+      // ── INSTANT REDIRECT ────────────────────────────────────────────────
+      // The JWT returned by Supabase contains user_metadata (set at sign-up).
+      // We don't need a DB round-trip to know where to send the user.
+      // ────────────────────────────────────────────────────────────────────
+      const role = data.session?.user?.user_metadata?.role as string | undefined;
+      toast.success('Signed in!');
+      router.push(dashboardForRole(role));
     } catch (err: any) {
-      // AbortError is thrown by the Supabase SDK when it cleans up internal
-      // abort signals after a successful auth. The sign-in still succeeded.
+      // AbortError is a harmless Supabase SDK internal cleanup signal.
+      // The sign-in still succeeded — redirect anyway.
       if (err?.name === 'AbortError') {
-        toast.success('Signed in successfully');
-        setAwaitingRedirect(true);
+        toast.success('Signed in!');
+        router.push('/dashboard'); // safe fallback; authContext will correct role
         return;
       }
       toast.error(err?.message || 'Sign in failed');
+    } finally {
       setLoading(false);
     }
   }
@@ -81,8 +79,6 @@ export default function LoginPage() {
           background: var(--bg);
           font-family: var(--font);
         }
-
-        /* ── Left brand panel ── */
         .login-panel-left {
           position: relative;
           display: flex;
@@ -110,7 +106,6 @@ export default function LoginPage() {
           background: rgba(255,255,255,0.04);
           pointer-events: none;
         }
-
         .left-brand {
           display: flex;
           align-items: center;
@@ -120,23 +115,14 @@ export default function LoginPage() {
           z-index: 1;
         }
         .left-brand-icon {
-          width: 38px;
-          height: 38px;
+          width: 38px; height: 38px;
           border-radius: 10px;
           background: rgba(255,255,255,0.18);
           border: 1.5px solid rgba(255,255,255,0.28);
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          display: flex; align-items: center; justify-content: center;
           backdrop-filter: blur(4px);
         }
-        .left-brand-name {
-          font-size: 18px;
-          font-weight: 700;
-          color: #fff;
-          letter-spacing: -0.3px;
-        }
-
+        .left-brand-name { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
         .left-content {
           flex: 1;
           display: flex;
@@ -147,66 +133,39 @@ export default function LoginPage() {
           z-index: 1;
         }
         .left-eyebrow {
-          font-size: 11px;
-          font-weight: 600;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          color: rgba(255,255,255,0.6);
+          font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
+          text-transform: uppercase; color: rgba(255,255,255,0.6);
           margin-bottom: var(--md-space-4);
         }
         .left-headline {
           font-family: var(--md-font-display);
           font-size: clamp(28px, 3vw, 40px);
-          font-weight: 700;
-          line-height: 1.12;
-          color: #fff;
-          letter-spacing: -0.5px;
+          font-weight: 700; line-height: 1.12;
+          color: #fff; letter-spacing: -0.5px;
           margin: 0 0 var(--md-space-6);
         }
-        .left-headline span {
-          opacity: 0.7;
-          font-weight: 300;
-        }
+        .left-headline span { opacity: 0.7; font-weight: 300; }
         .left-body-text {
-          font-size: 14px;
-          color: rgba(255,255,255,0.65);
-          line-height: 1.7;
-          max-width: 340px;
+          font-size: 14px; color: rgba(255,255,255,0.65);
+          line-height: 1.7; max-width: 340px;
           margin-bottom: var(--md-space-10);
         }
-
-        .left-stats {
-          display: flex;
-          align-items: center;
-          gap: var(--md-space-6);
-        }
+        .left-stats { display: flex; align-items: center; gap: var(--md-space-6); }
         .left-stat { display: flex; flex-direction: column; gap: 2px; }
         .left-stat-num {
           font-family: var(--md-font-display);
-          font-size: 22px;
-          font-weight: 700;
-          color: #fff;
-          line-height: 1;
+          font-size: 22px; font-weight: 700; color: #fff; line-height: 1;
         }
         .left-stat-label { font-size: 11px; color: rgba(255,255,255,0.55); letter-spacing: 0.04em; }
         .left-stat-divider { width: 1px; height: 34px; background: rgba(255,255,255,0.15); }
-
-        .left-footer {
-          display: flex;
-          align-items: center;
-          gap: var(--md-space-3);
-          position: relative;
-          z-index: 1;
-        }
+        .left-footer { display: flex; align-items: center; gap: var(--md-space-3); position: relative; z-index: 1; }
         .left-avatars { display: flex; }
         .left-avatar {
-          width: 30px; height: 30px;
-          border-radius: 50%;
+          width: 30px; height: 30px; border-radius: 50%;
           border: 2px solid var(--blue-700);
           display: flex; align-items: center; justify-content: center;
           font-size: 10px; font-weight: 700; color: #fff;
-          margin-left: -6px;
-          background: var(--blue-500);
+          margin-left: -6px; background: var(--blue-500);
         }
         .left-avatar:first-child { margin-left: 0; }
         .left-avatar-b { background: var(--blue-400); }
@@ -214,71 +173,52 @@ export default function LoginPage() {
         .left-footer-text { font-size: 12px; color: rgba(255,255,255,0.55); }
         .left-footer-text strong { color: rgba(255,255,255,0.85); font-weight: 600; }
 
-        /* ── Right form panel ── */
+        /* Right form panel */
         .login-panel-right {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
+          display: flex; flex-direction: column;
+          align-items: center; justify-content: center;
           padding: var(--md-space-12) 48px;
           background: var(--surface);
         }
-
         .login-form-wrap {
-          width: 100%;
-          max-width: 390px;
+          width: 100%; max-width: 390px;
           animation: md-fade-in var(--md-duration-medium) var(--md-motion-decelerate) both;
         }
-
         .login-form-header { margin-bottom: var(--md-space-8); }
-
         .login-form-title {
           font-family: var(--md-font-display);
           font-size: var(--md-text-headline-md);
-          font-weight: 700;
-          color: var(--text-1);
+          font-weight: 700; color: var(--text-1);
           margin: 0 0 var(--md-space-2);
-          letter-spacing: -0.3px;
-          line-height: 1.15;
+          letter-spacing: -0.3px; line-height: 1.15;
         }
         .login-form-sub { font-size: var(--md-text-body-md); color: var(--text-3); margin: 0; }
         .login-form-sub a {
-          color: var(--blue-600);
-          text-decoration: none;
-          font-weight: 600;
+          color: var(--blue-600); text-decoration: none; font-weight: 600;
           transition: color var(--md-duration-short) var(--md-motion-standard);
         }
         .login-form-sub a:hover { color: var(--blue-700); text-decoration: underline; }
 
-        /* Fields */
         .login-field { margin-bottom: var(--md-space-4); }
         .login-field-row {
-          display: flex;
-          align-items: center;
+          display: flex; align-items: center;
           justify-content: space-between;
           margin-bottom: var(--md-space-2);
         }
         .login-label {
           display: block;
-          font-size: 11px;
-          font-weight: 600;
-          color: var(--text-2);
-          letter-spacing: 0.07em;
-          text-transform: uppercase;
+          font-size: 11px; font-weight: 600; color: var(--text-2);
+          letter-spacing: 0.07em; text-transform: uppercase;
           margin-bottom: var(--md-space-2);
         }
         .login-input-wrap { position: relative; }
         .login-input {
-          width: 100%;
-          height: 46px;
+          width: 100%; height: 46px;
           background: var(--surface-2);
           border: 1.5px solid var(--divider);
           border-radius: var(--r-md);
-          color: var(--text-1);
-          font-family: var(--font);
-          font-size: 14px;
-          padding: 0 46px 0 14px;
-          outline: none;
+          color: var(--text-1); font-family: var(--font); font-size: 14px;
+          padding: 0 46px 0 14px; outline: none;
           transition: border-color var(--md-duration-short) var(--md-motion-standard),
                       box-shadow var(--md-duration-short) var(--md-motion-standard),
                       background var(--md-duration-short) var(--md-motion-standard);
@@ -287,57 +227,39 @@ export default function LoginPage() {
         .login-input::placeholder { color: var(--text-3); }
         .login-input:hover { border-color: var(--blue-200); }
         .login-input:focus {
-          border-color: var(--blue-400);
-          background: var(--surface);
+          border-color: var(--blue-400); background: var(--surface);
           box-shadow: 0 0 0 3px rgba(33,150,243,0.12);
         }
         .login-input-icon {
-          position: absolute;
-          right: 13px; top: 50%;
+          position: absolute; right: 13px; top: 50%;
           transform: translateY(-50%);
-          color: var(--text-3);
-          display: flex;
-          align-items: center;
+          color: var(--text-3); display: flex; align-items: center;
           pointer-events: none;
         }
         .login-input-icon.clickable {
-          pointer-events: auto;
-          cursor: pointer;
+          pointer-events: auto; cursor: pointer;
           transition: color var(--md-duration-short) var(--md-motion-standard);
         }
         .login-input-icon.clickable:hover { color: var(--blue-600); }
-
         .login-forgot {
-          font-size: 12px;
-          color: var(--text-3);
-          text-decoration: none;
-          font-weight: 500;
+          font-size: 12px; color: var(--text-3);
+          text-decoration: none; font-weight: 500;
           transition: color var(--md-duration-short) var(--md-motion-standard);
         }
         .login-forgot:hover { color: var(--blue-600); }
 
-        /* Submit */
         .login-submit {
-          width: 100%;
-          height: 46px;
-          background: var(--blue-600);
-          border: none;
+          width: 100%; height: 46px;
+          background: var(--blue-600); border: none;
           border-radius: var(--r-md);
-          font-family: var(--font);
-          font-size: 14px;
-          font-weight: 700;
-          color: #fff;
-          cursor: pointer;
-          margin-top: var(--md-space-2);
+          font-family: var(--font); font-size: 14px; font-weight: 700; color: #fff;
+          cursor: pointer; margin-top: var(--md-space-2);
           box-shadow: 0 4px 14px rgba(25,118,210,0.35);
           transition: background var(--md-duration-short) var(--md-motion-standard),
                       box-shadow var(--md-duration-short) var(--md-motion-standard),
                       transform var(--md-duration-short) var(--md-motion-emphasized);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          letter-spacing: -0.01em;
+          display: flex; align-items: center; justify-content: center;
+          gap: 8px; letter-spacing: -0.01em;
         }
         .login-submit:hover:not(:disabled) {
           background: var(--blue-700);
@@ -346,7 +268,6 @@ export default function LoginPage() {
         }
         .login-submit:active:not(:disabled) { transform: scale(0.99); }
         .login-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-
         .login-spinner {
           width: 16px; height: 16px;
           border: 2px solid rgba(255,255,255,0.3);
@@ -356,59 +277,33 @@ export default function LoginPage() {
         }
         @keyframes login-spin { to { transform: rotate(360deg); } }
 
-        /* Divider */
         .login-divider {
-          display: flex;
-          align-items: center;
-          gap: var(--md-space-3);
-          margin: var(--md-space-5) 0;
+          display: flex; align-items: center;
+          gap: var(--md-space-3); margin: var(--md-space-5) 0;
         }
         .login-divider-line { flex: 1; height: 1px; background: var(--divider); }
-        .login-divider-text {
-          font-size: 11px;
-          font-weight: 600;
-          letter-spacing: 0.08em;
-          color: var(--text-3);
-        }
+        .login-divider-text { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--text-3); }
 
-        /* OAuth */
         .login-oauth {
-          width: 100%;
-          height: 46px;
-          background: var(--surface);
-          border: 1.5px solid var(--divider);
+          width: 100%; height: 46px;
+          background: var(--surface); border: 1.5px solid var(--divider);
           border-radius: var(--r-md);
-          font-family: var(--font);
-          font-size: 13px;
-          font-weight: 600;
-          color: var(--text-2);
+          font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--text-2);
           cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
+          display: flex; align-items: center; justify-content: center; gap: 10px;
           box-shadow: var(--e1);
           transition: border-color var(--md-duration-short) var(--md-motion-standard),
                       box-shadow var(--md-duration-short) var(--md-motion-standard),
                       color var(--md-duration-short);
         }
-        .login-oauth:hover {
-          border-color: var(--blue-200);
-          box-shadow: var(--e2);
-          color: var(--text-1);
-        }
+        .login-oauth:hover { border-color: var(--blue-200); box-shadow: var(--e2); color: var(--text-1); }
 
-        /* Signup nudge */
         .login-signup-nudge {
-          margin-top: var(--md-space-6);
-          text-align: center;
-          font-size: 13px;
-          color: var(--text-3);
+          margin-top: var(--md-space-6); text-align: center;
+          font-size: 13px; color: var(--text-3);
         }
         .login-signup-nudge a {
-          color: var(--blue-600);
-          text-decoration: none;
-          font-weight: 600;
+          color: var(--blue-600); text-decoration: none; font-weight: 600;
           transition: color var(--md-duration-short);
         }
         .login-signup-nudge a:hover { color: var(--blue-700); text-decoration: underline; }
@@ -421,11 +316,15 @@ export default function LoginPage() {
       `}</style>
 
       <div className="login-shell">
-
         {/* Left panel */}
         <div className="login-panel-left">
           <a href="/" className="left-brand">
-        
+            <div className="left-brand-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M3 21l7-7m0 0l7.5-7.5M10 14l2-2m5.5-5.5L20 3M10 14L6 10l8.5-8.5 4 4L10 14z"
+                  stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
             <span className="left-brand-name">CleanOps</span>
           </a>
 
@@ -462,16 +361,13 @@ export default function LoginPage() {
               <div className="left-avatar left-avatar-b">ML</div>
               <div className="left-avatar left-avatar-c">AK</div>
             </div>
-            <p className="left-footer-text">
-              Trusted by <strong>2,000+</strong> households
-            </p>
+            <p className="left-footer-text">Trusted by <strong>2,000+</strong> households</p>
           </div>
         </div>
 
-        {/* Right panel */}
+        {/* Right form panel */}
         <div className="login-panel-right">
           <div className="login-form-wrap">
-
             <div className="login-form-header">
               <h2 className="login-form-title">Welcome back</h2>
               <p className="login-form-sub">
@@ -575,10 +471,8 @@ export default function LoginPage() {
             <p className="login-signup-nudge">
               Don&apos;t have an account? <Link href="/signup">Sign up free</Link>
             </p>
-
           </div>
         </div>
-
       </div>
     </>
   );
