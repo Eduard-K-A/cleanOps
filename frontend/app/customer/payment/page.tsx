@@ -52,8 +52,8 @@ function PaymentContent() {
     setLoading(true);
     try {
       // Since we're using Server Actions and Supabase, payment is already held in escrow
-      // Just approve the job completion for demo purposes
-      await approveJobCompletion(jobId);
+      // upon job creation. We just simulate a short processing delay here.
+      await new Promise((resolve) => setTimeout(resolve, 800));
       
       sessionStorage.removeItem('cleanops_payment');
       toast.success('Payment authorized (mock). Funds are held in escrow until you approve the job.');
