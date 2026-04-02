@@ -24,7 +24,7 @@ export default function Navbar() {
     { href: '/homepage', label: 'Home' },
     { href: '/customer/order', label: 'Book service' },
     { href: '/customer/requests', label: 'My requests' },
-    { href: '/customer/dashboard', label: 'Dashboard' },
+    { href: '/dashboard', label: 'Dashboard' },
   ];
 
   const links = !mounted || !isLoggedIn
