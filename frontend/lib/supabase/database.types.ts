@@ -12,7 +12,7 @@ export interface Database {
       profiles: {
         Row: {
           id: string
-          role: 'customer' | 'employee'
+          role: 'customer' | 'employee' | 'admin'
           money_balance: number
           rating: number | null
           location_lat: number | null
@@ -24,7 +24,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          role: 'customer' | 'employee'
+          role: 'customer' | 'employee' | 'admin'
           money_balance?: number
           rating?: number | null
           location_lat?: number | null
@@ -36,7 +36,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          role?: 'customer' | 'employee'
+          role?: 'customer' | 'employee' | 'admin'
           money_balance?: number
           rating?: number | null
           location_lat?: number | null

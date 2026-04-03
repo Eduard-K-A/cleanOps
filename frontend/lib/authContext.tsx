@@ -11,6 +11,7 @@ import React, {
 import { type User, type Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { api } from './api';
+import { syncJwtMetadata } from './authUtils';
 import type { Profile } from '@/types';
 
 interface AuthContextType {
@@ -39,7 +40,7 @@ function buildOptimisticProfile(user: User): Profile | null {
   if (!meta.role) return null;
   return {
     id: user.id,
-    role: meta.role as 'customer' | 'employee',
+    role: meta.role as 'customer' | 'employee' | 'admin',
     full_name: meta.full_name ?? '',
     email: user.email ?? '',
     // all other optional fields stay undefined — pages must handle that
@@ -82,15 +83,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem('cleanops_role', response.data.role);
           localStorage.setItem('cleanops_role_id', userId);
         }
+
+        // SYNC JWT METADATA: Keep JWT in sync with database role
+        // This ensures JWT metadata is always reliable for authentication
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user && session.user.id === userId) {
+          await syncJwtMetadata(session.user);
+        }
       }
-      // ⚠️  Do NOT set profile=null here. A 404 during sign-up is normal
+      // Do NOT set profile=null here. A 404 during sign-up is normal
       // (profile row may not exist yet). Keep the optimistic value.
     } catch {
       // Silently keep existing optimistic profile on error.
     } finally {
       setProfileLoading(false);
     }
-  }, []);
+  }, [supabase]);
 
   const refetchProfile = useCallback(async () => {
     if (user?.id) await fetchProfile(user.id);
