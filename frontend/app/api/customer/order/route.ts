@@ -22,6 +22,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (typeof body.distance !== 'number' || isNaN(body.distance) || body.distance <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'Estimated distance must be a valid number greater than 0', code: 400 },
+        { status: 400 }
+      );
+    }
     if (!body.price_amount || body.price_amount <= 0) {
       return NextResponse.json(
         { success: false, error: 'Invalid price amount', code: 400 },
@@ -29,12 +35,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert CreateJobRequest to match Server Action expectations
     const jobData = {
       title: `Cleaning Job - ${body.tasks.map(t => t.name).join(', ')}`,
       tasks: body.tasks.map(t => t.name),
       urgency: body.urgency, // Keep original case (LOW, NORMAL, HIGH)
       address: body.address,
+      distance: body.distance,
       price: body.price_amount,
       platformFee: Math.round(body.price_amount * 0.15),
     };
