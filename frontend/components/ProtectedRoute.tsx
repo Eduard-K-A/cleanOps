@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/authContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'customer' | 'employee';
+  requiredRole?: 'customer' | 'employee' | 'admin';
   redirectTo?: string;
 }
 
@@ -110,7 +110,14 @@ export function ProtectedRoute({ children, requiredRole, redirectTo }: Protected
       return;
     }
 
-    if (requiredRole && profile?.role && profile.role !== requiredRole) {
+    if (profile?.role === 'admin') {
+      if (requiredRole && requiredRole !== 'admin') {
+        setIsRedirecting(true);
+        router.push('/admin/dashboard');
+        return;
+      }
+      // Admins bypass all other checks if they hit a generic or admin route
+    } else if (requiredRole && profile?.role && profile?.role !== requiredRole) {
       setIsRedirecting(true);
       router.push(redirectTo ?? '/');
       return;
@@ -123,8 +130,13 @@ export function ProtectedRoute({ children, requiredRole, redirectTo }: Protected
   // profile is populated immediately by the cache useEffect in AuthProvider
   // (before getSession resolves). If it passes the role check, render children
   // right away — Supabase validation still runs in background.
+  
+  // If user is admin and requiredRole is something else, this optimistic 
+  // check will fail so they don't see unauthorized UI before redirect.
   const cachedRolePasses = profile?.role !== undefined &&
-    (!requiredRole || profile.role === requiredRole);
+    profile?.role === 'admin' 
+      ? (!requiredRole || requiredRole === 'admin') 
+      : (!requiredRole || profile?.role === requiredRole);
 
   if (cachedRolePasses && !isRedirecting) {
     return <>{children}</>;
@@ -144,7 +156,9 @@ export function ProtectedRoute({ children, requiredRole, redirectTo }: Protected
     return <RedirectingSkeleton label="Redirecting to sign in…" />;
   }
 
-  if (requiredRole && profile?.role && profile.role !== requiredRole) {
+  if (profile?.role === 'admin' && requiredRole && requiredRole !== 'admin') {
+    return <RedirectingSkeleton />;
+  } else if (profile?.role !== 'admin' && requiredRole && profile?.role && profile?.role !== requiredRole) {
     return <RedirectingSkeleton />;
   }
 
