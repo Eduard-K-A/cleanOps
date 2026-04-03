@@ -23,10 +23,8 @@ export interface Job {
   urgency: JobUrgency;
   price_amount: number;
   money_transaction_id?: string | null;
-  location_coordinates?: unknown;
   location_address?: string | null;
-  location_lat?: number | null;
-  location_lng?: number | null;
+  distance?: number | null;
   tasks: string[];
   proof_of_work: string[];
   created_at: string;
@@ -41,8 +39,7 @@ export interface ApiError {
 
 export interface CreateJobBody {
   size?: string;
-  location_lat: number;
-  location_lng: number;
+  distance?: number;
   urgency: JobUrgency;
   tasks: string[];
   price_amount: number;
@@ -51,8 +48,8 @@ export interface CreateJobBody {
 export interface CreateJobRequest {
   urgency: JobUrgency;
   price_amount: number;
-  // Client now only collects an address string; lat/lng may be resolved later.
   address: string;
+  distance: number;
   tasks: Array<{
     id: string;
     name: string;
