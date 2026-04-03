@@ -233,8 +233,9 @@ function StepSize() {
 }
 
 function StepLocation() {
-  const { address, setLocation, setStep } = useBookingStore();
+  const { address, distance, setLocation, setDistance, setStep } = useBookingStore();
   const [addr, setAddr] = useState(address);
+  const [dist, setDist] = useState(distance);
 
   const handleNext = () => {
     // Use strict address validation
@@ -243,7 +244,16 @@ function StepLocation() {
       toast.error(validation.error || 'Invalid address format');
       return;
     }
+    
+    // Distance validation
+    const parsedDist = parseFloat(dist);
+    if (!dist || isNaN(parsedDist) || parsedDist <= 0) {
+      toast.error('Estimated distance must be a valid number greater than 0');
+      return;
+    }
+
     setLocation(addr.trim());
+    setDistance(dist.trim());
     setStep('urgency');
   };
 
@@ -257,7 +267,7 @@ function StepLocation() {
           <div>
             <CardTitle className="text-xl text-white">Job Location</CardTitle>
             <CardDescription className="text-blue-100">
-              Tell us where the cleaning job is located
+              Tell us where the cleaning job is located and its distance from City Hall
             </CardDescription>
           </div>
         </div>
@@ -278,6 +288,22 @@ function StepLocation() {
             <span className="h-1 w-1 rounded-full bg-gray-400" />
             Format: "Street Address, City, ZIP"
           </p>
+        </div>
+
+        <div className="space-y-3">
+          <Label htmlFor="distance" className="text-base font-semibold text-gray-900">
+            Estimated Distance from City Hall (KM)
+          </Label>
+          <Input
+            id="distance"
+            type="number"
+            min="0.1"
+            step="0.1"
+            placeholder="e.g. 5.5"
+            value={dist}
+            onChange={(e) => setDist(e.target.value)}
+            className="h-12 text-base border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+          />
         </div>
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -441,7 +467,7 @@ function StepUrgency() {
 }
 
 function StepPayment() {
-  const { address, urgency, tasks, price_amount, reset, setStep } = useBookingStore();
+  const { address, distance, urgency, tasks, price_amount, reset, setStep } = useBookingStore();
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -464,6 +490,7 @@ function StepPayment() {
         urgency,
         price_amount,
         address: address,
+        distance: parseFloat(distance),
         tasks: tasks.map((task, index) => ({
           id: `task-${index}`,
           name: task,

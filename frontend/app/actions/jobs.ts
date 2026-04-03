@@ -1,12 +1,12 @@
 'use server'
 import { createClient } from '@/lib/supabase/server'
-import { generateMockCoordinates } from '@/lib/mockLocations'
 
 export async function createJob(jobData: {
   title: string
   tasks: string[]
   urgency: 'LOW' | 'NORMAL' | 'HIGH'  // Changed to uppercase to match JobUrgency type
   address: string
+  distance: number
   price: number
   platformFee: number
 }) {
@@ -21,10 +21,7 @@ export async function createJob(jobData: {
 
   try {
     console.log('Starting job creation process...');
-    
-    // Generate mock coordinates for the user's address
-    const coordinates = generateMockCoordinates(jobData.address)
-    console.log('Using user address:', jobData.address, 'with mock coordinates:', coordinates)
+    console.log('Using user address:', jobData.address, 'with distance:', jobData.distance);
 
     // Hold escrow first - check balance
     console.log('Checking user balance...');
@@ -85,7 +82,7 @@ export async function createJob(jobData: {
       throw new Error('Failed to update balance')
     }
 
-    // Create the job with user's address and mock coordinates
+    // Create the job with user's address and distance
     console.log('Creating job in database...');
     const { data, error } = await (supabase as any)
       .from('jobs')
@@ -94,8 +91,7 @@ export async function createJob(jobData: {
           customer_id: user.id,
           urgency: jobData.urgency, // Already uppercase (LOW, NORMAL, HIGH)
           location_address: jobData.address,
-          location_lat: coordinates.lat,
-          location_lng: coordinates.lng,
+          distance: jobData.distance,
           price_amount: jobData.price,
           status: 'OPEN',
           tasks: jobData.tasks,

@@ -56,10 +56,8 @@ export interface Database {
           urgency: 'LOW' | 'NORMAL' | 'HIGH'
           price_amount: number
           money_transaction_id: string | null
-          location_coordinates: string | null
           location_address: string | null
-          location_lat: number | null
-          location_lng: number | null
+          distance: number | null
           tasks: Json
           proof_of_work: Json
           created_at: string
@@ -73,10 +71,8 @@ export interface Database {
           urgency?: 'LOW' | 'NORMAL' | 'HIGH'
           price_amount: number
           money_transaction_id?: string | null
-          location_coordinates?: string | null
           location_address?: string | null
-          location_lat?: number | null
-          location_lng?: number | null
+          distance?: number | null
           tasks?: Json
           proof_of_work?: Json
           created_at?: string
@@ -90,10 +86,8 @@ export interface Database {
           urgency?: 'LOW' | 'NORMAL' | 'HIGH'
           price_amount?: number
           money_transaction_id?: string | null
-          location_coordinates?: string | null
           location_address?: string | null
-          location_lat?: number | null
-          location_lng?: number | null
+          distance?: number | null
           tasks?: Json
           proof_of_work?: Json
           created_at?: string
