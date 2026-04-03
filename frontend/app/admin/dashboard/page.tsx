@@ -8,6 +8,7 @@ import { TopAppBar } from '@/components/layout/TopAppBar';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { getKpiTrend, getAllJobsAdmin, getAllUsersAdmin } from '@/app/actions/admin';
 import { Briefcase, DollarSign, Users, Clock, ArrowRight, UserCheck } from 'lucide-react';
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
 
 export default function AdminDashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -30,9 +31,13 @@ export default function AdminDashboardPage() {
       <ProtectedRoute requiredRole="admin">
         <div className="flex h-screen overflow-hidden bg-slate-50">
           <NavigationDrawer isMobileOpen={isMobileMenuOpen} setIsMobileOpen={setIsMobileMenuOpen} />
-          <div className="flex-1 flex flex-col">
-            <TopAppBar onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} title="Dashboard" />
-            <div className="flex-1 flex items-center justify-center p-6"><div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <TopAppBar onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} title="Dashboard Overview" />
+            <main className="flex-1 overflow-auto p-6">
+              <div className="max-w-7xl mx-auto">
+                <DashboardSkeleton />
+              </div>
+            </main>
           </div>
         </div>
       </ProtectedRoute>

@@ -154,3 +154,142 @@ export function PageSkeleton() {
     </main>
   );
 }
+
+/**
+ * Skeleton for dashboard page
+ */
+export function DashboardSkeleton() {
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="space-y-2">
+        <Skeleton variant="text" width="300px" height={32} />
+        <Skeleton variant="text" width="450px" height={20} />
+      </div>
+
+      {/* KPI Stats Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <Skeleton variant="circular" width={48} height={48} />
+            <div className="flex-1 space-y-2">
+              <Skeleton variant="text" width="60%" height={16} />
+              <Skeleton variant="text" width="40%" height={24} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {[1, 2].map((i) => (
+          <div key={i} className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col">
+            <div className="p-5 border-b border-slate-100 flex justify-between items-center">
+              <Skeleton variant="text" width="120px" height={24} />
+              <Skeleton variant="text" width="80px" height={20} />
+            </div>
+            <div className="p-4 space-y-4">
+              {[1, 2, 3, 4, 5].map((j) => (
+                <div key={j} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1">
+                    {i === 2 && <Skeleton variant="circular" width={40} height={40} />}
+                    <div className="flex-1 space-y-1">
+                      <Skeleton variant="text" width="70%" height={16} />
+                      <Skeleton variant="text" width="40%" height={12} />
+                    </div>
+                  </div>
+                  <Skeleton variant="rectangular" width={60} height={20} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Skeleton for analytics page
+ */
+export function AnalyticsSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="space-y-2">
+          <Skeleton variant="text" width="250px" height={28} />
+          <Skeleton variant="text" width="350px" height={20} />
+        </div>
+        <div className="flex gap-2">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} variant="rectangular" width={48} height={32} />
+          ))}
+        </div>
+      </div>
+
+      {/* KPI Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+            <Skeleton variant="circular" width={40} height={40} />
+            <div className="space-y-2">
+              <Skeleton variant="text" width="60%" height={20} />
+              <Skeleton variant="text" width="40%" height={32} />
+            </div>
+            <Skeleton variant="text" width="30%" height={16} />
+          </div>
+        ))}
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {[1, 2].map((i) => (
+          <div key={i} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm h-80">
+            <Skeleton variant="text" width="150px" height={24} className="mb-6" />
+            <Skeleton variant="rectangular" width="100%" height="80%" />
+          </div>
+        ))}
+      </div>
+
+      {/* Bottom Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Pie Chart placeholder */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm h-[450px]">
+          <Skeleton variant="text" width="180px" height={24} className="mb-6" />
+          <div className="flex flex-col items-center justify-center space-y-8">
+            <Skeleton variant="circular" width={180} height={180} />
+            <div className="grid grid-cols-2 gap-4 w-full">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} variant="rectangular" width="100%" height={32} />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Leaderboards */}
+        {[1, 2].map((i) => (
+          <div key={i} className="bg-white rounded-xl border border-slate-200 shadow-sm h-[450px] overflow-hidden">
+            <div className="p-5 border-b border-slate-100">
+              <Skeleton variant="text" width="160px" height={24} />
+            </div>
+            <div className="p-4 space-y-4">
+              {[1, 2, 3, 4, 5].map((j) => (
+                <div key={j} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1">
+                    <Skeleton variant="circular" width={32} height={32} />
+                    <div className="flex-1 space-y-1">
+                      <Skeleton variant="text" width="60%" height={16} />
+                      <Skeleton variant="text" width="40%" height={12} />
+                    </div>
+                  </div>
+                  <Skeleton variant="text" width="50px" height={20} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
