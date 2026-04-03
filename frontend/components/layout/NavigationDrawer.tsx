@@ -4,9 +4,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
+import { createClient } from '@/lib/supabase/client';
 import {
   LayoutDashboard,
   Briefcase,
+  ClipboardCheck,
   TrendingUp,
   Users,
   Settings,
@@ -23,6 +25,7 @@ import {
   User,
   LogOut as SignOutIcon
 } from 'lucide-react';
+import { createBrowserClient } from '@supabase/ssr';
 
 interface NavigationItem {
   id: string;
@@ -30,10 +33,10 @@ interface NavigationItem {
   icon: React.ReactNode;
   href: string;
   badge?: number;
-  requiredRole?: 'customer' | 'employee';
+  requiredRole?: 'customer' | 'employee' | 'admin';
 }
 
-const getNavigationItems = (role?: string): NavigationItem[] => {
+const getNavigationItems = (role?: string, reviewQueueCount?: number): NavigationItem[] => {
   const customerItems: NavigationItem[] = [
     {
       id: 'home',
@@ -93,36 +96,19 @@ const getNavigationItems = (role?: string): NavigationItem[] => {
   ];
 
   const adminItems: NavigationItem[] = [
+    { id: 'home',         label: 'Home',         icon: <Home size={20} />,           href: '/homepage' },
+    { id: 'dashboard',   label: 'Dashboard',    icon: <LayoutDashboard size={20} />, href: '/admin/dashboard' },
+    { id: 'jobs',        label: 'Jobs',         icon: <Briefcase size={20} />,       href: '/admin/jobs' },
     {
-      id: 'home',
-      label: 'Home',
-      icon: <Home size={20} />,
-      href: '/homepage'
+      id: 'review-queue',
+      label: 'Review Queue',
+      icon: <ClipboardCheck size={20} />,
+      href: '/admin/review-queue',
+      badge: reviewQueueCount || undefined   // hide badge when 0
     },
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: <LayoutDashboard size={20} />,
-      href: '/dashboard'
-    },
-    {
-      id: 'analytics',
-      label: 'Analytics',
-      icon: <TrendingUp size={20} />,
-      href: '/analytics'
-    },
-    {
-      id: 'users',
-      label: 'Users',
-      icon: <Users size={20} />,
-      href: '/admin/users'
-    },
-    {
-      id: 'settings',
-      label: 'Settings',
-      icon: <Settings size={20} />,
-      href: '/settings'
-    }
+    { id: 'users',       label: 'Users',        icon: <Users size={20} />,           href: '/admin/users' },
+    { id: 'analytics',   label: 'Analytics',    icon: <BarChart3 size={20} />,       href: '/admin/analytics' },
+    { id: 'settings',    label: 'Settings',     icon: <Settings size={20} />,        href: '/admin/settings' },
   ];
 
   return role === 'employee' ? employeeItems : role === 'admin' ? adminItems : customerItems;
@@ -136,6 +122,7 @@ export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOp
   // role arrives. This prevents the nav from flickering to "customer" during
   // the brief window where profile is null mid-revalidation.
   const [stableRole, setStableRole] = useState<string | undefined>(undefined);
+  const [reviewQueueCount, setReviewQueueCount] = useState(0);
 
   const pathname = usePathname();
   const router = useRouter();
@@ -160,10 +147,46 @@ export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOp
     }
   }, [mounted, loading, profile?.role]);
 
+  // Realtime subscription for Admin Review Queue
+  useEffect(() => {
+    if (stableRole !== 'admin') return;
+
+    const supabaseClient = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    // Initial count
+    supabaseClient
+      .from('jobs')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'PENDING_REVIEW')
+      .then(({ count }) => setReviewQueueCount(count ?? 0));
+
+    // Realtime subscription
+    const channel = supabaseClient
+      .channel('admin-review-queue-badge')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'jobs',
+        filter: 'status=eq.PENDING_REVIEW'
+      }, async () => {
+        const { count } = await supabaseClient
+          .from('jobs')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'PENDING_REVIEW');
+        setReviewQueueCount(count ?? 0);
+      })
+      .subscribe();
+
+    return () => { supabaseClient.removeChannel(channel); };
+  }, [stableRole]);
+
   const drawerWidth = isCollapsed ? '72px' : '256px';
   const isActive = (href: string) => pathname === href;
   // Use stableRole so the nav doesn't flip mid-revalidation.
-  const navigationItems = getNavigationItems(stableRole);
+  const navigationItems = getNavigationItems(stableRole, reviewQueueCount);
   const userInitial = profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U';
 
   // Close user menu when clicking outside

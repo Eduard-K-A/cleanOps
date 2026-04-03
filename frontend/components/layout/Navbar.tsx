@@ -27,8 +27,18 @@ export default function Navbar() {
     { href: '/dashboard', label: 'Dashboard' },
   ];
 
+  const adminLinks = [
+    { href: '/homepage', label: 'Home' },
+    { href: '/admin/dashboard', label: 'Dashboard' },
+    { href: '/admin/jobs', label: 'Jobs' },
+    { href: '/admin/review-queue', label: 'Review Queue' },
+    { href: '/admin/users', label: 'Users' },
+  ];
+
   const links = !mounted || !isLoggedIn
     ? customerLinks
+    : profile?.role === 'admin'
+    ? adminLinks
     : profile?.role === 'employee'
     ? employeeLinks
     : customerLinks;

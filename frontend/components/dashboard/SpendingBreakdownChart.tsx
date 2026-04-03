@@ -13,14 +13,7 @@ import {
 } from 'recharts';
 import { DollarSign } from 'lucide-react';
 
-const spendingData = [
-  { category: 'Residential', current: 8500, previous: 7200 },
-  { category: 'Commercial', current: 12400, previous: 10800 },
-  { category: 'Deep Clean', current: 5600, previous: 4900 },
-  { category: 'Window', current: 3200, previous: 2800 },
-  { category: 'Upholstery', current: 2100, previous: 1800 },
-  { category: 'Maintenance', current: 4800, previous: 4500 }
-];
+// removed mock spendingData
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -47,7 +40,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export function SpendingBreakdownChart() {
+export function SpendingBreakdownChart({ data }: { data?: any[] }) {
+  if (!data) return null;
   return (
     <div
       className="bg-white rounded-xl p-6"
@@ -91,11 +85,10 @@ export function SpendingBreakdownChart() {
         </button>
       </div>
 
-      {/* Chart */}
       <div className="h-80 min-h-80">
         <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={320}>
           <BarChart 
-            data={spendingData} 
+            data={data} 
             margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
           >
             <CartesianGrid 
@@ -106,7 +99,7 @@ export function SpendingBreakdownChart() {
             />
             
             <XAxis 
-              dataKey="category" 
+              dataKey="week" 
               tick={{ fill: 'var(--md-on-surface-muted)', fontSize: 12 }}
               tickLine={false}
               axisLine={false}
@@ -129,67 +122,16 @@ export function SpendingBreakdownChart() {
             />
             
             <Bar
-              dataKey="current"
+              dataKey="revenue"
               fill="var(--md-primary-500)"
-              name="Current Period"
-              radius={[4, 4, 0, 0]}
-            />
-            
-            <Bar
-              dataKey="previous"
-              fill="var(--md-primary-200)"
-              name="Previous Period"
+              name="Revenue"
               radius={[4, 4, 0, 0]}
             />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t" style={{ borderColor: 'var(--md-divider)' }}>
-        <div className="text-center">
-          <p 
-            className="text-2xl font-bold"
-            style={{ color: 'var(--md-on-surface)' }}
-          >
-            $36,600
-          </p>
-          <p 
-            className="text-xs"
-            style={{ color: 'var(--md-on-surface-muted)' }}
-          >
-            Total Current
-          </p>
-        </div>
-        <div className="text-center">
-          <p 
-            className="text-2xl font-bold"
-            style={{ color: 'var(--md-success)' }}
-          >
-            +18.5%
-          </p>
-          <p 
-            className="text-xs"
-            style={{ color: 'var(--md-on-surface-muted)' }}
-          >
-            Growth Rate
-          </p>
-        </div>
-        <div className="text-center">
-          <p 
-            className="text-2xl font-bold"
-            style={{ color: 'var(--md-primary-600)' }}
-          >
-            Commercial
-          </p>
-          <p 
-            className="text-xs"
-            style={{ color: 'var(--md-on-surface-muted)' }}
-          >
-            Top Category
-          </p>
-        </div>
-      </div>
+      {/* Summary Stats Removed for real data propagation */}
     </div>
   );
 }

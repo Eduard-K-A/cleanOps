@@ -13,20 +13,7 @@ import {
 } from 'recharts';
 import { Calendar } from 'lucide-react';
 
-const jobsData = [
-  { month: 'Jan', jobs: 12, revenue: 4800 },
-  { month: 'Feb', jobs: 19, revenue: 7200 },
-  { month: 'Mar', jobs: 23, revenue: 8900 },
-  { month: 'Apr', jobs: 35, revenue: 12400 },
-  { month: 'May', jobs: 42, revenue: 15600 },
-  { month: 'Jun', jobs: 38, revenue: 14200 },
-  { month: 'Jul', jobs: 45, revenue: 16800 },
-  { month: 'Aug', jobs: 52, revenue: 19400 },
-  { month: 'Sep', jobs: 48, revenue: 17900 },
-  { month: 'Oct', jobs: 58, revenue: 21800 },
-  { month: 'Nov', jobs: 62, revenue: 23200 },
-  { month: 'Dec', jobs: 71, revenue: 26500 }
-];
+// Removed mock jobsData
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -53,7 +40,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export function JobsCreatedChart() {
+export function JobsCreatedChart({ data }: { data?: any[] }) {
+  if (!data) return null;
+  
   return (
     <div
       className="bg-white rounded-xl p-6"
@@ -84,28 +73,15 @@ export function JobsCreatedChart() {
           </p>
         </div>
         
-        {/* Date filter chips */}
-        <div className="flex items-center gap-2">
-          {['1M', '3M', '6M', '1Y'].map((period) => (
-            <button
-              key={period}
-              className="px-3 py-1 rounded-full text-xs font-medium transition-colors"
-              style={{
-                backgroundColor: period === '1Y' ? 'var(--md-primary-100)' : 'var(--md-surface-variant)',
-                color: period === '1Y' ? 'var(--md-primary-700)' : 'var(--md-on-surface-muted)',
-                border: period === '1Y' ? '1px solid var(--md-primary-200)' : '1px solid var(--md-divider)'
-              }}
-            >
-              {period}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 text-slate-500">
+           <Calendar className="w-5 h-5 text-slate-400" />
         </div>
       </div>
 
       {/* Chart */}
       <div className="h-80 min-h-80">
         <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={320}>
-          <AreaChart data={jobsData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+          <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="jobsGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="var(--md-primary-500)" stopOpacity={0.8}/>
@@ -121,7 +97,7 @@ export function JobsCreatedChart() {
             />
             
             <XAxis 
-              dataKey="month" 
+              dataKey="date" 
               tick={{ fill: 'var(--md-on-surface-muted)', fontSize: 12 }}
               tickLine={false}
               axisLine={false}
@@ -137,7 +113,7 @@ export function JobsCreatedChart() {
             
             <Area
               type="monotone"
-              dataKey="jobs"
+              dataKey="count"
               stroke="var(--md-primary-500)"
               strokeWidth={2}
               fill="url(#jobsGradient)"
