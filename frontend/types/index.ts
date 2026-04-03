@@ -4,7 +4,7 @@ export type BookingStep = 'TASKS' | 'LOCATION' | 'URGENCY' | 'PRICE' | 'REVIEW';
 
 export interface Profile {
   id: string;
-  role: 'customer' | 'employee';
+  role: 'customer' | 'employee' | 'admin';
   money_balance: number; // Mock money balance
   rating?: number | null;
   location_lat?: number | null;
