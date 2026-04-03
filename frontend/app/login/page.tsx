@@ -20,7 +20,14 @@ import toast from 'react-hot-toast';
 // ---------------------------------------------------------------------------
 
 function dashboardForRole(role?: string) {
-  return role === 'employee' ? '/homepage' : '/dashboard';
+  switch (role) {
+    case 'admin':
+      return '/admin/dashboard';
+    case 'employee':
+      return '/homepage';
+    default:
+      return '/dashboard';
+  }
 }
 
 export default function LoginPage() {

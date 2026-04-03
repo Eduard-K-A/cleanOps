@@ -239,3 +239,43 @@ export async function getEmployeeJobs(status?: string) {
   if (error) throw error
   return data
 }
+
+/**
+ * ADMIN ACTIONS
+ */
+export async function getAllJobsAdmin() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  // Verify Admin Role
+  const { data: profile } = await (supabase as any).from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || profile.role !== 'admin') throw new Error('Forbidden')
+
+  const { data, error } = await (supabase as any)
+    .from('jobs')
+    .select('*, customer:profiles!customer_id(full_name), worker:profiles!worker_id(full_name)')
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export async function adminUpdateJobStatus(jobId: string, status: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  // Verify Admin Role
+  const { data: profile } = await (supabase as any).from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || profile.role !== 'admin') throw new Error('Forbidden')
+
+  const updateData: Record<string, any> = { status: status.toUpperCase() }
+
+  const { error } = await (supabase as any)
+    .from('jobs')
+    .update(updateData)
+    .eq('id', jobId)
+
+  if (error) throw error
+}
