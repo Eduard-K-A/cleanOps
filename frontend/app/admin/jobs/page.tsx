@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
+import { Suspense } from 'react';
+
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -36,6 +38,18 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export default function AdminJobsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-slate-50">
+        <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <AdminJobsContent />
+    </Suspense>
+  );
+}
+
+function AdminJobsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
