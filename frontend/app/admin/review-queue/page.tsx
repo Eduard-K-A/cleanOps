@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
+import { ReviewQueueSkeleton } from '@/components/ui/Skeleton';
 
 export default function ReviewQueuePage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -132,7 +133,7 @@ export default function ReviewQueuePage() {
               </div>
 
               {loading && jobs.length === 0 ? (
-                <div className="flex items-center justify-center p-12 text-slate-400">Loading queue...</div>
+                <ReviewQueueSkeleton />
               ) : filteredJobs.length === 0 ? (
                 <div className="flex flex-col items-center justify-center bg-white border border-slate-200 rounded-xl p-16 text-center shadow-sm">
                   <ClipboardCheck className="w-16 h-16 text-slate-200 mb-4" />

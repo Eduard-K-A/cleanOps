@@ -213,7 +213,7 @@ export async function getAllOpenJobs() {
     .eq('status', 'OPEN')
     .order('created_at', { ascending: false })
   if (error) throw error
-  return data
+  return data ?? []
 }
 
 export async function getEmployeeJobs(status?: string) {
