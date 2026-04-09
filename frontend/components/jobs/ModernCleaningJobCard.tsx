@@ -25,9 +25,11 @@ interface ModernCleaningJobCardProps {
   onView: (id: string) => void;
   onCancel: (id: string) => Promise<void>;
   isCancelling: boolean;
+  customerName?: string | null;
+  workerName?: string | null;
 }
 
-export function ModernCleaningJobCard({ job, onView, onCancel, isCancelling }: ModernCleaningJobCardProps) {
+export function ModernCleaningJobCard({ job, onView, onCancel, isCancelling, customerName, workerName }: ModernCleaningJobCardProps) {
   const getStatusIcon = () => {
     switch (job.status) {
       case 'OPEN':
@@ -173,10 +175,17 @@ export function ModernCleaningJobCard({ job, onView, onCancel, isCancelling }: M
             </div>
           </div>
           <div className="meta-item">
+            <div className="meta-label">Requested by</div>
+            <div className="meta-value">
+              <User className="h-4 w-4" />
+              {customerName || 'Unknown'}
+            </div>
+          </div>
+          <div className="meta-item">
             <div className="meta-label">Cleaner</div>
             <div className="meta-value">
               <User className="h-4 w-4" />
-              {job.worker_id ? 'Assigned' : 'Pending Assignment'}
+              {workerName || 'Pending Assignment'}
             </div>
           </div>
           <div className="meta-item">

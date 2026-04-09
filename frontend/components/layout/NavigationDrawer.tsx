@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
+import { useUnreadCount } from '@/hooks/realtime/useUnreadCount';
 import { createClient } from '@/lib/supabase/client';
 import {
   LayoutDashboard,
@@ -23,7 +24,8 @@ import {
   Sparkles,
   LogOut,
   User,
-  LogOut as SignOutIcon
+  LogOut as SignOutIcon,
+  MessageSquare
 } from 'lucide-react';
 import { createBrowserClient } from '@supabase/ssr';
 
@@ -36,7 +38,7 @@ interface NavigationItem {
   requiredRole?: 'customer' | 'employee' | 'admin';
 }
 
-const getNavigationItems = (role?: string, reviewQueueCount?: number): NavigationItem[] => {
+const getNavigationItems = (role?: string, reviewQueueCount?: number, unreadCount?: number): NavigationItem[] => {
   const customerItems: NavigationItem[] = [
     {
       id: 'home',
@@ -57,6 +59,14 @@ const getNavigationItems = (role?: string, reviewQueueCount?: number): Navigatio
       icon: <FileText size={20} />,
       href: '/customer/requests',
       requiredRole: 'customer'
+    },
+    {
+      id: 'messages',
+      label: 'Messages',
+      icon: <MessageSquare size={20} />,
+      href: '/customer/messages',
+      requiredRole: 'customer',
+      badge: unreadCount || undefined
     },
     {
       id: 'dashboard',
@@ -86,6 +96,14 @@ const getNavigationItems = (role?: string, reviewQueueCount?: number): Navigatio
       icon: <FileText size={20} />,
       href: '/employee/history',
       requiredRole: 'employee'
+    },
+    {
+      id: 'messages',
+      label: 'Messages',
+      icon: <MessageSquare size={20} />,
+      href: '/employee/messages',
+      requiredRole: 'employee',
+      badge: unreadCount || undefined
     },
     {
       id: 'dashboard',
@@ -127,6 +145,7 @@ export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOp
   const pathname = usePathname();
   const router = useRouter();
   const { profile, user, logout, loading, mounted } = useAuth();
+  const { unreadCount } = useUnreadCount();
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Use external mobile state if provided, otherwise use internal state
@@ -186,7 +205,7 @@ export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOp
   const drawerWidth = isCollapsed ? '72px' : '256px';
   const isActive = (href: string) => pathname === href;
   // Use stableRole so the nav doesn't flip mid-revalidation.
-  const navigationItems = getNavigationItems(stableRole, reviewQueueCount);
+  const navigationItems = getNavigationItems(stableRole, reviewQueueCount, unreadCount);
   const userInitial = profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U';
 
   // Close user menu when clicking outside

@@ -9,6 +9,7 @@ interface EmployeeJobCardProps {
   onClaim: (id: string) => void;
   showClaim?: boolean;
   isClaiming?: boolean;
+  customerName?: string | null;
 }
 
 const STATUS_CONFIG = {
@@ -45,6 +46,7 @@ export function EmployeeJobCard({
   onClaim,
   showClaim = true,
   isClaiming = false,
+  customerName,
 }: EmployeeJobCardProps) {
   const status  = STATUS_CONFIG[job.status]  ?? STATUS_CONFIG.OPEN;
   const urgency = URGENCY_CONFIG[job.urgency] ?? URGENCY_CONFIG.NORMAL;
@@ -101,6 +103,13 @@ export function EmployeeJobCard({
             <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
             <span className="line-clamp-2">{job.location_address}</span>
           </div>
+        )}
+
+        {/* ── Posted by ── */}
+        {customerName && (
+          <p className="text-xs text-slate-500 mt-0.5">
+            Posted by {customerName}
+          </p>
         )}
 
         {/* ── Tasks ── */}
