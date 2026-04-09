@@ -50,10 +50,8 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
     <ProtectedRoute>
       <MainLayout
         title="Job Information"
-        subtitle="View and manage job details and progress"
-        breadcrumb="Job Details"
       >
-        <div className="max-w-2xl mx-auto">
+        <div className="w-full">
           <Button variant="ghost" className="mb-4" onClick={() => router.push(backPath)}>
             ← Back to {backLabel}
           </Button>

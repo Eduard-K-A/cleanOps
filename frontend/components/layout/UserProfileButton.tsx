@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   ArrowDownLeft,
@@ -292,6 +293,7 @@ function BalanceSection({ balance, onRefresh }: BalanceSectionProps) {
 // ─── UserProfileButton ────────────────────────────────────────────────────────
 
 export function UserProfileButton() {
+  const router = useRouter();
   const { user, profile, mounted, logout, refetchProfile } = useAuth();
   const [open, setOpen] = useState(false);
   const [locationLabel, setLocationLabel] = useState('');
@@ -345,6 +347,15 @@ export function UserProfileButton() {
     window.localStorage.setItem(`cleanops_location_label_${profile.id}`, next.trim());
     setLocationLabel(next.trim());
   }
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   if (!mounted || !user) return null;
 
@@ -429,10 +440,7 @@ export function UserProfileButton() {
                 variant="ghost"
                 size="sm"
                 className="w-full justify-start text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
-                onClick={async () => {
-                  setOpen(false);
-                  await logout();
-                }}
+                onClick={handleLogout}
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign out
