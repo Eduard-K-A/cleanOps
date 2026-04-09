@@ -16,6 +16,7 @@ export default function Navbar() {
   const employeeLinks = [
     { href: '/homepage', label: 'Home' },
     { href: '/employee/feed', label: 'Jobs' },
+    { href: '/employee/messages', label: 'Messages' },
     { href: '/employee/history', label: 'History' },
     { href: '/employee/dashboard', label: 'Dashboard' },
   ];
@@ -24,6 +25,7 @@ export default function Navbar() {
     { href: '/homepage', label: 'Home' },
     { href: '/customer/order', label: 'Book service' },
     { href: '/customer/requests', label: 'My requests' },
+    { href: '/customer/messages', label: 'Messages' },
     { href: '/dashboard', label: 'Dashboard' },
   ];
 
