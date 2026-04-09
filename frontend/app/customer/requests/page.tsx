@@ -306,6 +306,8 @@ export default function RequestsPage() {
                   onView={(id: string) => router.push(`/customer/jobs/${id}`)}
                   onCancel={handleCancel}
                   isCancelling={cancelling === job.id}
+                  customerName={job.customer_profile?.full_name}
+                  workerName={job.worker_profile?.full_name}
                 />
                 {job.status === "PENDING_REVIEW" && (
                   <Button

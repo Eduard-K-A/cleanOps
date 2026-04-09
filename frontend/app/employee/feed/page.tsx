@@ -142,6 +142,7 @@ export default function EmployeeFeedPage() {
                         isClaiming={claiming === job.id}
                         onClaim={handleClaim}
                         onView={handleView}
+                        customerName={job.customer_profile?.full_name}
                       />
                     ))}
                   </div>
