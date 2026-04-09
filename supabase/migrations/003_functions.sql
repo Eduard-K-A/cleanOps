@@ -71,8 +71,12 @@ $$ language plpgsql security definer;
 create or replace function claim_job(p_job_id uuid, p_employee_id uuid)
 returns uuid as $$
 declare
+  employee_name text;
   job_count int;
 begin
+  -- Get employee's name
+  select full_name into employee_name from public.profiles where id = p_employee_id;
+  
   -- Check if job is still open
   if not exists (select 1 from public.jobs where id = p_job_id and status = 'OPEN') then
     raise exception 'Job is no longer available';
@@ -80,7 +84,7 @@ begin
   
   -- Update job with employee and change status
   update public.jobs 
-  set worker_id = p_employee_id, status = 'IN_PROGRESS', updated_at = now()
+  set worker_id = p_employee_id, worker_name = employee_name, status = 'IN_PROGRESS', updated_at = now()
   where id = p_job_id and status = 'OPEN';
   
   -- Notify customer
