@@ -1,12 +1,26 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, LogOut, MapPin, Pencil, User as UserIcon, DollarSign } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  AlertTriangle,
+  ArrowDownLeft,
+  ArrowUpRight,
+  ChevronDown,
+  DollarSign,
+  LogOut,
+  MapPin,
+  Pencil,
+  User as UserIcon,
+  X,
+} from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import toast from 'react-hot-toast';
+
+// ─── EditableField ────────────────────────────────────────────────────────────
 
 interface EditableFieldProps {
   label: string;
@@ -48,35 +62,13 @@ function EditableField({ label, value, readOnly, onSave }: EditableFieldProps) {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                void handleSave();
-              }
-              if (e.key === 'Escape') {
-                e.preventDefault();
-                setEditing(false);
-                setDraft(value);
-              }
+              if (e.key === 'Enter') { e.preventDefault(); void handleSave(); }
+              if (e.key === 'Escape') { e.preventDefault(); setEditing(false); setDraft(value); }
             }}
           />
-          <Button
-            type="button"
-            size="sm"
-            disabled={saving}
-            onClick={() => void handleSave()}
-          >
-            Save
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            disabled={saving}
-            onClick={() => {
-              setEditing(false);
-              setDraft(value);
-            }}
-          >
+          <Button type="button" size="sm" disabled={saving} onClick={() => void handleSave()}>Save</Button>
+          <Button type="button" size="sm" variant="ghost" disabled={saving}
+            onClick={() => { setEditing(false); setDraft(value); }}>
             Cancel
           </Button>
         </div>
@@ -102,15 +94,211 @@ function EditableField({ label, value, readOnly, onSave }: EditableFieldProps) {
   );
 }
 
+// ─── BalanceSection ───────────────────────────────────────────────────────────
+
+type BalanceTab = 'deposit' | 'withdraw';
+type WithdrawStep = 'input' | 'confirm';
+
+interface BalanceSectionProps {
+  balance: number;
+  onRefresh: () => Promise<void>;
+}
+
+function BalanceSection({ balance, onRefresh }: BalanceSectionProps) {
+  const [tab, setTab] = useState<BalanceTab>('deposit');
+  const [amount, setAmount] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [withdrawStep, setWithdrawStep] = useState<WithdrawStep>('input');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const parsed = Number(amount);
+  const isValidAmount = amount !== '' && !isNaN(parsed) && parsed > 0;
+  const exceedsBalance = tab === 'withdraw' && isValidAmount && parsed > balance;
+
+  // Reset state when switching tabs
+  function switchTab(next: BalanceTab) {
+    setTab(next);
+    setAmount('');
+    setWithdrawStep('input');
+  }
+
+  // reset confirm step if amount changes
+  useEffect(() => {
+    if (withdrawStep === 'confirm') setWithdrawStep('input');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [amount]);
+
+  async function handleDeposit() {
+    if (!isValidAmount) return;
+    try {
+      setBusy(true);
+      const { addMoney } = await import('@/app/actions/payments');
+      await addMoney(parsed);
+      await onRefresh();
+      toast.success(`$${parsed.toFixed(2)} deposited`);
+      setAmount('');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to deposit');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleWithdraw() {
+    if (!isValidAmount || exceedsBalance) return;
+    if (withdrawStep === 'input') {
+      setWithdrawStep('confirm');
+      return;
+    }
+    // confirmed
+    try {
+      setBusy(true);
+      const { withdrawMoney } = await import('@/app/actions/payments');
+      await withdrawMoney(parsed);
+      await onRefresh();
+      toast.success(`$${parsed.toFixed(2)} withdrawn`);
+      setAmount('');
+      setWithdrawStep('input');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to withdraw');
+      setWithdrawStep('input');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Balance display */}
+      <div className="flex items-center gap-2">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">
+          <DollarSign className="h-4 w-4 text-green-600" />
+        </div>
+        <div>
+          <div className="text-sm font-bold text-slate-900">${balance.toFixed(2)}</div>
+          <div className="text-[10px] text-slate-400">Available balance</div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex rounded-lg bg-slate-100 p-0.5">
+        {(['deposit', 'withdraw'] as BalanceTab[]).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => switchTab(t)}
+            className={cn(
+              'flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition-all',
+              tab === t
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            )}
+          >
+            {t === 'deposit'
+              ? <ArrowDownLeft className="h-3 w-3 text-green-500" />
+              : <ArrowUpRight className="h-3 w-3 text-orange-500" />
+            }
+            {t === 'deposit' ? 'Deposit' : 'Withdraw'}
+          </button>
+        ))}
+      </div>
+
+      {/* Confirm step overlay for withdraw */}
+      {tab === 'withdraw' && withdrawStep === 'confirm' ? (
+        <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 space-y-2">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
+            <p className="text-xs text-orange-800">
+              Withdraw <span className="font-bold">${parsed.toFixed(2)}</span> from your balance?
+              This cannot be undone.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              className="flex-1 bg-orange-600 text-white hover:bg-orange-700"
+              disabled={busy}
+              onClick={() => void handleWithdraw()}
+            >
+              {busy ? 'Withdrawing…' : 'Confirm'}
+            </Button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setWithdrawStep('input')}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 transition-colors"
+            >
+              <X className="h-3 w-3" /> Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* Amount input row */
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">$</span>
+            <input
+              ref={inputRef}
+              type="number"
+              placeholder="0.00"
+              value={amount}
+              min="0.01"
+              step="0.01"
+              disabled={busy}
+              onChange={(e) => setAmount(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  tab === 'deposit' ? void handleDeposit() : void handleWithdraw();
+                }
+              }}
+              className={cn(
+                'h-8 w-full rounded-md border pl-6 pr-2 text-sm outline-none transition-colors',
+                'border-slate-200 bg-white text-slate-900 placeholder-slate-400',
+                'focus:border-sky-400 focus:ring-1 focus:ring-sky-400',
+                exceedsBalance && 'border-red-300 focus:border-red-400 focus:ring-red-400'
+              )}
+            />
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            disabled={busy || !isValidAmount || exceedsBalance}
+            onClick={() => tab === 'deposit' ? void handleDeposit() : void handleWithdraw()}
+            className={cn(
+              'whitespace-nowrap',
+              tab === 'withdraw' && 'bg-orange-600 hover:bg-orange-700 text-white'
+            )}
+          >
+            {busy
+              ? (tab === 'deposit' ? 'Adding…' : 'Next…')
+              : (tab === 'deposit' ? 'Add' : 'Withdraw')
+            }
+          </Button>
+        </div>
+      )}
+
+      {/* Validation hint */}
+      {exceedsBalance && (
+        <p className="text-[10px] text-red-500">
+          Exceeds balance (${balance.toFixed(2)} available)
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── UserProfileButton ────────────────────────────────────────────────────────
+
 export function UserProfileButton() {
   const { user, profile, mounted, logout, refetchProfile } = useAuth();
   const [open, setOpen] = useState(false);
-  const [savingLocation, setSavingLocation] = useState(false);
   const [locationLabel, setLocationLabel] = useState('');
-  const [addingMoney, setAddingMoney] = useState(false);
-  const [moneyAmount, setMoneyAmount] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const email = user?.email ?? 'Unknown user';
+  const balance = profile?.money_balance ?? 0;
 
   const displayName = useMemo(() => {
     if (profile?.full_name && profile.full_name.trim().length > 0) return profile.full_name;
@@ -128,14 +316,23 @@ export function UserProfileButton() {
     return fromName || 'U';
   }, [profile?.full_name, email]);
 
-  // Simple, local-only label for human-readable location
+  // Restore location label from localStorage
   useEffect(() => {
-    if (!profile?.id) return;
-    if (typeof window === 'undefined') return;
-    const key = `cleanops_location_label_${profile.id}`;
-    const stored = window.localStorage.getItem(key);
+    if (!profile?.id || typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem(`cleanops_location_label_${profile.id}`);
     if (stored) setLocationLabel(stored);
   }, [profile?.id]);
+
+  // Close on outside click
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [open]);
 
   async function handleSaveName(next: string) {
     if (!next || !profile) return;
@@ -144,40 +341,16 @@ export function UserProfileButton() {
   }
 
   async function handleSaveLocation(next: string) {
-    if (!profile) return;
-    if (typeof window === 'undefined') return;
-    try {
-      setSavingLocation(true);
-      const key = `cleanops_location_label_${profile.id}`;
-      window.localStorage.setItem(key, next.trim());
-      setLocationLabel(next.trim());
-    } finally {
-      setSavingLocation(false);
-    }
-  }
-
-  async function handleAddMoney() {
-    if (!profile || !moneyAmount || isNaN(Number(moneyAmount)) || Number(moneyAmount) <= 0) {
-      return;
-    }
-    try {
-      setAddingMoney(true);
-      const { addMoney } = await import('@/app/actions/payments');
-      await addMoney(Number(moneyAmount));
-      await refetchProfile();
-      setMoneyAmount('');
-    } catch (error: any) {
-      console.error('Error adding money:', error);
-      alert(error.message || 'Failed to add money');
-    } finally {
-      setAddingMoney(false);
-    }
+    if (!profile || typeof window === 'undefined') return;
+    window.localStorage.setItem(`cleanops_location_label_${profile.id}`, next.trim());
+    setLocationLabel(next.trim());
   }
 
   if (!mounted || !user) return null;
 
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
+      {/* Trigger button */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -192,14 +365,20 @@ export function UserProfileButton() {
           <span className="max-w-40 truncate font-medium text-slate-900">{displayName}</span>
           <span className="max-w-40 truncate text-[11px] text-slate-500">{email}</span>
         </div>
-        <ChevronDown className="h-4 w-4 text-slate-400" />
+        <span className="hidden sm:inline-flex items-center gap-0.5 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-700 ring-1 ring-green-200">
+          <span className="text-green-500">$</span>
+          {balance.toFixed(2)}
+        </span>
+        <ChevronDown className={cn('h-4 w-4 text-slate-400 transition-transform', open && 'rotate-180')} />
       </button>
 
+      {/* Dropdown */}
       {open && (
         <div
           className="absolute right-0 z-50 mt-2 w-80 origin-top-right rounded-xl border border-slate-200 bg-white p-3 shadow-lg ring-1 ring-black/5"
           role="menu"
         >
+          {/* Header */}
           <div className="mb-3 flex items-center gap-3 border-b border-slate-100 pb-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-600 text-sm font-semibold text-white">
               <UserIcon className="h-5 w-5" />
@@ -216,8 +395,10 @@ export function UserProfileButton() {
           </div>
 
           <div className="space-y-3">
+            {/* Name */}
             <EditableField label="Name" value={displayName} onSave={handleSaveName} />
 
+            {/* Location */}
             <div className="space-y-1">
               <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Location</div>
               <div className="flex items-center gap-2">
@@ -225,63 +406,24 @@ export function UserProfileButton() {
                   <MapPin className="h-4 w-4 text-slate-500" />
                 </div>
                 <div className="flex-1">
-                  <EditableField
-                    label=""
-                    value={locationLabel}
-                    onSave={handleSaveLocation}
-                  />
+                  <EditableField label="" value={locationLabel} onSave={handleSaveLocation} />
                 </div>
               </div>
               {profile?.location_lat != null && profile.location_lng != null && (
                 <div className="pl-10 text-[11px] text-slate-400">
-                  Approx. coordinates: {profile.location_lat.toFixed(3)}, {profile.location_lng.toFixed(3)}
+                  Approx. {profile.location_lat.toFixed(3)}, {profile.location_lng.toFixed(3)}
                 </div>
               )}
             </div>
 
+            {/* Balance — Deposit / Withdraw */}
             <div className="space-y-1">
               <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Balance</div>
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">
-                  <DollarSign className="h-4 w-4 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm font-semibold text-slate-900">
-                    ${(profile?.money_balance || 0).toFixed(2)}
-                  </div>
-                  <p className="text-[11px] text-slate-500">Mock money for demo</p>
-                </div>
-              </div>
-              <div className="flex gap-2 pt-1">
-                <Input
-                  type="number"
-                  placeholder="Enter amount"
-                  value={moneyAmount}
-                  onChange={(e) => setMoneyAmount(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      void handleAddMoney();
-                    }
-                  }}
-                  disabled={addingMoney}
-                  min="0"
-                  step="0.01"
-                  className="h-8 text-sm"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={addingMoney || !moneyAmount || Number(moneyAmount) <= 0}
-                  onClick={() => void handleAddMoney()}
-                  className="whitespace-nowrap"
-                >
-                  {addingMoney ? 'Adding…' : 'Add'}
-                </Button>
-              </div>
+              <BalanceSection balance={balance} onRefresh={refetchProfile} />
             </div>
 
-            <div className="mt-2 border-t border-slate-100 pt-2">
+            {/* Sign out */}
+            <div className="border-t border-slate-100 pt-2">
               <Button
                 type="button"
                 variant="ghost"
@@ -302,4 +444,3 @@ export function UserProfileButton() {
     </div>
   );
 }
-
