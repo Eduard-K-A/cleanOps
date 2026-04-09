@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Menu, Search, Bell, User } from 'lucide-react';
-import { useAuth } from '@/lib/authContext';
+import { Search, Bell } from 'lucide-react';
+import { UserProfileButton } from './UserProfileButton';
 
 interface TopAppBarProps {
   onMenuClick?: () => void;
@@ -19,7 +19,7 @@ export function TopAppBar({
   showSearch = true,
   showNotifications = true 
 }: TopAppBarProps) {
-  const { profile } = useAuth();
+
 
   return (
     <header
@@ -90,23 +90,8 @@ export function TopAppBar({
         )}
 
         {/* User profile */}
-        <div className="flex items-center gap-3 pl-2 border-l" style={{ borderColor: 'var(--md-divider)' }}>
-          <div className="text-right hidden sm:block">
-            <p className="text-sm font-medium" style={{ color: 'var(--md-on-surface)' }}>
-              {(profile as any)?.email?.split('@')[0] || 'User'}
-            </p>
-            <p className="text-xs" style={{ color: 'var(--md-on-surface-muted)' }}>
-              {profile?.role || 'Guest'}
-            </p>
-          </div>
-          <button className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm"
-              style={{ backgroundColor: 'var(--md-primary-500)' }}
-            >
-              {(profile as any)?.email?.charAt(0).toUpperCase() || 'U'}
-            </div>
-          </button>
+        <div className="pl-2 border-l" style={{ borderColor: 'var(--md-divider)' }}>
+          <UserProfileButton />
         </div>
       </div>
     </header>
