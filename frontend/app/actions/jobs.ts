@@ -50,7 +50,7 @@ export async function createJob(jobData: {
     // Get updated balance
     const { data: updatedProfile } = await (supabase as any)
       .from('profiles')
-      .select('money_balance')
+      .select('money_balance, full_name')
       .eq('id', user.id)
       .single()
     
@@ -77,6 +77,7 @@ export async function createJob(jobData: {
       .insert([
         {
           customer_id: user.id,
+          customer_name: updatedProfileData.full_name,
           urgency: jobData.urgency, // Already uppercase (LOW, NORMAL, HIGH)
           location_address: jobData.address,
           distance: jobData.distance,
@@ -108,7 +109,11 @@ export async function getCustomerJobs(status?: string) {
 
   let query = supabase
     .from('jobs')
-    .select('*')
+    .select(`
+      *,
+      customer_profile:profiles!customer_id(id, full_name),
+      worker_profile:profiles!worker_id(id, full_name)
+    `)
     .eq('customer_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -197,7 +202,11 @@ export async function getAllOpenJobs() {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('jobs')
-    .select('*')
+    .select(`
+      *,
+      customer_profile:profiles!customer_id(id, full_name),
+      worker_profile:profiles!worker_id(id, full_name)
+    `)
     .eq('status', 'OPEN')
     .order('created_at', { ascending: false })
   if (error) throw error
@@ -211,7 +220,11 @@ export async function getEmployeeJobs(status?: string) {
 
   let query = supabase
     .from('jobs')
-    .select('*')
+    .select(`
+      *,
+      customer_profile:profiles!customer_id(id, full_name),
+      worker_profile:profiles!worker_id(id, full_name)
+    `)
     .eq('worker_id', user.id)
     .order('created_at', { ascending: false })
 
