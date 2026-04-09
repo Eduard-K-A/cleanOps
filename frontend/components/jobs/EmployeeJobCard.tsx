@@ -58,7 +58,7 @@ export function EmployeeJobCard({
       {/* Urgency accent bar */}
       <div className={`h-1 w-full ${job.urgency === 'HIGH' ? 'bg-red-400' : job.urgency === 'NORMAL' ? 'bg-blue-400' : 'bg-slate-200'}`} />
 
-      <div className="flex flex-col gap-4 p-5">
+      <div className="flex flex-col gap-3 p-4">
 
         {/* ── Header ── */}
         <div className="flex items-start justify-between gap-3">
@@ -78,20 +78,20 @@ export function EmployeeJobCard({
 
         {/* ── Key metrics row ── */}
         <div className="grid grid-cols-3 divide-x divide-slate-100 rounded-xl bg-slate-50 text-center">
-          <div className="px-3 py-2.5">
-            <p className="text-lg font-bold text-slate-900">{formatPrice(job.price_amount)}</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">Payout</p>
+          <div className="px-2 py-2">
+            <p className="text-base font-bold text-slate-900">{formatPrice(job.price_amount)}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Payout</p>
           </div>
-          <div className="px-3 py-2.5">
-            <p className={`inline-flex items-center gap-1 text-xs font-semibold rounded-full px-2 py-0.5 ${urgency.classes}`}>
-              {job.urgency === 'HIGH' && <Zap className="h-3 w-3" aria-hidden="true" />}
+          <div className="px-2 py-2">
+            <p className={`inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-1.5 py-0.5 ${urgency.classes}`}>
+              {job.urgency === 'HIGH' && <Zap className="h-2.5 w-2.5" aria-hidden="true" />}
               {urgency.label}
             </p>
-            <p className="text-[11px] text-slate-500 mt-1">Priority</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Priority</p>
           </div>
-          <div className="px-3 py-2.5">
-            <p className="text-xs font-semibold text-slate-700">{timeAgo(job.created_at)}</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">Posted</p>
+          <div className="px-2 py-2">
+            <p className="text-[11px] font-semibold text-slate-700">{timeAgo(job.created_at)}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Posted</p>
           </div>
         </div>
 
@@ -105,22 +105,22 @@ export function EmployeeJobCard({
 
         {/* ── Tasks ── */}
         {tasks.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {tasks.slice(0, 4).map((task, i) => (
-              <span key={i} className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+          <div className="flex flex-wrap gap-1">
+            {tasks.slice(0, 3).map((task, i) => (
+              <span key={i} className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700">
                 {task}
               </span>
             ))}
-            {tasks.length > 4 && (
-              <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
-                +{tasks.length - 4} more
+            {tasks.length > 3 && (
+              <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                +{tasks.length - 3} more
               </span>
             )}
           </div>
         )}
 
         {/* ── Actions ── */}
-        <div className="flex gap-2 pt-1">
+        <div className="flex gap-2 pt-0.5">
           <button
             type="button"
             onClick={() => onView(job.id)}
