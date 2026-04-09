@@ -6,11 +6,11 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { ModernCleaningJobCard } from "@/components/jobs/ModernCleaningJobCard";
 import { Button } from "@/components/ui/button";
+import { RequestsPageSkeleton } from "@/components/ui/Skeleton";
 import { api } from "@/lib/api";
 import type { Job } from "@/types";
 import toast from "react-hot-toast";
 import {
-  Loader2,
   RefreshCw,
   Filter,
   Search,
@@ -146,8 +146,6 @@ export default function RequestsPage() {
     <ProtectedRoute>
       <MainLayout
         title="My Requests"
-        subtitle="Track and manage all your cleaning service jobs"
-        breadcrumb="Service Management"
       >
         {error && !loading && (
           <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -267,9 +265,7 @@ export default function RequestsPage() {
 
         {/* Cards Grid or Empty State */}
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-10 w-10 animate-spin text-sky-600" />
-          </div>
+          <RequestsPageSkeleton />
         ) : filteredJobs.length === 0 ? (
           <div className="empty-state">
             <div className="empty-illustration">

@@ -9,8 +9,6 @@ export default function OrderPage() {
     <ProtectedRoute>
       <MainLayout
         title="Request a cleaning"
-        subtitle="Size, location, urgency — then authorize payment. Funds are held in escrow until you approve."
-        breadcrumb="Service Booking"
       >
         <BookingForm />
       </MainLayout>
