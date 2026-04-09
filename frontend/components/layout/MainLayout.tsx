@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { NavigationDrawer } from './NavigationDrawer';
 import { Menu } from 'lucide-react';
+import { UserProfileButton } from './UserProfileButton';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -13,6 +14,7 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, title, subtitle, breadcrumb }: MainLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
@@ -35,16 +37,29 @@ export function MainLayout({ children, title, subtitle, breadcrumb }: MainLayout
         <main className="h-full overflow-y-auto">
           {/* Page Header */}
           {(title || subtitle || breadcrumb) && (
-            <div className="bg-white border-b border-gray-200 px-6 py-4">
-              {breadcrumb && (
-                <div className="text-sm text-gray-500 mb-1">{breadcrumb}</div>
-              )}
-              {title && (
-                <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
-              )}
-              {subtitle && (
-                <p className="text-gray-600 mt-1">{subtitle}</p>
-              )}
+            <div className="bg-white border-b border-gray-200 px-4 lg:px-6 h-16 flex items-center justify-between">
+              {/* Left: breadcrumb / title / subtitle */}
+              <div className="flex min-w-0 flex-col justify-center">
+                {breadcrumb && (
+                  <p className="text-xs text-gray-500 leading-none mb-0.5 truncate">{breadcrumb}</p>
+                )}
+                {title && (
+                  <h1
+                    className="text-xl font-semibold leading-tight truncate"
+                    style={{ color: 'var(--md-on-surface)', fontFamily: 'var(--md-font-display)' }}
+                  >
+                    {title}
+                  </h1>
+                )}
+                {subtitle && (
+                  <p className="text-sm leading-none mt-0.5 truncate" style={{ color: 'var(--md-on-surface-muted)' }}>
+                    {subtitle}
+                  </p>
+                )}
+              </div>
+
+              {/* User profile button with dropdown */}
+              <UserProfileButton />
             </div>
           )}
           
