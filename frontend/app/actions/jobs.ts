@@ -44,19 +44,7 @@ export async function createJob(jobData: {
     console.log('Price as decimal:', priceAsDecimal)
     
     if (profileData.money_balance < priceAsDecimal) {
-      // For development, let's add balance if insufficient
-      console.log('Insufficient balance, adding funds for development')
-      const { error: addFundsError } = await (supabase as any)
-        .from('profiles')
-        .update({ 
-          money_balance: priceAsDecimal + 1000 // Add enough for job + buffer
-        })
-        .eq('id', user.id)
-      
-      if (addFundsError) {
-        console.error('Failed to add funds:', addFundsError)
-        throw new Error('Failed to add funds for development')
-      }
+      throw new Error(`Insufficient balance. Required: $${priceAsDecimal.toFixed(2)}, Available: $${profileData.money_balance.toFixed(2)}`)
     }
 
     // Get updated balance
