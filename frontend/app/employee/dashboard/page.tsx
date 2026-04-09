@@ -6,6 +6,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
 import { useAsyncData } from '@/hooks/useAsyncData';
+import { EmployeeDashboardSkeleton } from '@/components/ui/Skeleton';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/authContext';
 import type { Job } from '@/types';
@@ -64,10 +65,7 @@ export default function EmployeeDashboardPage() {
             }}
           >
             <div className="mx-auto max-w-6xl">
-              <div className="mb-8">
-                <h1 className="mb-2 text-3xl font-bold text-slate-900">Dashboard</h1>
-                <p className="text-slate-600">Overview of your work and earnings.</p>
-              </div>
+              {loading ? <EmployeeDashboardSkeleton /> : <>
 
               {/* Stats Cards */}
               <div className="grid gap-6 mb-8 sm:grid-cols-2 lg:grid-cols-4">
@@ -146,9 +144,7 @@ export default function EmployeeDashboardPage() {
                     <CardTitle>Recent Activity</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {loading ? (
-                      <p className="text-slate-500">Loading...</p>
-                    ) : myJobs.length === 0 ? (
+                    {myJobs.length === 0 ? (
                       <p className="text-slate-500">No recent activity</p>
                     ) : (
                       <div className="space-y-2">
@@ -176,6 +172,7 @@ export default function EmployeeDashboardPage() {
                   </CardContent>
                 </Card>
               </div>
+            </> }
             </div>
           </main>
         </div>

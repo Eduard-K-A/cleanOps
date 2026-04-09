@@ -6,7 +6,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
 import { EmployeeJobCard } from '@/components/jobs/EmployeeJobCard';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { HistoryPageSkeleton } from '@/components/ui/Skeleton';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -125,12 +125,11 @@ export default function EmployeeHistoryPage() {
               padding: 'var(--md-space-6)'
             }}
           >
-            <div className="mx-auto max-w-4xl">
-              <h1 className="mb-2 text-3xl font-bold text-slate-900">Your History</h1>
-              <p className="mb-8 text-slate-600">Jobs you have claimed or completed.</p>
+            <div className="mx-auto max-w-7xl">
+           
 
           {loading && historyJobs.length === 0 ? (
-            <LoadingSpinner size="lg" className="py-16" />
+            <HistoryPageSkeleton />
           ) : historyJobs.length === 0 ? (
             <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/50 p-12 text-center space-y-4">
               <p className="text-slate-600">You haven't claimed any jobs yet.</p>
@@ -147,7 +146,7 @@ export default function EmployeeHistoryPage() {
               {loading && (
                 <div className="absolute right-0 top-0 mr-2 mt-1 text-sm text-slate-500">Refreshing…</div>
               )}
-              <div className="grid gap-6 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {historyJobs.map((job) => (
                   <div key={job.id}>
                     <EmployeeJobCard

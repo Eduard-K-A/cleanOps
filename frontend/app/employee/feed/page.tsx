@@ -6,6 +6,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
 import { EmployeeJobCard } from '@/components/jobs/EmployeeJobCard';
+import { FeedPageSkeleton } from '@/components/ui/Skeleton';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { useJobFeed } from '@/hooks/realtime/useJobFeed';
 import { api } from '@/lib/api';
@@ -13,40 +14,7 @@ import type { Job, Profile } from '@/types';
 import toast from 'react-hot-toast';
 import { MapPin, RefreshCw, Briefcase } from 'lucide-react';
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
 
-function CardSkeleton() {
-  return (
-    <div className="animate-pulse rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-      <div className="h-1 bg-slate-200" />
-      <div className="p-5 space-y-4">
-        <div className="flex justify-between gap-3">
-          <div className="space-y-2 flex-1">
-            <div className="h-3 w-16 rounded bg-slate-100" />
-            <div className="h-4 w-3/4 rounded-lg bg-slate-200" />
-          </div>
-          <div className="h-6 w-20 rounded-full bg-slate-200" />
-        </div>
-        <div className="grid grid-cols-3 gap-px rounded-xl bg-slate-100 overflow-hidden">
-          {[0,1,2].map(i => <div key={i} className="h-14 bg-slate-50" />)}
-        </div>
-        <div className="h-4 w-2/3 rounded bg-slate-100" />
-        <div className="flex gap-2">
-          <div className="h-10 flex-1 rounded-xl bg-slate-100" />
-          <div className="h-10 flex-1 rounded-xl bg-slate-200" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FeedSkeleton() {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
-    </div>
-  );
-}
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
@@ -133,16 +101,11 @@ export default function EmployeeFeedPage() {
           <TopAppBar title="Available Jobs" />
 
           <main className="flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6">
 
               {/* Page header */}
               <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-slate-900">Available Jobs</h1>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Showing all available jobs · updates in real time
-                  </p>
-                </div>
+      
 
                 <div className="flex items-center gap-3">
                   {!isInitialLoad && (
@@ -165,12 +128,12 @@ export default function EmployeeFeedPage() {
 
               {/* Feed */}
               {isInitialLoad ? (
-                <FeedSkeleton />
+                <FeedPageSkeleton />
               ) : jobsList.length === 0 ? (
                 <EmptyState onRefresh={refetch} isRefreshing={loading} />
               ) : (
                 <div className={`transition-opacity duration-200 ${loading ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
-                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {jobsList.map((job) => (
                       <EmployeeJobCard
                         key={job.id}
