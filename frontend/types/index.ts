@@ -29,6 +29,8 @@ export interface Job {
   proof_of_work: string[];
   created_at: string;
   updated_at: string;
+  customer_profile?: Pick<Profile, 'id' | 'full_name'> | null;
+  worker_profile?: Pick<Profile, 'id' | 'full_name'> | null;
 }
 
 export interface ApiError {
@@ -62,7 +64,17 @@ export interface Message {
   job_id: string;
   sender_id: string;
   content: string;
+  is_read: boolean;
   created_at: string;
+}
+
+export interface Conversation {
+  job: Job & {
+    customer_profile: Pick<Profile, 'id' | 'full_name'>;
+    worker_profile: Pick<Profile, 'id' | 'full_name'> | null;
+  };
+  last_message: Message | null;
+  unread_count: number;
 }
 
 export interface Notification {
