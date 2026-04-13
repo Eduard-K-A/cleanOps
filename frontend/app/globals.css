@@ -969,7 +969,7 @@
   .job-card:hover {
     box-shadow: var(--e3); 
     transform: translateY(-2px);
-    border-color: var(--blue-200);
+    border-color: var(--divider);
   }
   
   @keyframes card-in {
@@ -979,15 +979,15 @@
 
   /* Status accent bar */
   .card-status-bar { 
-    height: 4px; 
+    height: 0; 
     width: 100%; 
   }
   
-  .status-open      { background: var(--blue-500); }
-  .status-progress  { background: linear-gradient(90deg, var(--blue-500), var(--warning)); }
-  .status-pending   { background: var(--warning); }
-  .status-completed { background: var(--success); }
-  .status-cancelled { background: #B0BEC5; }
+  .status-open      { background: none; }
+  .status-progress  { background: none; }
+  .status-pending   { background: none; }
+  .status-completed { background: none; }
+  .status-cancelled { background: none; }
 
   .card-body { 
     padding: 18px 20px; 
@@ -1007,8 +1007,8 @@
     width: 44px; 
     height: 44px; 
     border-radius: 12px;
-    background: var(--blue-50); 
-    border: 1.5px solid var(--blue-100);
+    background: var(--surface-2); 
+    border: 1.5px solid var(--divider);
     display: flex; 
     align-items: center; 
     justify-content: center;
@@ -1061,16 +1061,16 @@
     border-radius: 50%; 
   }
   
-  .chip-open      { background: var(--blue-50);    color: var(--blue-800); }
-  .chip-open .dot { background: var(--blue-500); }
-  .chip-progress      { background: var(--warning-bg); color: #7C4700; }
-  .chip-progress .dot { background: var(--warning); }
-  .chip-pending      { background: var(--pending-bg); color: var(--pending); }
-  .chip-pending .dot { background: var(--pending); }
-  .chip-completed      { background: var(--success-bg); color: #004D40; }
-  .chip-completed .dot { background: var(--success); }
-  .chip-cancelled      { background: #ECEFF1; color: #546E7A; }
-  .chip-cancelled .dot { background: #90A4AE; }
+  .chip-open      { background: var(--surface-2);    color: var(--text-1); }
+  .chip-open .dot { background: var(--text-2); }
+  .chip-progress      { background: var(--surface-2); color: var(--text-1); }
+  .chip-progress .dot { background: var(--text-2); }
+  .chip-pending      { background: var(--surface-2); color: var(--text-1); }
+  .chip-pending .dot { background: var(--text-2); }
+  .chip-completed      { background: var(--surface-2); color: var(--text-1); }
+  .chip-completed .dot { background: var(--text-2); }
+  .chip-cancelled      { background: var(--surface-2); color: var(--text-1); }
+  .chip-cancelled .dot { background: var(--text-2); }
 
   .card-meta {
     display: grid; 
@@ -1102,7 +1102,7 @@
   }
   
   .meta-value svg { 
-    color: var(--blue-400); 
+    color: var(--text-3); 
   }
 
   .card-progress-row { 
@@ -1126,20 +1126,20 @@
   .progress-pct { 
     font-size: 12px; 
     font-weight: 700; 
-    color: var(--blue-600); 
+    color: var(--text-2); 
   }
   
   .progress-track {
     height: 6px; 
     border-radius: 3px; 
-    background: var(--blue-100);
+    background: var(--divider);
     overflow: hidden;
   }
   
   .progress-fill {
     height: 100%; 
     border-radius: 3px;
-    background: linear-gradient(90deg, var(--blue-500), var(--blue-400));
+    background: var(--text-2);
     transition: width 600ms var(--md-motion-standard);
   }
 
@@ -1154,9 +1154,9 @@
     font-weight: 500;
     padding: 3px 10px; 
     border-radius: var(--r-full);
-    background: var(--blue-50); 
-    color: var(--blue-800);
-    border: 1px solid var(--blue-100);
+    background: var(--surface-2); 
+    color: var(--text-1);
+    border: 1px solid var(--divider);
   }
 
   .card-footer {
