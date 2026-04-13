@@ -1,19 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  MapPin, 
-  DollarSign, 
-  Clock, 
-  Bookmark, 
-  Building,
-  Home
-} from 'lucide-react';
+import { MapPin, Clock, Bookmark } from 'lucide-react';
 
 interface JobCardProps {
   id: string;
   company: string;
-  companyLogo?: string;
   postedDate: string;
   title: string;
   location: string;
@@ -30,7 +22,6 @@ interface JobCardProps {
 export function JobCard({
   id,
   company,
-  companyLogo,
   postedDate,
   title,
   location,
@@ -56,32 +47,6 @@ export function JobCard({
     onApply?.(id);
   };
 
-  const getStatusColor = () => {
-    switch (status) {
-      case 'active':
-        return 'var(--md-primary-500)';
-      case 'urgent':
-        return 'var(--md-error)';
-      case 'featured':
-        return 'var(--md-warning)';
-      default:
-        return 'var(--md-primary-500)';
-    }
-  };
-
-  const getWorkModeIcon = () => {
-    switch (workMode) {
-      case 'Remote':
-        return <Home size={14} />;
-      case 'Hybrid':
-        return <Building size={14} />;
-      case 'On-site':
-        return <MapPin size={14} />;
-      default:
-        return <MapPin size={14} />;
-    }
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -96,219 +61,97 @@ export function JobCard({
   };
 
   return (
-    <div
-      className={`relative bg-white rounded-xl overflow-hidden transition-all duration-200 cursor-pointer
-        ${saved ? 'border-2' : ''}
-        ${applied ? '' : 'hover:shadow-lg'}
-      `}
-      style={{
-        backgroundColor: applied ? 'var(--md-primary-50)' : 'var(--md-surface)',
-        boxShadow: 'var(--md-elevation-1)',
-        borderLeft: `4px solid ${getStatusColor()}`,
-        borderColor: saved ? 'var(--md-primary-300)' : 'transparent',
-        borderRadius: 'var(--md-radius-lg)',
-        transition: 'all var(--md-duration-short) var(--md-motion-standard)'
-      }}
-      onMouseEnter={(e) => {
-        if (!applied) {
-          e.currentTarget.style.boxShadow = 'var(--md-elevation-3)';
-          e.currentTarget.style.transform = 'translateY(-2px)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!applied) {
-          e.currentTarget.style.boxShadow = 'var(--md-elevation-1)';
-          e.currentTarget.style.transform = 'translateY(0)';
-        }
-      }}
-    >
-      {/* Card Content */}
-      <div className="p-6">
-        {/* Header: Company Logo + Name + Posted Date */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            {/* Company Logo */}
-            <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-semibold text-sm"
-              style={{ 
-                backgroundColor: companyLogo ? 'transparent' : 'var(--md-primary-100)',
-                color: companyLogo ? 'inherit' : 'var(--md-primary-700)'
-              }}
-            >
-              {companyLogo ? (
-                <img src={companyLogo} alt={company} className="w-10 h-10 rounded-lg object-cover" />
-              ) : (
-                company.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2)
-              )}
-            </div>
-            
-            {/* Company Name */}
-            <div>
-              <p 
-                className="font-medium text-sm"
-                style={{ color: 'var(--md-on-surface)' }}
-              >
-                {company}
-              </p>
-              <p 
-                className="text-xs"
-                style={{ color: 'var(--md-on-surface-muted)' }}
-              >
-                {formatDate(postedDate)}
-              </p>
-            </div>
+    <div className="relative bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+      {/* Header section */}
+      <div className="p-4 border-b border-slate-100">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-bold text-slate-900 line-clamp-2 mb-1">{title}</h3>
+            <p className="text-xs text-slate-600">{company}</p>
           </div>
-        </div>
-
-        {/* Job Title */}
-        <h3 
-          className="font-bold text-lg mb-3 line-clamp-2"
-          style={{ 
-            color: 'var(--md-on-surface)',
-            fontFamily: 'var(--md-font-display)',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden'
-          }}
-        >
-          {title}
-        </h3>
-
-        {/* Location + Work Mode Chips */}
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          {/* Location Chip */}
-          <div
-            className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border"
-            style={{
-              backgroundColor: 'var(--md-surface)',
-              borderColor: 'var(--md-divider)',
-              color: 'var(--md-on-surface-muted)'
-            }}
-          >
-            <MapPin size={14} />
-            {location}
-          </div>
-
-          {/* Work Mode Chip */}
-          <div
-            className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border"
-            style={{
-              backgroundColor: 'var(--md-surface)',
-              borderColor: 'var(--md-divider)',
-              color: 'var(--md-on-surface-muted)'
-            }}
-          >
-            {getWorkModeIcon()}
-            {workMode}
-          </div>
-        </div>
-
-        {/* Salary Range */}
-        <div className="flex items-center gap-2 mb-4">
-          <DollarSign 
-            size={16} 
-            style={{ color: 'var(--md-primary-600)' }}
-          />
-          <span 
-            className="font-bold text-base"
-            style={{ color: 'var(--md-primary-600)' }}
-          >
-            {salaryRange}
-          </span>
-          <span 
-            className="text-sm"
-            style={{ color: 'var(--md-on-surface-muted)' }}
-          >
-            per year
-          </span>
-        </div>
-
-        {/* Skill Tags */}
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          {skills.slice(0, 5).map((skill, index) => (
-            <span
-              key={index}
-              className="px-2 py-1 rounded-full text-xs font-medium"
-              style={{
-                backgroundColor: 'var(--md-primary-50)',
-                color: 'var(--md-primary-800)',
-                fontSize: '11px'
-              }}
-            >
-              {skill}
-            </span>
-          ))}
-          {skills.length > 5 && (
-            <span
-              className="px-2 py-1 rounded-full text-xs font-medium"
-              style={{
-                backgroundColor: 'var(--md-surface-variant)',
-                color: 'var(--md-on-surface-muted)',
-                fontSize: '11px'
-              }}
-            >
-              +{skills.length - 5}
-            </span>
-          )}
-        </div>
-
-        {/* Horizontal Divider */}
-        <div 
-          className="h-px mb-4"
-          style={{ backgroundColor: 'var(--md-divider)' }}
-        />
-
-        {/* Footer Row */}
-        <div className="flex items-center justify-between">
-          {/* Apply Button or Applied Status */}
-          {applied ? (
-            <div
-              className="px-4 py-2 rounded-lg text-sm font-medium"
-              style={{
-                backgroundColor: 'var(--md-success)',
-                color: 'white'
-              }}
-            >
-              Applied
-            </div>
-          ) : (
-            <button
-              onClick={handleApply}
-              className="px-6 py-2 rounded-lg text-sm font-semibold transition-colors"
-              style={{
-                backgroundColor: 'var(--md-primary-500)',
-                color: 'white'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--md-primary-600)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--md-primary-500)';
-              }}
-            >
-              Apply Now
-            </button>
-          )}
-
-          {/* Save Button */}
           <button
+            type="button"
             onClick={handleSave}
-            className="p-2 rounded-lg transition-colors"
-            style={{
-              backgroundColor: 'var(--md-surface-variant)',
-              color: saved ? 'var(--md-primary-500)' : 'var(--md-on-surface-muted)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--md-primary-50)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--md-surface-variant)';
-            }}
+            className={`shrink-0 p-2 rounded-lg transition-colors ${
+              saved
+                ? 'bg-slate-200 text-slate-900'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
           >
-            {saved ? <Bookmark size={20} /> : <Bookmark size={20} />}
+            <Bookmark className="h-4 w-4" fill={saved ? 'currentColor' : 'none'} />
           </button>
         </div>
+
+        {/* Status badge */}
+        <div className="inline-flex items-center px-2.5 py-1 rounded-md border border-slate-200 bg-slate-50">
+          <span className="text-xs font-semibold text-slate-700">
+            {status === 'urgent' ? 'Urgent' : status === 'featured' ? 'Featured' : 'Active'}
+          </span>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="p-4 space-y-3">
+        {/* Location and mode */}
+        <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-1.5 text-slate-700">
+            <MapPin className="h-4 w-4 text-slate-400" />
+            {location}
+          </div>
+          <span className="text-xs text-slate-600 px-2 py-1 rounded border border-slate-200 bg-slate-50">
+            {workMode}
+          </span>
+        </div>
+
+        {/* Salary range */}
+        <div>
+          <p className="text-xs text-slate-600 font-medium uppercase tracking-wide mb-1">Salary Range</p>
+          <p className="text-sm font-semibold text-slate-900">{salaryRange}</p>
+        </div>
+
+        {/* Skills */}
+        {skills.length > 0 && (
+          <div>
+            <p className="text-xs text-slate-600 font-medium uppercase tracking-wide mb-2">Required Skills</p>
+            <div className="flex flex-wrap gap-1">
+              {skills.slice(0, 3).map((skill) => (
+                <span
+                  key={skill}
+                  className="px-2 py-1 text-xs font-medium text-slate-700 border border-slate-200 bg-slate-50 rounded-md"
+                >
+                  {skill}
+                </span>
+              ))}
+              {skills.length > 3 && (
+                <span className="px-2 py-1 text-xs font-medium text-slate-600 border border-slate-200 bg-slate-50 rounded-md">
+                  +{skills.length - 3}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Posted date */}
+        <div className="flex items-center gap-1 text-xs text-slate-500 pt-2 border-t border-slate-100">
+          <Clock className="h-3.5 w-3.5" />
+          Posted {formatDate(postedDate)}
+        </div>
+      </div>
+
+      {/* Action button */}
+      <div className="p-4 border-t border-slate-100 bg-slate-50">
+        <button
+          type="button"
+          onClick={handleApply}
+          disabled={applied}
+          className={`w-full py-2 px-4 rounded-lg font-semibold text-sm transition-colors ${
+            applied
+              ? 'bg-slate-300 text-slate-700 cursor-not-allowed'
+              : 'bg-slate-900 text-white hover:bg-slate-800'
+          }`}
+        >
+          {applied ? 'Applied' : 'Apply Now'}
+        </button>
       </div>
     </div>
   );

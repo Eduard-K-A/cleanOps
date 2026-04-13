@@ -30,8 +30,18 @@ create or replace function release_escrow(
 returns void as $$
 declare
   payout numeric := p_amount - p_platform_fee;
+  admin_id uuid;
 begin
+  -- Get the first admin user
+  select id into admin_id from public.profiles where role = 'admin' limit 1;
+  
+  -- Add payout to employee balance
   update public.profiles set money_balance = money_balance + payout where id = p_employee_id;
+  
+  -- Add platform fee to admin balance if admin exists
+  if admin_id is not null then
+    update public.profiles set money_balance = money_balance + p_platform_fee where id = admin_id;
+  end if;
   
   -- Add notification for employee
   insert into public.notifications(user_id, type, payload)

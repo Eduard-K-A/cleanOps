@@ -1,12 +1,12 @@
 # CleanOps
 
-A full-stack service marketplace for cleaning jobs featuring real-time geolocation, mock money escrow system, job dispatching, and Supabase-powered backend.
+A full-stack service marketplace for cleaning jobs featuring real-time geolocation, mock money escrow system, job dispatching, and a Supabase-powered backend.
 
 ## Stack
 
-- **Frontend:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Lucide Icons, Shadcn-style UI components, Zustand, Supabase Auth, React Hooks
+- **Frontend:** Next.js 16.1 (App Router), TypeScript, Tailwind CSS v4, Lucide Icons, Shadcn-style UI components, Zustand, Supabase Auth, React Hooks
 - **Backend:** Supabase (PostgreSQL + PostGIS), Supabase Auth, Supabase Realtime, Server Actions
-- **Infrastructure:** Supabase Edge Functions (optional), Database Triggers, RLS Policies
+- **Infrastructure:** Database Triggers, RLS Policies
 
 ## Prerequisites
 
@@ -23,7 +23,7 @@ A full-stack service marketplace for cleaning jobs featuring real-time geolocati
 3. Run migrations in order:
    ```bash
    # From supabase/migrations/ directory
-   # Run SQL files in order: 001 → 002 → 003 → 004 → 005 → 006 → 007
+   # Run SQL files in order: 001 → 002 → ...
    # Or use Supabase CLI: supabase db push
    ```
 
@@ -48,11 +48,12 @@ Frontend runs on `http://localhost:3000`.
 
 ### 3. User Roles & Onboarding
 
-- **Account Types:** Users choose between `customer` or `employee` during signup
-- **Customer:** Browse jobs, create job bookings, pay employees
-- **Employee:** View job feed, claim jobs, submit work proof, receive payment
-- **Profiles Table:** Stores user metadata including role, money balance, location, ratings
-- **Onboarding:** New employees complete setup flow before accessing job feed
+- **Account Types:** Users choose between `customer` or `employee` during signup, while an `admin` role manages the platform.
+- **Customer:** Browse jobs, create job bookings, manage orders, message employees, pay via the mock money system.
+- **Employee:** View job feed based on proximity, claim jobs, submit work proof, message customers, receive payment.
+- **Admin:** Access full platform overview, view analytics, manage user accounts, review content in a specialized queue, configure settings.
+- **Profiles Table:** Stores user metadata including role, money balance, location, ratings.
+- **Onboarding:** New employees complete a setup flow before accessing the realtime job feed.
 
 ## Architecture
 
@@ -61,7 +62,7 @@ Frontend runs on `http://localhost:3000`.
 ```
 Frontend (Next.js)
     ↓
-Server Actions (Next.js API layer)
+Server Actions (Next.js App Router layer)
     ↓
 Supabase Client (TypeScript)
     ├→ PostgreSQL Database
@@ -72,7 +73,7 @@ Supabase Client (TypeScript)
 
 **Key Components:**
 
-- **Server Actions** (`app/actions/`) - Handle all data operations server-side
+- **Server Actions** (`app/actions/`) - Handle all data operations server-side securely.
   - `auth.ts` - Authentication & signup
   - `jobs.ts` - Job creation, claiming, completion
   - `messages.ts` - Chat messaging
@@ -86,49 +87,45 @@ Supabase Client (TypeScript)
 
 - **RLS Policies** - Row-level security for data isolation
   - Users can only access their own data
-  - Employees only see open jobs
+  - Employees only see open nearby jobs
   - Customers can only manage their jobs
+  - Admins can access platform-wide data securely
 
 ### Frontend Architecture
 
 ```
 app/
-├── (auth)/ - Login & signup flows
-├── customer/ - Customer dashboards (dashboard, jobs, payment, requests)
-├── employee/ - Employee dashboards (dashboard, feed, history, jobs)
-├── admin/ - Admin panels
-├── actions/ - Server Actions for data operations
-└── components/ - Reusable React components
+├── login/ & signup/ - Authentication flows
+├── customer/        - Customer dashboards (dashboard, jobs, messages, order, payment, requests)
+├── employee/        - Employee dashboards (dashboard, feed, history, jobs, messages)
+├── admin/           - Admin panels (dashboard, analytics, jobs, review-queue, users, settings)
+├── actions/         - Server Actions for data operations
+└── api/             - Route handlers
 
 lib/
-├── api/ - Advanced API optimization layer
-│   ├── cache.ts - Multi-layer caching (memory + localStorage)
-│   ├── requestQueue.ts - Request prioritization & batching
-│   ├── requestDeduplication.ts - Duplicate request prevention
-│   ├── retry.ts - Exponential backoff retry logic
-│   ├── performance.ts - Performance monitoring
-│   ├── optimistic.ts - Optimistic updates
-│   └── prefetch.ts - Data prefetching utilities
-├── supabase/ - Supabase client configuration
-└── hooks/ - Custom React hooks for data fetching
-
-hooks/
-├── useAsyncData.ts - Generic async data fetching
-├── useJobDetail.ts - Job details with realtime updates
-├── useOptimisticMutation.ts - Optimistic mutations
-└── realtime/ - Supabase Realtime subscriptions
-    ├── useJobFeed.ts - Real-time job feed
-    ├── useJobMessages.ts - Real-time messaging
-    └── useJobUpdates.ts - Real-time job status
+├── api/             - Advanced API optimization layer
+│   ├── cache.ts - Multi-layer caching
+│   ├── requestQueue.ts - Prioritization
+│   ├── requestDeduplication.ts
+│   ├── retry.ts
+│   ├── performance.ts 
+│   ├── optimistic.ts
+│   └── prefetch.ts
+├── supabase/        - Supabase client configurations
+└── hooks/           - Custom React hooks
+    ├── useAsyncData.ts
+    ├── useJobDetail.ts
+    ├── useOptimisticMutation.ts
+    └── realtime/    - Supabase Realtime (useJobFeed, useJobMessages, useJobUpdates)
 ```
 
-- `frontend/` — Next.js application with App Router, Server Actions, UI components
-- `supabase/` — Database migrations, schema, RLS policies, stored functions
+- `frontend/` — Next.js 16 application with App Router, Server Actions, UI components, Tailwind 4.
+- `supabase/` — Database migrations, schema, RLS policies, stored functions.
 
 ## Core Flows
 
 ### 1. User Signup & Authentication
-```
+```text
 1. User fills signup form (email, password, role)
 2. Server Action calls: signUp(formData)
 3. Supabase Auth creates user account
@@ -138,17 +135,17 @@ hooks/
 **Location:** `app/signup/page.tsx` → `app/actions/auth.ts`
 
 ### 2. Add Money to Account
-```
+```text
 1. User clicks profile button → Balance section
 2. Enters amount and confirms
 3. Server Action calls: addMoney(amount)
 4. Supabase function `add_money()` updates balance
 5. Transaction recorded in money_transactions table
 ```
-**Location:** `components/layout/UserProfileButton.tsx` → `app/actions/payments.ts`
+**Location:** UI Component → `app/actions/payments.ts`
 
 ### 3. Create & Book a Job (Customer)
-```
+```text
 1. Customer navigates to booking form
 2. Selects property size, tasks, urgency, location
 3. System calculates price based on urgency
@@ -157,10 +154,10 @@ hooks/
 6. Job status set to OPEN
 7. Redirect to confirmation page
 ```
-**Location:** `app/customer/jobs/page.tsx` → `app/actions/jobs.ts`
+**Location:** `app/customer/requests/page.tsx` or `/order` → `app/actions/jobs.ts`
 
 ### 4. Job Discovery & Claiming (Employee)
-```
+```text
 1. Employee views job feed with real-time updates
 2. Hook `useJobFeed()` loads nearby jobs via Supabase Realtime
 3. Jobs sorted by proximity using postgis `get_nearby_jobs()` RPC
@@ -171,7 +168,7 @@ hooks/
 **Location:** `app/employee/feed/page.tsx` → `app/actions/jobs.ts`
 
 ### 5. Submit Work Proof & Complete Job
-```
+```text
 1. Employee uploads proof of work (images)
 2. Server Action calls: updateJobStatus(jobId, PENDING_REVIEW, proofImages)
 3. Job status changes to PENDING_REVIEW
@@ -182,8 +179,17 @@ hooks/
 ```
 **Location:** `app/employee/jobs/page.tsx` → `app/actions/jobs.ts`
 
-### 6. Real-Time Messaging
+### 6. Admin Supervision
+```text
+1. Admin logs in and views the Platform Overview Dashboard
+2. Real-time metrics show active user count, job volume, and revenue
+3. Admin navigates to the Review Queue to check reported jobs or disputed completions
+4. Can directly override decisions or manage user accounts via users tab
 ```
+**Location:** `app/admin/dashboard/page.tsx` & `app/admin/review-queue/page.tsx`
+
+### 7. Real-Time Messaging
+```text
 1. Customer and employee can message within a job
 2. Hook `useJobMessages()` subscribes to Supabase Realtime messages table
 3. New messages appear instantly
@@ -309,17 +315,16 @@ This eliminates the need for traditional REST API endpoints and provides better 
 - Live notification system
 
 ### 📱 Responsive UI
-- Mobile-first design with Tailwind CSS
+- Mobile-first design with Tailwind CSS v4
 - Responsive grid layouts
 - Touch-friendly buttons and forms
 - Dark/light mode support (optional)
 
-### ⚡ Performance Optimizations
+### ⚡ Performance & Admin Capabilities
+- Skeleton loaders for smooth, perceived performance across Admin and Dashboard interfaces
+- Advanced metrics tracking & analytics through the new Admin portal
 - Smart caching with memory + localStorage
-- Request deduplication
-- Exponential backoff retries
-- Performance monitoring and metrics
-- Optimistic UI updates
+- Optimistic UI updates to hide network latency
 
 ## Database Schema
 
