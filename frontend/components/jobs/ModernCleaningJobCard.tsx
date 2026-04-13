@@ -1,24 +1,7 @@
 'use client';
 
-import React from 'react';
-import { 
-  MapPin, 
-  DollarSign, 
-  Clock, 
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  PlayCircle,
-  Eye,
-  Loader2,
-  User,
-  Calendar,
-  MessageCircle,
-  MoreHorizontal,
-  ArrowRight
-} from 'lucide-react';
-import type { Job, JobStatus } from '@/types';
-import { Button } from '@/components/ui/button';
+import { MapPin, Eye, MessageCircle, Zap, AlertCircle, PlayCircle, Clock, CheckCircle, XCircle } from 'lucide-react';
+import type { Job } from '@/types';
 
 interface ModernCleaningJobCardProps {
   job: Job;
@@ -29,228 +12,192 @@ interface ModernCleaningJobCardProps {
   workerName?: string | null;
 }
 
-export function ModernCleaningJobCard({ job, onView, onCancel, isCancelling, customerName, workerName }: ModernCleaningJobCardProps) {
-  const getStatusIcon = () => {
-    switch (job.status) {
-      case 'OPEN':
-        return <AlertCircle className="h-4 w-4" />;
-      case 'IN_PROGRESS':
-        return <PlayCircle className="h-4 w-4" />;
-      case 'PENDING_REVIEW':
-        return <Clock className="h-4 w-4" />;
-      case 'COMPLETED':
-        return <CheckCircle className="h-4 w-4" />;
-      case 'CANCELLED':
-        return <XCircle className="h-4 w-4" />;
-      default:
-        return <AlertCircle className="h-4 w-4" />;
-    }
-  };
+const STATUS_CONFIG = {
+  OPEN: {
+    label: 'Open',
+    icon: AlertCircle,
+    color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    iconBg: 'bg-emerald-100'
+  },
+  IN_PROGRESS: {
+    label: 'In Progress',
+    icon: PlayCircle,
+    color: 'bg-amber-50 text-amber-700 border-amber-200',
+    iconBg: 'bg-amber-100'
+  },
+  PENDING_REVIEW: {
+    label: 'Pending Review',
+    icon: Clock,
+    color: 'bg-blue-50 text-blue-700 border-blue-200',
+    iconBg: 'bg-blue-100'
+  },
+  COMPLETED: {
+    label: 'Completed',
+    icon: CheckCircle,
+    color: 'bg-sky-50 text-sky-700 border-sky-200',
+    iconBg: 'bg-sky-100'
+  },
+  CANCELLED: {
+    label: 'Cancelled',
+    icon: XCircle,
+    color: 'bg-slate-50 text-slate-700 border-slate-200',
+    iconBg: 'bg-slate-100'
+  }
+} as const;
 
-  const getStatusClass = () => {
-    switch (job.status) {
-      case 'OPEN':
-        return 'open';
-      case 'IN_PROGRESS':
-        return 'progress';
-      case 'PENDING_REVIEW':
-        return 'pending';
-      case 'COMPLETED':
-        return 'completed';
-      case 'CANCELLED':
-        return 'cancelled';
-      default:
-        return 'open';
-    }
-  };
+const URGENCY_CONFIG = {
+  LOW: {
+    label: 'Low',
+    color: 'bg-slate-100 text-slate-700'
+  },
+  NORMAL: {
+    label: 'Normal',
+    color: 'bg-blue-100 text-blue-700'
+  },
+  HIGH: {
+    label: 'High',
+    color: 'bg-red-100 text-red-700',
+    icon: true
+  }
+} as const;
 
-  const getStatusBarClass = () => {
-    switch (job.status) {
-      case 'OPEN':
-        return 'status-open';
-      case 'IN_PROGRESS':
-        return 'status-progress';
-      case 'PENDING_REVIEW':
-        return 'status-pending';
-      case 'COMPLETED':
-        return 'status-completed';
-      case 'CANCELLED':
-        return 'status-cancelled';
-      default:
-        return 'status-open';
-    }
-  };
+function formatPrice(cents: number) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
+}
 
-  const getChipClass = () => {
-    switch (job.status) {
-      case 'OPEN':
-        return 'chip-open';
-      case 'IN_PROGRESS':
-        return 'chip-progress';
-      case 'PENDING_REVIEW':
-        return 'chip-pending';
-      case 'COMPLETED':
-        return 'chip-completed';
-      case 'CANCELLED':
-        return 'chip-cancelled';
-      default:
-        return 'chip-open';
-    }
-  };
+function formatDate(dateStr: string) {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-  const getStatusLabel = () => {
-    switch (job.status) {
-      case 'OPEN':
-        return 'Open';
-      case 'IN_PROGRESS':
-        return 'In Progress';
-      case 'PENDING_REVIEW':
-        return 'Pending Review';
-      case 'COMPLETED':
-        return 'Completed';
-      case 'CANCELLED':
-        return 'Cancelled';
-      default:
-        return 'Open';
-    }
-  };
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  return `${Math.floor(diffDays / 30)} months ago`;
+}
 
-  const getProgressPercentage = () => {
-    switch (job.status) {
-      case 'OPEN':
-        return 0;
-      case 'IN_PROGRESS':
-        return 65;
-      case 'PENDING_REVIEW':
-        return 90;
-      case 'COMPLETED':
-        return 100;
-      case 'CANCELLED':
-        return 0;
-      default:
-        return 0;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-    return `${Math.floor(diffDays / 30)} months ago`;
-  };
-
-  const progress = getProgressPercentage();
+export function ModernCleaningJobCard({
+  job,
+  onView,
+  onCancel,
+  isCancelling,
+  customerName,
+  workerName,
+}: ModernCleaningJobCardProps) {
+  const tasks = Array.isArray(job.tasks) ? job.tasks : [];
+  const statusConfig = STATUS_CONFIG[job.status];
+  const urgencyConfig = URGENCY_CONFIG[job.urgency];
+  const StatusIcon = statusConfig.icon;
 
   return (
-    <div className="job-card">
-      <div className={`card-status-bar ${getStatusBarClass()}`}></div>
-      <div className="card-body">
-        <div className="card-header">
-          <div className="card-logo">🏠</div>
-          <div className="card-title-group">
-            <div className="card-title">
-              {job.tasks.length > 0 ? job.tasks[0] : 'Cleaning Service'}
-              {job.tasks.length > 1 && ` +${job.tasks.length - 1} more`}
-            </div>
-            <div className="card-id">CLN-{job.id.slice(-6).toUpperCase()}</div>
-          </div>
-          <div className={`status-chip ${getChipClass()}`}>
-            <span className="dot"></span>
-            {getStatusLabel()}
-          </div>
+    <article className="flex flex-col rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 overflow-hidden">
+      
+      {/* Header with status */}
+      <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-100">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold text-slate-900 line-clamp-2">
+            {job.location_address || 'Cleaning Service'}
+          </h3>
+          <p className="text-xs text-slate-500 mt-1">
+            Job ID: {job.id.slice(-6).toUpperCase()}
+          </p>
         </div>
 
-        <div className="card-meta">
-          <div className="meta-item">
-            <div className="meta-label">Location</div>
-            <div className="meta-value">
-              <MapPin className="h-4 w-4" />
-              {job.location_address || 'Location TBD'}
-            </div>
+        <div className={`inline-flex shrink-0 items-center gap-1.5 px-2.5 py-1.5 rounded-md border ${statusConfig.color}`}>
+          <span className={`p-0.5 rounded ${statusConfig.iconBg}`}>
+            <StatusIcon className="h-3.5 w-3.5" />
+          </span>
+          <span className="text-xs font-semibold">{statusConfig.label}</span>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="flex flex-col gap-4 p-4">
+        
+        {/* Key metrics grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Amount</p>
+            <p className="text-sm font-bold text-slate-900">{formatPrice(job.price_amount)}</p>
           </div>
-          <div className="meta-item">
-            <div className="meta-label">Requested by</div>
-            <div className="meta-value">
-              <User className="h-4 w-4" />
-              {customerName || 'Unknown'}
-            </div>
-          </div>
-          <div className="meta-item">
-            <div className="meta-label">Cleaner</div>
-            <div className="meta-value">
-              <User className="h-4 w-4" />
-              {workerName || 'Pending Assignment'}
-            </div>
-          </div>
-          <div className="meta-item">
-            <div className="meta-label">Service Cost</div>
-            <div className="meta-value">
-              <DollarSign className="h-4 w-4" />
-              ${job.price_amount}
-            </div>
-          </div>
-          <div className="meta-item">
-            <div className="meta-label">Scheduled</div>
-            <div className="meta-value">
-              <Calendar className="h-4 w-4" />
-              {formatDate(job.created_at)}
+          <div>
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Priority</p>
+            <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md ${urgencyConfig.color} font-semibold text-xs w-fit`}>
+              {job.urgency === 'HIGH' && <Zap className="h-3 w-3" />}
+              {urgencyConfig.label}
             </div>
           </div>
         </div>
 
-        {progress > 0 && (
-          <div className="card-progress-row">
-            <div className="progress-header">
-              <span className="progress-label">Completion</span>
-              <span className="progress-pct">{progress}%</span>
-            </div>
-            <div className="progress-track">
-              <div 
-                className="progress-fill" 
-                style={{ width: `${progress}%` }}
-              ></div>
+        {/* Location */}
+        {job.location_address && (
+          <div className="flex gap-2">
+            <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
+            <p className="text-sm text-slate-700 line-clamp-2">{job.location_address}</p>
+          </div>
+        )}
+
+        {/* People info */}
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Posted by</p>
+            <p className="font-medium text-slate-900">{customerName || 'Unknown'}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Assigned to</p>
+            <p className="font-medium text-slate-900">{workerName || '—'}</p>
+          </div>
+        </div>
+
+        {/* Tasks */}
+        {tasks.length > 0 && (
+          <div>
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-2">Tasks</p>
+            <div className="flex flex-wrap gap-1">
+              {tasks.slice(0, 3).map((task, idx) => (
+                <span
+                  key={idx}
+                  className="px-2 py-1 text-xs font-medium text-slate-700 border border-slate-200 bg-slate-50 rounded-md"
+                >
+                  {task}
+                </span>
+              ))}
+              {tasks.length > 3 && (
+                <span className="px-2 py-1 text-xs font-medium text-slate-600 border border-slate-200 bg-slate-50 rounded-md">
+                  +{tasks.length - 3}
+                </span>
+              )}
             </div>
           </div>
         )}
 
-        <div className="card-tags">
-          <span className="tag">{job.urgency} Priority</span>
-          {job.tasks.slice(0, 3).map((task, index) => (
-            <span key={index} className="tag">{task}</span>
-          ))}
-          {job.tasks.length > 3 && (
-            <span className="tag">+{job.tasks.length - 3} more</span>
-          )}
-        </div>
-      </div>
+        {/* Footer with timestamp and actions */}
+        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+          <p className="text-xs text-slate-500">{formatDate(job.created_at)}</p>
+          
+          <div className="flex gap-2">
+            {job.status === 'IN_PROGRESS' && job.worker_id && (
+              <a
+                href={`/customer/messages?job=${job.id}`}
+                className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100"
+              >
+                <MessageCircle className="h-4 w-4" />
+              </a>
+            )}
 
-      <div className="card-footer">
-        <div className="footer-date">
-          <Clock className="h-4 w-4" />
-          {job.urgency === 'HIGH' ? 'Urgent service requested' : 'Standard service'}
-        </div>
-        <div className="footer-actions">
-          <button className="btn-icon" title="Message">
-            <MessageCircle className="h-4 w-4" />
-          </button>
-          <button className="btn-icon" title="More options">
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
-          <button 
-            className="btn-detail ripple-parent" 
-            onClick={() => onView(job.id)}
-          >
-            View 
-            <ArrowRight className="h-4 w-4" />
-          </button>
+            <button
+              type="button"
+              onClick={() => onView(job.id)}
+              className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100"
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              View
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
