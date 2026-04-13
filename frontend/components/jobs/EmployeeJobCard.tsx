@@ -1,6 +1,6 @@
 'use client';
 
-import { MapPin, DollarSign, Clock, Zap, Eye, Loader2, CheckCircle, XCircle, PlayCircle, AlertCircle } from 'lucide-react';
+import { MapPin, Eye, Loader2, MessageCircle, Zap, AlertCircle, PlayCircle, Clock, CheckCircle, XCircle } from 'lucide-react';
 import type { Job } from '@/types';
 
 interface EmployeeJobCardProps {
@@ -13,17 +13,52 @@ interface EmployeeJobCardProps {
 }
 
 const STATUS_CONFIG = {
-  OPEN:           { label: 'Open',           classes: 'bg-emerald-50 text-emerald-700 ring-emerald-200',  Icon: AlertCircle },
-  IN_PROGRESS:    { label: 'In Progress',    classes: 'bg-amber-50  text-amber-700  ring-amber-200',      Icon: PlayCircle  },
-  PENDING_REVIEW: { label: 'Pending Review', classes: 'bg-orange-50 text-orange-700 ring-orange-200',     Icon: Clock       },
-  COMPLETED:      { label: 'Completed',      classes: 'bg-sky-50    text-sky-700    ring-sky-200',        Icon: CheckCircle },
-  CANCELLED:      { label: 'Cancelled',      classes: 'bg-red-50    text-red-600    ring-red-200',        Icon: XCircle     },
+  OPEN: {
+    label: 'Open',
+    icon: AlertCircle,
+    color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    iconBg: 'bg-emerald-100'
+  },
+  IN_PROGRESS: {
+    label: 'In Progress',
+    icon: PlayCircle,
+    color: 'bg-amber-50 text-amber-700 border-amber-200',
+    iconBg: 'bg-amber-100'
+  },
+  PENDING_REVIEW: {
+    label: 'Pending Review',
+    icon: Clock,
+    color: 'bg-blue-50 text-blue-700 border-blue-200',
+    iconBg: 'bg-blue-100'
+  },
+  COMPLETED: {
+    label: 'Completed',
+    icon: CheckCircle,
+    color: 'bg-sky-50 text-sky-700 border-sky-200',
+    iconBg: 'bg-sky-100'
+  },
+  CANCELLED: {
+    label: 'Cancelled',
+    icon: XCircle,
+    color: 'bg-slate-50 text-slate-700 border-slate-200',
+    iconBg: 'bg-slate-100'
+  }
 } as const;
 
 const URGENCY_CONFIG = {
-  LOW:    { label: 'Low',    classes: 'bg-slate-100 text-slate-600' },
-  NORMAL: { label: 'Normal', classes: 'bg-blue-50   text-blue-600'  },
-  HIGH:   { label: 'Urgent', classes: 'bg-red-50    text-red-600'   },
+  LOW: {
+    label: 'Low',
+    color: 'bg-slate-100 text-slate-700'
+  },
+  NORMAL: {
+    label: 'Normal',
+    color: 'bg-blue-100 text-blue-700'
+  },
+  HIGH: {
+    label: 'High',
+    color: 'bg-red-100 text-red-700',
+    icon: true
+  }
 } as const;
 
 function formatPrice(cents: number) {
@@ -33,10 +68,10 @@ function formatPrice(cents: number) {
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1)  return 'Just now';
+  if (mins < 1) return 'Just now';
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24)  return `${hrs}h ago`;
+  if (hrs < 24) return `${hrs}h ago`;
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
@@ -48,103 +83,109 @@ export function EmployeeJobCard({
   isClaiming = false,
   customerName,
 }: EmployeeJobCardProps) {
-  const status  = STATUS_CONFIG[job.status]  ?? STATUS_CONFIG.OPEN;
-  const urgency = URGENCY_CONFIG[job.urgency] ?? URGENCY_CONFIG.NORMAL;
-  const StatusIcon = status.Icon;
   const tasks = Array.isArray(job.tasks) ? job.tasks : [];
   const canClaim = job.status === 'OPEN' && !isClaiming;
+  const statusConfig = STATUS_CONFIG[job.status];
+  const urgencyConfig = URGENCY_CONFIG[job.urgency];
+  const StatusIcon = statusConfig.icon;
 
   return (
-    <article className="group relative flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 overflow-hidden">
+    <article className="relative flex flex-col rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 overflow-hidden">
+      
+      {/* Top bar with status indicator */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+        <div className="flex items-center gap-2">
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border ${statusConfig.color}`}>
+            <span className={`p-0.5 rounded ${statusConfig.iconBg}`}>
+              <StatusIcon className="h-3.5 w-3.5" />
+            </span>
+            <span className="text-xs font-semibold">{statusConfig.label}</span>
+          </div>
+          {job.urgency === 'HIGH' && (
+            <div className={`inline-flex items-center gap-1.5 px-2 py-1.5 rounded-md ${urgencyConfig.color}`}>
+              <Zap className="h-3 w-3" />
+              <span className="text-xs font-semibold">Urgent</span>
+            </div>
+          )}
+        </div>
+        <span className="text-xs text-slate-500">{timeAgo(job.created_at)}</span>
+      </div>
 
-      {/* Urgency accent bar */}
-      <div className={`h-1 w-full ${job.urgency === 'HIGH' ? 'bg-red-400' : job.urgency === 'NORMAL' ? 'bg-blue-400' : 'bg-slate-200'}`} />
-
-      <div className="flex flex-col gap-3 p-4">
-
-        {/* ── Header ── */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">Cleaning Job</p>
-            <h3 className="font-semibold text-slate-900 truncate">
+      {/* Main content */}
+      <div className="flex flex-col gap-4 p-4">
+        
+        {/* Location */}
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900 mb-1">Location</h3>
+          <div className="flex items-start gap-2">
+            <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" aria-hidden="true" />
+            <p className="text-sm text-slate-700 line-clamp-2">
               {job.location_address ?? 'Address on confirmation'}
-            </h3>
-          </div>
-
-          {/* Status badge */}
-          <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${status.classes}`}>
-            <StatusIcon className="h-3 w-3" aria-hidden="true" />
-            {status.label}
-          </span>
-        </div>
-
-        {/* ── Key metrics row ── */}
-        <div className="grid grid-cols-3 divide-x divide-slate-100 rounded-xl bg-slate-50 text-center">
-          <div className="px-2 py-2">
-            <p className="text-base font-bold text-slate-900">{formatPrice(job.price_amount)}</p>
-            <p className="text-[10px] text-slate-500 mt-0.5">Payout</p>
-          </div>
-          <div className="px-2 py-2">
-            <p className={`inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-1.5 py-0.5 ${urgency.classes}`}>
-              {job.urgency === 'HIGH' && <Zap className="h-2.5 w-2.5" aria-hidden="true" />}
-              {urgency.label}
             </p>
-            <p className="text-[10px] text-slate-500 mt-0.5">Priority</p>
-          </div>
-          <div className="px-2 py-2">
-            <p className="text-[11px] font-semibold text-slate-700">{timeAgo(job.created_at)}</p>
-            <p className="text-[10px] text-slate-500 mt-0.5">Posted</p>
           </div>
         </div>
 
-        {/* ── Location ── */}
-        {job.location_address && (
-          <div className="flex items-start gap-2 text-sm text-slate-600">
-            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
-            <span className="line-clamp-2">{job.location_address}</span>
+        {/* Posted by and Price */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Posted by</p>
+            <p className="text-sm font-medium text-slate-900">{customerName || 'Unknown'}</p>
           </div>
-        )}
+          <div>
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Payout</p>
+            <p className="text-sm font-bold text-slate-900">{formatPrice(job.price_amount)}</p>
+          </div>
+        </div>
 
-        {/* ── Posted by ── */}
-        {customerName && (
-          <p className="text-xs text-slate-500 mt-0.5">
-            Posted by {customerName}
-          </p>
-        )}
-
-        {/* ── Tasks ── */}
+        {/* Tasks */}
         {tasks.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {tasks.slice(0, 3).map((task, i) => (
-              <span key={i} className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700">
-                {task}
-              </span>
-            ))}
-            {tasks.length > 3 && (
-              <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                +{tasks.length - 3} more
-              </span>
-            )}
+          <div>
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-2">Tasks</p>
+            <div className="flex flex-wrap gap-1">
+              {tasks.slice(0, 3).map((task, i) => (
+                <span
+                  key={i}
+                  className="rounded-md px-2 py-1 text-xs font-medium text-slate-700 border border-slate-200 bg-slate-50"
+                >
+                  {task}
+                </span>
+              ))}
+              {tasks.length > 3 && (
+                <span className="rounded-md px-2 py-1 text-xs font-medium text-slate-600 border border-slate-200 bg-slate-50">
+                  +{tasks.length - 3} more
+                </span>
+              )}
+            </div>
           </div>
         )}
 
-        {/* ── Actions ── */}
-        <div className="flex gap-2 pt-0.5">
+        {/* Action buttons */}
+        <div className="flex gap-2 pt-2">
           <button
             type="button"
             onClick={() => onView(job.id)}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100"
           >
             <Eye className="h-4 w-4" aria-hidden="true" />
             Details
           </button>
+
+          {job.status === 'IN_PROGRESS' && (
+            <a
+              href={`/employee/messages?job=${job.id}`}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100"
+            >
+              <MessageCircle className="h-4 w-4" aria-hidden="true" />
+              Message
+            </a>
+          )}
 
           {showClaim && (
             <button
               type="button"
               onClick={() => onClaim(job.id)}
               disabled={!canClaim}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-slate-900 text-sm font-semibold text-white transition-colors hover:bg-slate-800 active:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-slate-900"
             >
               {isClaiming ? (
                 <>
@@ -157,7 +198,6 @@ export function EmployeeJobCard({
             </button>
           )}
         </div>
-
       </div>
     </article>
   );

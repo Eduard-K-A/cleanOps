@@ -1,19 +1,7 @@
 'use client';
 
-import React from 'react';
-import { 
-  MapPin, 
-  DollarSign, 
-  Clock, 
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  PlayCircle,
-  Eye,
-  Loader2
-} from 'lucide-react';
-import type { Job, JobStatus } from '@/types';
-import { Button } from '@/components/ui/button';
+import { MapPin, Eye, Loader2, XCircle, AlertCircle, PlayCircle, Clock, CheckCircle, Zap } from 'lucide-react';
+import type { Job } from '@/types';
 
 interface CleaningJobCardProps {
   job: Job;
@@ -22,144 +10,113 @@ interface CleaningJobCardProps {
   isCancelling: boolean;
 }
 
-export function CleaningJobCard({ job, onView, onCancel, isCancelling }: CleaningJobCardProps) {
-  const getStatusIcon = () => {
-    switch (job.status) {
-      case 'OPEN':
-        return <AlertCircle className="h-4 w-4" />;
-      case 'IN_PROGRESS':
-        return <PlayCircle className="h-4 w-4" />;
-      case 'PENDING_REVIEW':
-        return <Clock className="h-4 w-4" />;
-      case 'COMPLETED':
-        return <CheckCircle className="h-4 w-4" />;
-      case 'CANCELLED':
-        return <XCircle className="h-4 w-4" />;
-      default:
-        return <AlertCircle className="h-4 w-4" />;
-    }
-  };
+const STATUS_CONFIG = {
+  OPEN: {
+    label: 'Open',
+    icon: AlertCircle,
+    color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    iconBg: 'bg-emerald-100'
+  },
+  IN_PROGRESS: {
+    label: 'In Progress',
+    icon: PlayCircle,
+    color: 'bg-amber-50 text-amber-700 border-amber-200',
+    iconBg: 'bg-amber-100'
+  },
+  PENDING_REVIEW: {
+    label: 'Pending Review',
+    icon: Clock,
+    color: 'bg-blue-50 text-blue-700 border-blue-200',
+    iconBg: 'bg-blue-100'
+  },
+  COMPLETED: {
+    label: 'Completed',
+    icon: CheckCircle,
+    color: 'bg-sky-50 text-sky-700 border-sky-200',
+    iconBg: 'bg-sky-100'
+  },
+  CANCELLED: {
+    label: 'Cancelled',
+    icon: XCircle,
+    color: 'bg-slate-50 text-slate-700 border-slate-200',
+    iconBg: 'bg-slate-100'
+  }
+} as const;
 
-  const getStatusColor = () => {
-    switch (job.status) {
-      case 'OPEN':
-        return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'IN_PROGRESS':
-        return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'PENDING_REVIEW':
-        return 'text-orange-600 bg-orange-50 border-orange-200';
-      case 'COMPLETED':
-        return 'text-green-600 bg-green-50 border-green-200';
-      case 'CANCELLED':
-        return 'text-red-600 bg-red-50 border-red-200';
-      default:
-        return 'text-gray-600 bg-gray-50 border-gray-200';
-    }
-  };
+function formatPrice(cents: number) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
+}
 
-  const getUrgencyColor = () => {
-    switch (job.urgency) {
-      case 'LOW':
-        return 'text-green-600 bg-green-50';
-      case 'NORMAL':
-        return 'text-blue-600 bg-blue-50';
-      case 'HIGH':
-        return 'text-red-600 bg-red-50';
-      default:
-        return 'text-gray-600 bg-gray-50';
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-    return `${Math.floor(diffDays / 30)} months ago`;
-  };
+export function CleaningJobCard({
+  job,
+  onView,
+  onCancel,
+  isCancelling,
+}: CleaningJobCardProps) {
+  const statusConfig = STATUS_CONFIG[job.status];
+  const StatusIcon = statusConfig.icon;
+  const canCancel = job.status === 'OPEN' || job.status === 'IN_PROGRESS';
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor()}`}>
-              {getStatusIcon()}
-              {job.status.replace('_', ' ')}
-            </span>
-            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getUrgencyColor()}`}>
-              {job.urgency} Priority
-            </span>
+    <div className="rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 overflow-hidden">
+      {/* Header with status */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border ${statusConfig.color}`}>
+          <span className={`p-0.5 rounded ${statusConfig.iconBg}`}>
+            <StatusIcon className="h-3.5 w-3.5" />
+          </span>
+          <span className="text-xs font-semibold">{statusConfig.label}</span>
+        </div>
+        <p className="text-sm font-bold text-slate-900">{formatPrice(job.price_amount)}</p>
+      </div>
+
+      {/* Content */}
+      <div className="p-4">
+        {/* Tasks summary */}
+        <p className="text-sm text-slate-700 mb-3 line-clamp-2">
+          {job.tasks.join(', ') || 'Cleaning Service'}
+        </p>
+
+        {/* Location */}
+        {job.location_address && (
+          <div className="flex gap-2 mb-4">
+            <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
+            <p className="text-sm text-slate-600 line-clamp-1">{job.location_address}</p>
           </div>
-          <p className="text-sm text-gray-500">
-            Posted {formatDate(job.created_at)}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-2xl font-bold text-green-600">${job.price_amount}</p>
-        </div>
-      </div>
-
-      {/* Location */}
-      {job.location_address && (
-        <div className="flex items-center gap-2 mb-4 text-sm text-gray-600">
-          <MapPin className="h-4 w-4" />
-          {job.location_address}
-        </div>
-      )}
-
-      {/* Tasks */}
-      <div className="mb-4">
-        <h4 className="font-medium text-gray-900 mb-2">Tasks:</h4>
-        <ul className="space-y-1">
-          {job.tasks.map((task, index) => (
-            <li key={index} className="text-sm text-gray-600 flex items-start gap-2">
-              <span className="text-green-500 mt-0.5">•</span>
-              {task}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Actions */}
-      <div className="flex gap-2 pt-4 border-t border-gray-100">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onView(job.id)}
-          className="flex-1"
-        >
-          <Eye className="h-4 w-4 mr-2" />
-          View Details
-        </Button>
-        
-        {(job.status === 'OPEN' || job.status === 'IN_PROGRESS') && (
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => onCancel(job.id)}
-            disabled={isCancelling}
-            className="flex-1"
-          >
-            {isCancelling ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Cancelling...
-              </>
-            ) : (
-              <>
-                <XCircle className="h-4 w-4 mr-2" />
-                Cancel
-              </>
-            )}
-          </Button>
         )}
+
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => onView(job.id)}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100"
+          >
+            <Eye className="h-4 w-4" />
+            View
+          </button>
+          
+          {canCancel && (
+            <button
+              type="button"
+              onClick={() => onCancel(job.id)}
+              disabled={isCancelling}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-red-50 border border-red-200 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 active:bg-red-200 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-red-50"
+            >
+              {isCancelling ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Cancelling
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-4 w-4" />
+                  Cancel
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
