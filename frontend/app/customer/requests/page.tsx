@@ -6,6 +6,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { ModernCleaningJobCard } from "@/components/jobs/ModernCleaningJobCard";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { RequestsPageSkeleton } from "@/components/ui/Skeleton";
 import { api } from "@/lib/api";
 import type { Job } from "@/types";
@@ -17,8 +18,23 @@ import {
   ArrowUpDown,
   Grid3X3,
   List,
+  Flag,
+  AlertTriangle,
+  ChevronDown,
 } from "lucide-react";
 import type { JobStatus } from "@/types";
+
+// Sort options configuration
+const SORT_OPTIONS = [
+  { value: "recent", label: "Most Recent", icon: "📅" },
+  { value: "oldest", label: "Oldest First", icon: "📅" },
+  { value: "price_high", label: "Price: High to Low", icon: "💰" },
+  { value: "price_low", label: "Price: Low to High", icon: "💰" },
+  { value: "urgency_high", label: "Urgency: High First", icon: "⚡" },
+  { value: "urgency_low", label: "Urgency: Low First", icon: "🐢" },
+] as const;
+
+type SortOption = typeof SORT_OPTIONS[number]["value"];
 
 const STATUS_OPTIONS: { value: string; label: string; color: string }[] = [
   { value: "all", label: "All Requests", color: "bg-slate-100" },
@@ -38,8 +54,16 @@ export default function RequestsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("recent");
+  const [sortBy, setSortBy] = useState<SortOption>("recent");
   const [statusFilter, setStatusFilter] = useState<string>("OPEN"); // Default to show open requests
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+
+  // Report modal state
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [selectedJobForReport, setSelectedJobForReport] = useState<Job | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   useEffect(() => {
     fetchJobs();
@@ -48,6 +72,21 @@ export default function RequestsPage() {
     const interval = setInterval(fetchJobs, 5000);
     return () => clearInterval(interval);
   }, []); // Empty dependency - fetch all jobs regardless of filter changes
+
+  // Close sort dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.sort-dropdown-container')) {
+        setIsSortDropdownOpen(false);
+      }
+    }
+
+    if (isSortDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isSortDropdownOpen]);
 
   async function fetchJobs() {
     try {
@@ -78,17 +117,42 @@ export default function RequestsPage() {
     }
   }
 
-  const filteredJobs = jobs.filter((job) => {
-    const matchesStatus = statusFilter === "all" || job.status === statusFilter;
-    const matchesSearch =
-      searchQuery === "" ||
-      job.tasks.some((task) =>
-        task.toLowerCase().includes(searchQuery.toLowerCase()),
-      ) ||
-      job.location_address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.id.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
+  // Sorting function
+  const sortJobs = (jobsToSort: Job[]): Job[] => {
+    const sorted = [...jobsToSort];
+    switch (sortBy) {
+      case "recent":
+        return sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      case "oldest":
+        return sorted.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      case "price_high":
+        return sorted.sort((a, b) => b.price_amount - a.price_amount);
+      case "price_low":
+        return sorted.sort((a, b) => a.price_amount - b.price_amount);
+      case "urgency_high":
+        const urgencyOrderHigh = { HIGH: 3, NORMAL: 2, LOW: 1 };
+        return sorted.sort((a, b) => urgencyOrderHigh[b.urgency] - urgencyOrderHigh[a.urgency]);
+      case "urgency_low":
+        const urgencyOrderLow = { HIGH: 3, NORMAL: 2, LOW: 1 };
+        return sorted.sort((a, b) => urgencyOrderLow[a.urgency] - urgencyOrderLow[b.urgency]);
+      default:
+        return sorted;
+    }
+  };
+
+  const filteredJobs = sortJobs(
+    jobs.filter((job) => {
+      const matchesStatus = statusFilter === "all" || job.status === statusFilter;
+      const matchesSearch =
+        searchQuery === "" ||
+        job.tasks.some((task) =>
+          task.toLowerCase().includes(searchQuery.toLowerCase()),
+        ) ||
+        job.location_address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.id.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesStatus && matchesSearch;
+    })
+  );
 
   const getStatusCounts = () => {
     const counts = {
@@ -132,7 +196,7 @@ export default function RequestsPage() {
     try {
       setCancelling(id);
       await api.updateJobStatus(id, "CANCELLED");
-      toast.success("Job cancelled successfully.");
+      toast.success("Job cancelled successfully. Refund will be processed to your account.");
       await fetchJobs();
     } catch (e: unknown) {
       const err = e as { response?: { data?: { error?: string } } };
@@ -141,6 +205,44 @@ export default function RequestsPage() {
       setCancelling(null);
     }
   }
+
+  // Handle opening report modal
+  const handleOpenReport = (job: Job) => {
+    setSelectedJobForReport(job);
+    setReportModalOpen(true);
+    setReportReason("");
+    setReportDetails("");
+  };
+
+  // Handle submitting report
+  const handleSubmitReport = async () => {
+    if (!selectedJobForReport || !reportReason.trim()) {
+      toast.error("Please select a reason for the report");
+      return;
+    }
+
+    try {
+      setIsSubmittingReport(true);
+      // Submit report to admin via API
+      const { submitJobReport } = await import('@/app/actions/reports');
+      await submitJobReport({
+        jobId: selectedJobForReport.id,
+        reason: reportReason,
+        details: reportDetails,
+        reportedBy: selectedJobForReport.customer_id,
+      });
+      toast.success("Report submitted successfully. Admin will review shortly.");
+      setReportModalOpen(false);
+      setSelectedJobForReport(null);
+      setReportReason("");
+      setReportDetails("");
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      toast.error(err?.message ?? "Failed to submit report");
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
 
   return (
     <ProtectedRoute>
@@ -239,16 +341,43 @@ export default function RequestsPage() {
             <input
               className="search-input"
               type="text"
-              placeholder="Search requests…"
+              placeholder="Search requests by location or tasks…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           <div className="toolbar-spacer"></div>
-          <button className="btn-sort">
-            <ArrowUpDown className="h-4 w-4" />
-            Most Recent
-          </button>
+          {/* Sort Dropdown */}
+          <div className="relative sort-dropdown-container">
+            <button
+              className="btn-sort"
+              onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
+            >
+              <ArrowUpDown className="h-4 w-4" />
+              {SORT_OPTIONS.find(o => o.value === sortBy)?.label || "Sort"}
+              <ChevronDown className={`h-3 w-3 transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isSortDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 z-50 py-1">
+                {SORT_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      setSortBy(option.value);
+                      setIsSortDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 hover:bg-slate-50 transition-colors ${
+                      sortBy === option.value ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'
+                    }`}
+                  >
+                    <span>{option.icon}</span>
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button className="btn-view active" title="Grid view">
             <Grid3X3 className="h-5 w-5" />
           </button>
@@ -305,6 +434,7 @@ export default function RequestsPage() {
                   job={job}
                   onView={(id: string) => router.push(`/customer/jobs/${id}`)}
                   onCancel={handleCancel}
+                  onReport={handleOpenReport}
                   isCancelling={cancelling === job.id}
                   customerName={job.customer_profile?.full_name}
                   workerName={job.worker_profile?.full_name}
@@ -322,6 +452,95 @@ export default function RequestsPage() {
             ))}
           </div>
         )}
+
+        {/* Report Modal */}
+        <Modal
+          isOpen={reportModalOpen}
+          onClose={() => {
+            setReportModalOpen(false);
+            setSelectedJobForReport(null);
+            setReportReason("");
+            setReportDetails("");
+          }}
+          title={
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <span>Report Job Issue</span>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            {selectedJobForReport && (
+              <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                <p className="text-xs text-slate-500 uppercase font-medium">Job ID</p>
+                <p className="text-sm font-mono text-slate-700">{selectedJobForReport.id.slice(-8).toUpperCase()}</p>
+                <p className="text-xs text-slate-500 uppercase font-medium mt-2">Location</p>
+                <p className="text-sm text-slate-700">{selectedJobForReport.location_address || 'Not specified'}</p>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Reason for Report <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                <option value="">Select a reason...</option>
+                <option value="worker_no_show">Worker did not show up</option>
+                <option value="incomplete_work">Work was not completed satisfactorily</option>
+                <option value="property_damage">Property damage occurred</option>
+                <option value="rude_behavior">Worker was rude or unprofessional</option>
+                <option value="overcharged">Feel I was overcharged</option>
+                <option value="safety_concern">Safety concern</option>
+                <option value="other">Other issue</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Additional Details
+              </label>
+              <textarea
+                value={reportDetails}
+                onChange={(e) => setReportDetails(e.target.value)}
+                placeholder="Please provide more details about the issue..."
+                rows={4}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+              />
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-xs text-amber-800">
+                <Flag className="h-3 w-3 inline mr-1" />
+                This report will be sent to the admin for review. False reports may result in account suspension.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setReportModalOpen(false);
+                  setSelectedJobForReport(null);
+                  setReportReason("");
+                  setReportDetails("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmitReport}
+                disabled={!reportReason || isSubmittingReport}
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                {isSubmittingReport ? "Submitting..." : "Submit Report"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </MainLayout>
     </ProtectedRoute>
   );
