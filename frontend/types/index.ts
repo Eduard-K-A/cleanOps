@@ -33,6 +33,7 @@ export interface Job {
   updated_at: string;
   customer_profile?: Pick<Profile, 'id' | 'full_name'> | null;
   worker_profile?: Pick<Profile, 'id' | 'full_name'> | null;
+  worker_name?: string | null;
 }
 
 export interface ApiError {
