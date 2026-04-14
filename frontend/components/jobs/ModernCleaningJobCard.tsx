@@ -147,7 +147,7 @@ export function ModernCleaningJobCard({
           </div>
           <div>
             <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Assigned to</p>
-            <p className="font-medium text-slate-900">{workerName || '—'}</p>
+            <p className="font-medium text-slate-900">{job.worker_name || 'Not assigned yet'}</p>
           </div>
         </div>
 
