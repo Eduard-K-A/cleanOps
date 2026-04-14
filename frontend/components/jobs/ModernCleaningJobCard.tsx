@@ -1,12 +1,13 @@
 'use client';
 
-import { MapPin, Eye, MessageCircle, Zap, AlertCircle, PlayCircle, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { MapPin, Eye, MessageCircle, Zap, AlertCircle, PlayCircle, Clock, CheckCircle, XCircle, Flag, Trash2 } from 'lucide-react';
 import type { Job } from '@/types';
 
 interface ModernCleaningJobCardProps {
   job: Job;
   onView: (id: string) => void;
   onCancel: (id: string) => Promise<void>;
+  onReport?: (job: Job) => void;
   isCancelling: boolean;
   customerName?: string | null;
   workerName?: string | null;
@@ -82,6 +83,7 @@ export function ModernCleaningJobCard({
   job,
   onView,
   onCancel,
+  onReport,
   isCancelling,
   customerName,
   workerName,
@@ -176,8 +178,34 @@ export function ModernCleaningJobCard({
         {/* Footer with timestamp and actions */}
         <div className="flex items-center justify-between pt-2 border-t border-slate-100">
           <p className="text-xs text-slate-500">{formatDate(job.created_at)}</p>
-          
+
           <div className="flex gap-2">
+            {/* Report button - available for IN_PROGRESS and PENDING_REVIEW */}
+            {(job.status === 'IN_PROGRESS' || job.status === 'PENDING_REVIEW') && onReport && (
+              <button
+                type="button"
+                onClick={() => onReport(job)}
+                className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-100 active:bg-amber-200"
+                title="Report issue to admin"
+              >
+                <Flag className="h-4 w-4 mr-1" />
+                Report
+              </button>
+            )}
+
+            {/* Cancel button - available for OPEN jobs */}
+            {job.status === 'OPEN' && (
+              <button
+                type="button"
+                onClick={() => onCancel(job.id)}
+                disabled={isCancelling}
+                className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 active:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                {isCancelling ? 'Cancelling...' : 'Cancel'}
+              </button>
+            )}
+
             {job.status === 'IN_PROGRESS' && job.worker_id && (
               <a
                 href={`/customer/messages?job=${job.id}`}
