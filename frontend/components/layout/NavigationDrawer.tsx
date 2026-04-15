@@ -25,7 +25,8 @@ import {
   LogOut,
   User,
   LogOut as SignOutIcon,
-  MessageSquare
+  MessageSquare,
+  PlayCircle
 } from 'lucide-react';
 import { createBrowserClient } from '@supabase/ssr';
 
@@ -88,6 +89,13 @@ const getNavigationItems = (role?: string, reviewQueueCount?: number, unreadCoun
       label: 'Jobs Feed',
       icon: <Briefcase size={20} />,
       href: '/employee/feed',
+      requiredRole: 'employee'
+    },
+    {
+      id: 'my-jobs',
+      label: 'My Jobs',
+      icon: <PlayCircle size={20} />,
+      href: '/employee/my-jobs',
       requiredRole: 'employee'
     },
     {
