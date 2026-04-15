@@ -96,7 +96,7 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
             <Button 
               variant="outline" 
               className="mt-4" 
-              onClick={() => router.push(backPath)}
+              onClick={() => router.back()}
             >
               ← Back to {backLabel}
             </Button>
@@ -124,7 +124,7 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
     const messagePath = isCustomer 
       ? `/customer/messages?job=${job.id}`
       : `/employee/messages?job=${job.id}`;
-    router.push(messagePath);
+    router.replace(messagePath);
   };
 
   return (
@@ -135,7 +135,7 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
           <Button 
             variant="ghost" 
             className="mb-6" 
-            onClick={() => router.push(backPath)}
+            onClick={() => router.back()}
           >
             ← Back to {backLabel}
           </Button>
