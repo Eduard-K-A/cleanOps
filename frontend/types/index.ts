@@ -10,6 +10,7 @@ export interface Profile {
   location_lat?: number | null;
   location_lng?: number | null;
   full_name?: string | null;
+  phone_number?: string | null;
   onboarding_completed?: boolean;
   created_at?: string;
   updated_at?: string;
@@ -83,7 +84,7 @@ export interface Conversation {
 export interface Notification {
   id: string;
   user_id: string;
-  type: 'JOB_ASSIGNED' | 'JOB_UPDATED' | 'MESSAGE_RECEIVED' | 'PAYMENT_RECEIVED' | 'DISPATCH_ALERT';
+  type: 'JOB_ASSIGNED' | 'JOB_UPDATED' | 'MESSAGE_RECEIVED' | 'PAYMENT_RECEIVED' | 'DISPATCH_ALERT' | 'JOB_REPORTED';
   payload: Record<string, any>;
   is_read: boolean;
   created_at: string;
