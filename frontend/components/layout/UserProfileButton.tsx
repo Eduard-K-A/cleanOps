@@ -11,6 +11,7 @@ import {
   LogOut,
   MapPin,
   Pencil,
+  Phone,
   User as UserIcon,
   X,
 } from 'lucide-react';
@@ -297,6 +298,7 @@ export function UserProfileButton() {
   const { user, profile, mounted, logout, refetchProfile } = useAuth();
   const [open, setOpen] = useState(false);
   const [locationLabel, setLocationLabel] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const email = user?.email ?? 'Unknown user';
@@ -325,6 +327,13 @@ export function UserProfileButton() {
     if (stored) setLocationLabel(stored);
   }, [profile?.id]);
 
+  // Load phone number from profile when it changes
+  useEffect(() => {
+    if (profile?.phone_number) {
+      setPhoneNumber(profile.phone_number);
+    }
+  }, [profile?.phone_number]);
+
   // Close on outside click
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
@@ -346,6 +355,14 @@ export function UserProfileButton() {
     if (!profile || typeof window === 'undefined') return;
     window.localStorage.setItem(`cleanops_location_label_${profile.id}`, next.trim());
     setLocationLabel(next.trim());
+  }
+
+  async function handleSavePhone(next: string) {
+    if (!profile || !next) return;
+    // Basic phone number validation (digits, spaces, dashes, parentheses, plus)
+    const sanitized = next.trim().replace(/[^\d\s\-\(\)\+]/g, '');
+    await api.updateProfile({ id: profile.id, phone_number: sanitized });
+    await refetchProfile();
   }
 
   const handleLogout = async () => {
@@ -408,6 +425,19 @@ export function UserProfileButton() {
           <div className="space-y-3">
             {/* Name */}
             <EditableField label="Name" value={displayName} onSave={handleSaveName} />
+
+            {/* Phone Number */}
+            <div className="space-y-1">
+              <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Phone Number</div>
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
+                  <Phone className="h-4 w-4 text-slate-500" />
+                </div>
+                <div className="flex-1">
+                  <EditableField label="" value={phoneNumber} onSave={handleSavePhone} />
+                </div>
+              </div>
+            </div>
 
             {/* Location */}
             <div className="space-y-1">

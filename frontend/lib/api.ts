@@ -17,6 +17,10 @@ import {
   addMoney, 
   getBalance 
 } from '../app/actions/payments';
+import {
+  uploadProofOfWork,
+  deleteProofOfWork
+} from '../app/actions/storage';
 
 
 // Helper function to format Supabase responses to match API response format
@@ -523,6 +527,39 @@ export const api = {
       return {
         success: false,
         error: error.message || 'Failed to sign out',
+        code: 500
+      };
+    }
+  },
+
+  // Storage operations
+  async uploadProofOfWork(jobId: string, file: File): Promise<ApiResponse<{ url: string; path: string }>> {
+    try {
+      const result = await uploadProofOfWork(jobId, file);
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to upload image',
+        code: 500
+      };
+    }
+  },
+
+  async deleteProofOfWork(filePath: string): Promise<ApiResponse<null>> {
+    try {
+      await deleteProofOfWork(filePath);
+      return {
+        success: true,
+        data: null
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to delete image',
         code: 500
       };
     }

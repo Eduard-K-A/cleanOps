@@ -54,25 +54,32 @@ export async function submitJobReport(data: ReportData) {
     throw new Error('Failed to submit report')
   }
 
-  // Create a notification for admin
-  const { error: notificationError } = await (supabase as any)
-    .from('notifications')
-    .insert([
-      {
-        type: 'JOB_REPORTED',
-        user_id: 'admin', // Special handling in notification system
-        payload: {
-          job_id: data.jobId,
-          reason: data.reason,
-          reporter_id: user.id,
-        },
-        is_read: false,
-      },
-    ])
+  // Create notifications for all admins
+  const { data: admins } = await (supabase as any)
+    .from('profiles')
+    .select('id')
+    .eq('role', 'admin')
 
-  if (notificationError) {
-    console.error('Admin notification error:', notificationError)
-    // Don't throw here - the report was still created
+  if (admins && admins.length > 0) {
+    const notifications = admins.map((admin: { id: string }) => ({
+      type: 'JOB_REPORTED',
+      user_id: admin.id,
+      payload: {
+        job_id: data.jobId,
+        reason: data.reason,
+        reporter_id: user.id,
+      },
+      is_read: false,
+    }))
+
+    const { error: notificationError } = await (supabase as any)
+      .from('notifications')
+      .insert(notifications)
+
+    if (notificationError) {
+      console.error('Admin notification error:', notificationError)
+      // Don't throw here - the report was still created
+    }
   }
 
   return { success: true }
