@@ -145,9 +145,10 @@ function BalanceSection({ balance, onRefresh }: BalanceSectionProps) {
     try {
       setBusy(true);
       const { addMoney } = await import('@/app/actions/payments');
-      await addMoney(parsed);
+      // Convert dollars to cents for backend
+      await addMoney(Math.round(parsed * 100));
       await onRefresh();
-      toast.success(`$${parsed.toFixed(2)} deposited`);
+      toast.success(formatCurrency(parsed) + ' deposited');
       setAmount('');
     } catch (err: any) {
       toast.error(err.message || 'Failed to deposit');
@@ -166,9 +167,10 @@ function BalanceSection({ balance, onRefresh }: BalanceSectionProps) {
     try {
       setBusy(true);
       const { withdrawMoney } = await import('@/app/actions/payments');
-      await withdrawMoney(parsed);
+      // Convert dollars to cents for backend
+      await withdrawMoney(Math.round(parsed * 100));
       await onRefresh();
-      toast.success(`$${parsed.toFixed(2)} withdrawn`);
+      toast.success(formatCurrency(parsed) + ' withdrawn');
       setAmount('');
       setWithdrawStep('input');
     } catch (err: any) {
