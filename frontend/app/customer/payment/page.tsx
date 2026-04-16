@@ -94,8 +94,7 @@ export default function PaymentPage() {
     <ProtectedRoute>
       <MainLayout
         title="Complete Payment"
-        subtitle="Authorize payment for your cleaning service"
-        breadcrumb="Payment"
+  
       >
         <PaymentContent />
       </MainLayout>
