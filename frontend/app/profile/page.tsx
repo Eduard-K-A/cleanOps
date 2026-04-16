@@ -65,9 +65,29 @@ export default function ProfilePage() {
       if (field === 'full_name') {
         updates.full_name = editValues.full_name;
       } else if (field === 'phone_number') {
-        // Basic phone validation
-        const sanitized = editValues.phone_number.trim().replace(/[^\d\s\-\(\)\+]/g, '');
-        updates.phone_number = sanitized;
+        // Philippines phone validation
+        const phone = editValues.phone_number.trim();
+        
+        // Valid formats: 09XX XXX XXXX, 09XXXXXXXXX, +63 XXX XXX XXXX, +63XXXXXXXXX
+        const philippinesMobileRegex = /^(09\d{9}|\+63\d{10})$/;
+        const philippinesLandlineRegex = /^(0\d{1,2}\d{7,8})$/;
+        
+        // Remove all non-digit characters except leading +
+        const cleaned = phone.startsWith('+') 
+          ? '+' + phone.replace(/\D/g, '') 
+          : phone.replace(/\D/g, '');
+        
+        // Validate format
+        const isValidMobile = philippinesMobileRegex.test(cleaned);
+        const isValidLandline = philippinesLandlineRegex.test(cleaned);
+        
+        if (!isValidMobile && !isValidLandline) {
+          toast.error('Please enter a valid Philippines phone number (e.g., 09171234567 or +639171234567)');
+          setSaving(false);
+          return;
+        }
+        
+        updates.phone_number = cleaned;
       }
       
       if (Object.keys(updates).length > 0) {
@@ -242,7 +262,7 @@ export default function ProfilePage() {
                                 value={editValues.phone_number}
                                 onChange={(e) => setEditValues({ ...editValues, phone_number: e.target.value })}
                                 className="flex-1"
-                                placeholder="+1 (555) 123-4567"
+                                placeholder="09171234567 or +639171234567"
                               />
                               <Button
                                 size="sm"

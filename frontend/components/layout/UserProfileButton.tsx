@@ -18,6 +18,14 @@ import {
 import { useAuth } from '@/lib/authContext';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
+
+// Helper to format currency consistently with /profile page
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(amount);
+}
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -49,6 +57,8 @@ function EditableField({ label, value, readOnly, onSave }: EditableFieldProps) {
       setSaving(true);
       await onSave(draft.trim());
       setEditing(false);
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to save');
     } finally {
       setSaving(false);
     }
@@ -177,7 +187,7 @@ function BalanceSection({ balance, onRefresh }: BalanceSectionProps) {
           <DollarSign className="h-4 w-4 text-green-600" />
         </div>
         <div>
-          <div className="text-sm font-bold text-slate-900">${balance.toFixed(2)}</div>
+          <div className="text-sm font-medium text-gray-900">{formatCurrency(balance)}</div>
           <div className="text-[10px] text-slate-400">Available balance</div>
         </div>
       </div>
@@ -284,7 +294,7 @@ function BalanceSection({ balance, onRefresh }: BalanceSectionProps) {
       {/* Validation hint */}
       {exceedsBalance && (
         <p className="text-[10px] text-red-500">
-          Exceeds balance (${balance.toFixed(2)} available)
+          Exceeds balance ({formatCurrency(balance)} available)
         </p>
       )}
     </div>
@@ -302,7 +312,8 @@ export function UserProfileButton() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const email = user?.email ?? 'Unknown user';
-  const balance = profile?.money_balance ?? 0;
+  // money_balance is stored in cents, convert to dollars for display
+  const balance = (profile?.money_balance ?? 0) / 100;
 
   const displayName = useMemo(() => {
     if (profile?.full_name && profile.full_name.trim().length > 0) return profile.full_name;
@@ -359,9 +370,29 @@ export function UserProfileButton() {
 
   async function handleSavePhone(next: string) {
     if (!profile || !next) return;
-    // Basic phone number validation (digits, spaces, dashes, parentheses, plus)
-    const sanitized = next.trim().replace(/[^\d\s\-\(\)\+]/g, '');
-    await api.updateProfile({ id: profile.id, phone_number: sanitized });
+    
+    // Philippines phone validation
+    // Valid formats: 09XX XXX XXXX (11 digits starting with 09) or +63 XXX XXX XXXX
+    // Landlines: 0XX XXXXXXX (area code + 7-8 digits)
+    const phone = next.trim();
+    
+    // Remove all non-digit characters except leading +
+    const cleaned = phone.startsWith('+') 
+      ? '+' + phone.replace(/\D/g, '') 
+      : phone.replace(/\D/g, '');
+    
+    // Validation regex
+    const philippinesMobileRegex = /^(09\d{9}|\+63\d{10})$/;
+    const philippinesLandlineRegex = /^(0\d{1,2}\d{7,8})$/;
+    
+    const isValidMobile = philippinesMobileRegex.test(cleaned);
+    const isValidLandline = philippinesLandlineRegex.test(cleaned);
+    
+    if (!isValidMobile && !isValidLandline) {
+      throw new Error('Please enter a valid Philippines phone number (e.g., 09171234567 or +639171234567)');
+    }
+    
+    await api.updateProfile({ id: profile.id, phone_number: cleaned });
     await refetchProfile();
   }
 
