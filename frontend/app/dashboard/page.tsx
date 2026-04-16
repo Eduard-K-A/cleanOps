@@ -53,6 +53,7 @@ export default function Dashboard() {
         <TopAppBar 
           onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           title="Dashboard"
+          showSearch={false}
         />
 
         {/* Dashboard Content */}
