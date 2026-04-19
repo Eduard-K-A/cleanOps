@@ -151,7 +151,7 @@ function AdminJobsContent() {
     'PENDING_REVIEW': 'bg-purple-100 text-purple-800'
   };
 
-  const totalValue = data.jobs.reduce((sum, j) => sum + (j.price_amount || 0), 0) / 100;
+  const totalValue = data.jobs.reduce((sum, j) => sum + (Number(j.price_amount) || 0), 0);
   const totalPages = Math.ceil(data.total / 20);
 
   return (
@@ -311,7 +311,7 @@ function AdminJobsContent() {
                                   {job.urgency}
                                 </Badge>
                               </td>
-                              <td className="p-4 text-sm font-semibold text-slate-700">${(job.price_amount / 100).toFixed(2)}</td>
+                              <td className="p-4 text-sm font-semibold text-slate-700">${Number(job.price_amount).toFixed(2)}</td>
                               <td className="p-4 text-sm text-slate-500 whitespace-nowrap">
                                 {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
                               </td>
@@ -354,9 +354,9 @@ function AdminJobsContent() {
                                       
                                       <h4 className="text-xs font-semibold text-slate-500 uppercase mt-4 mb-2">Tasks Breakdown</h4>
                                       <div className="flex flex-wrap gap-2">
-                                        {Array.isArray(job.tasks) && job.tasks.map((task: string, i: number) => (
+                                        {Array.isArray(job.tasks) && job.tasks.map((task: any, i: number) => (
                                           <span key={i} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium border border-blue-200">
-                                            {task}
+                                            {typeof task === 'string' ? task : task?.name || task?.value || 'Task'}
                                           </span>
                                         ))}
                                       </div>
