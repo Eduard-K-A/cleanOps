@@ -151,7 +151,7 @@ export default function ReviewQueuePage() {
                           <Badge variant="secondary" className="bg-orange-100 text-orange-800 font-mono text-xs">
                             #{job.id.slice(0, 8)}
                           </Badge>
-                          <span className="text-base font-bold text-slate-800">${(job.price_amount / 100).toFixed(2)}</span>
+                          <span className="text-base font-bold text-slate-800">${Number(job.price_amount).toFixed(2)}</span>
                         </div>
                         
                         <div className="space-y-3 mb-4">
