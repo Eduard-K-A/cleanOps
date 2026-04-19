@@ -1,4 +1,4 @@
-import { ApiResponse, CreateJobRequest, Job, Message, Notification, Profile } from '../types';
+import { ApiResponse, CreateJobRequest, Job, Message, Notification, Profile, JobApplication } from '../types';
 import { supabase } from './supabase';
 import { 
   applyForJob,
@@ -469,7 +469,7 @@ export const api = {
         };
       }
 
-      const { data: result, error } = await supabase.from('profiles')
+      const { data: result, error } = await (supabase as any).from('profiles')
         .update(data as any)
         .eq('id', user.id)
         .select()
