@@ -48,8 +48,9 @@ function EmptyState({ onRefresh, isRefreshing }: { onRefresh: () => void; isRefr
 
 export default function EmployeeFeedPage() {
   const router = useRouter();
-  const [claiming, setClaiming] = useState<string | null>(null);
+  const [applying, setApplying] = useState<string | null>(null);
   const [jobsList, setJobsList] = useState<Job[]>([]);
+  const [userApplications, setUserApplications] = useState<string[]>([]); // Store job IDs the user applied to
 
   const { data: jobs, loading, refetch } = useAsyncData<Job[]>({
     fetchFn: () => api.getJobs('OPEN'),
@@ -63,6 +64,26 @@ export default function EmployeeFeedPage() {
     errorMessage: 'Failed to load profile',
   });
 
+  // Fetch applications for this employee to show "Applied" status
+  const fetchApplications = useCallback(async () => {
+    try {
+      const { data: apps } = await api.get('job_applications', { 
+        filters: { employee_id: profile?.id } 
+      });
+      if (apps) {
+        setUserApplications((apps as any[]).map(a => a.job_id));
+      }
+    } catch (e) {
+      console.error('Failed to fetch applications', e);
+    }
+  }, [profile?.id]);
+
+  useEffect(() => {
+    if (profile?.id) {
+      fetchApplications();
+    }
+  }, [profile?.id, fetchApplications]);
+
   // Realtime: prepend new jobs, deduplicated
   useJobFeed((newJob) => {
     const job = newJob as unknown as Job;
@@ -71,18 +92,18 @@ export default function EmployeeFeedPage() {
 
   useEffect(() => { setJobsList(jobs); }, [jobs]);
 
-  const handleClaim = useCallback(async (id: string) => {
+  const handleApply = useCallback(async (id: string) => {
     try {
-      setClaiming(id);
-      await api.claimJob(id);
-      toast.success('Job claimed!');
-      setJobsList((prev) => prev.filter((j) => j.id !== id));
+      setApplying(id);
+      await api.applyForJob(id);
+      toast.success('Application sent to customer!');
+      setUserApplications(prev => [...prev, id]);
       await refetch();
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { error?: string } } };
-      toast.error(err?.response?.data?.error ?? 'Failed to claim job');
+      const err = e as { response?: { data?: { error?: string } }; message?: string };
+      toast.error(err?.response?.data?.error || err?.message || 'Failed to apply for job');
     } finally {
-      setClaiming(null);
+      setApplying(null);
     }
   }, [refetch]);
 
@@ -139,10 +160,11 @@ export default function EmployeeFeedPage() {
                         key={job.id}
                         job={job}
                         showClaim
-                        isClaiming={claiming === job.id}
-                        onClaim={handleClaim}
+                        isClaiming={applying === job.id}
+                        onClaim={handleApply}
                         onView={handleView}
                         customerName={job.customer_profile?.full_name}
+                        hasApplied={userApplications.includes(job.id)}
                       />
                     ))}
                   </div>

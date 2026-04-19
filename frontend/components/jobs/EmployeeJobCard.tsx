@@ -10,6 +10,7 @@ interface EmployeeJobCardProps {
   showClaim?: boolean;
   isClaiming?: boolean;
   customerName?: string | null;
+  hasApplied?: boolean;
 }
 
 const STATUS_CONFIG = {
@@ -82,9 +83,10 @@ export function EmployeeJobCard({
   showClaim = true,
   isClaiming = false,
   customerName,
+  hasApplied = false,
 }: EmployeeJobCardProps) {
   const tasks = Array.isArray(job.tasks) ? job.tasks : [];
-  const canClaim = job.status === 'OPEN' && !isClaiming;
+  const canApply = job.status === 'OPEN' && !isClaiming && !hasApplied;
   const statusConfig = STATUS_CONFIG[job.status];
   const urgencyConfig = URGENCY_CONFIG[job.urgency];
   const StatusIcon = statusConfig.icon;
@@ -105,6 +107,12 @@ export function EmployeeJobCard({
             <div className={`inline-flex items-center gap-1.5 px-2 py-1.5 rounded-md ${urgencyConfig.color}`}>
               <Zap className="h-3 w-3" />
               <span className="text-xs font-semibold">Urgent</span>
+            </div>
+          )}
+          {hasApplied && (
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-blue-200 bg-blue-50 text-blue-700">
+              <CheckCircle className="h-3.5 w-3.5" />
+              <span className="text-xs font-semibold">Applied</span>
             </div>
           )}
         </div>
@@ -184,16 +192,18 @@ export function EmployeeJobCard({
             <button
               type="button"
               onClick={() => onClaim(job.id)}
-              disabled={!canClaim}
+              disabled={!canApply}
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-slate-900 text-sm font-semibold text-white transition-colors hover:bg-slate-800 active:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-slate-900"
             >
               {isClaiming ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  Claiming…
+                  Applying…
                 </>
+              ) : hasApplied ? (
+                'Applied'
               ) : (
-                'Claim Job'
+                'Apply Now'
               )}
             </button>
           )}

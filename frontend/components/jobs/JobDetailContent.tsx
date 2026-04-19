@@ -1,6 +1,8 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatDistanceToNow } from 'date-fns';
 import { 
   MapPin, 
   DollarSign, 
@@ -23,7 +25,9 @@ import { Badge } from '@/components/ui/badge';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useAuth } from '@/lib/authContext';
 import { useJobDetail } from '@/hooks/useJobDetail';
-import type { JobStatus } from '@/types';
+import type { JobStatus, JobApplication } from '@/types';
+import toast from 'react-hot-toast';
+import { api } from '@/lib/api';
 
 interface JobDetailContentProps {
   backPath: string;
@@ -76,7 +80,50 @@ function getProgressPercentage(status: JobStatus): number {
 export function JobDetailContent({ backPath, backLabel, showApprove = false }: JobDetailContentProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const { job, loading, approving, handleApprove } = useJobDetail();
+  const { job, loading, approving, handleApprove, refetch } = useJobDetail();
+  const [applications, setApplications] = useState<JobApplication[]>([]);
+  const [loadingApps, setLoadingApps] = useState(false);
+  const [processingApp, setProcessingApp] = useState<string | null>(null);
+
+  const isCustomer = user?.id === job?.customer_id;
+  const isWorker = user?.id === job?.worker_id;
+
+  // Fetch applications if user is customer and job is OPEN
+  useEffect(() => {
+    async function fetchApps() {
+      if (isCustomer && job?.status === 'OPEN') {
+        setLoadingApps(true);
+        try {
+          const { data } = await api.getJobApplications(job.id);
+          if (data) setApplications(data);
+        } catch (e) {
+          console.error('Failed to fetch applications', e);
+        } finally {
+          setLoadingApps(false);
+        }
+      }
+    }
+    fetchApps();
+  }, [isCustomer, job?.id, job?.status]);
+
+  const onHandleApp = async (appId: string, status: 'ACCEPTED' | 'REJECTED') => {
+    try {
+      setProcessingApp(appId);
+      await api.handleApplication(appId, status);
+      toast.success(status === 'ACCEPTED' ? 'Professional approved!' : 'Application declined');
+      if (status === 'ACCEPTED') {
+        // Job status will change to IN_PROGRESS, so we should refetch job
+        await refetch();
+      } else {
+        // Just remove from local list or refetch apps
+        setApplications(prev => prev.filter(a => a.id !== appId));
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Action failed');
+    } finally {
+      setProcessingApp(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -105,8 +152,8 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
     );
   }
 
-  const isCustomer = user?.id === job.customer_id;
-  const isWorker = user?.id === job.worker_id;
+  // const isCustomer = user?.id === job.customer_id; // moved up
+  // const isWorker = user?.id === job.worker_id; // moved up
   const canApprove = showApprove && isCustomer && job.status === 'PENDING_REVIEW';
   const hasWorker = !!job.worker_id;
   const canMessage = hasWorker && (isCustomer || isWorker);
@@ -130,7 +177,7 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
     <ProtectedRoute>
       <MainLayout title="Job Details">
         <div className="w-full max-w-4xl mx-auto">
-          {/* Back Button */}
+          {/* Back Button ... */}
           <Button 
             variant="ghost" 
             className="mb-6" 
@@ -139,9 +186,9 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
             ← Back to {backLabel}
           </Button>
 
-          {/* Header Section */}
+          {/* Header Section ... */}
           <div className="grid gap-6">
-            {/* Main Status Card */}
+            {/* Main Status Card ... */}
             <Card className="border-0 shadow-md">
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-4 mb-6">
@@ -159,7 +206,7 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
                   </span>
                 </div>
 
-                {/* Progress Bar */}
+                {/* Progress Bar ... */}
                 <div className="mb-6">
                   <div className="flex justify-between mb-2">
                     <span className="text-sm font-medium text-slate-700">Job Progress</span>
@@ -173,7 +220,7 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
                   </div>
                 </div>
 
-                {/* Key Metrics */}
+                {/* Key Metrics ... */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
                   <div className="text-center">
                     <p className="text-2xl font-bold text-slate-900">
@@ -200,9 +247,72 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
               </CardContent>
             </Card>
 
-            {/* Details Grid */}
+            {/* Applicants Section (New) */}
+            {isCustomer && job.status === 'OPEN' && (
+              <Card className="border-0 shadow-md border-t-4 border-t-sky-500">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <User className="w-5 h-5 text-sky-600" />
+                    Interested Professionals ({applications.filter(a => a.status === 'PENDING').length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {loadingApps ? (
+                    <div className="py-8 text-center text-slate-500">
+                      <LoadingSpinner size="sm" className="mx-auto mb-2" />
+                      Loading applicants...
+                    </div>
+                  ) : applications.filter(a => a.status === 'PENDING').length === 0 ? (
+                    <div className="py-8 text-center text-slate-500 bg-slate-50 rounded-xl border-2 border-dashed">
+                      No applications yet. We'll notify you when someone applies.
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {applications.filter(a => a.status === 'PENDING').map((app) => (
+                        <div key={app.id} className="py-4 flex items-center justify-between gap-4 first:pt-0 last:pb-0">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-bold text-lg border-2 border-white shadow-sm">
+                              {app.employee_profile?.full_name?.[0] || 'P'}
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-900">{app.employee_profile?.full_name || 'Professional'}</p>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <span className="text-amber-500 text-xs">★</span>
+                                <span className="text-xs font-semibold text-slate-600">{app.employee_profile?.rating?.toFixed(1) || 'No ratings'}</span>
+                                <span className="text-[10px] text-slate-400 ml-1">Applied {formatDistanceToNow(new Date(app.created_at), { addSuffix: true })}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-rose-600 border-rose-100 hover:bg-rose-50"
+                              onClick={() => onHandleApp(app.id, 'REJECTED')}
+                              disabled={!!processingApp}
+                            >
+                              Decline
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              className="bg-sky-600 hover:bg-sky-700"
+                              onClick={() => onHandleApp(app.id, 'ACCEPTED')}
+                              disabled={!!processingApp}
+                            >
+                              {processingApp === app.id ? 'Approving...' : 'Approve'}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Details Grid ... */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Location & People */}
+              {/* Location & People ... */}
               <Card className="border-0 shadow-md">
                 <CardHeader>
                   <CardTitle className="text-lg">Details</CardTitle>
@@ -230,7 +340,7 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
                     <div>
                       <p className="text-sm text-slate-600">Posted By</p>
                       <p className="font-medium text-slate-900">
-                        {job.customer_profile?.full_name || 'Unknown'}
+                        {job.customer_profile?.full_name || (job as any).customer_name || 'Unknown'}
                       </p>
                     </div>
                   </div>
@@ -241,14 +351,14 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
                     <div>
                       <p className="text-sm text-slate-600">Assigned To</p>
                       <p className="font-medium text-slate-900">
-                        {job.worker_profile?.full_name || 'Not yet assigned'}
+                        {job.worker_profile?.full_name || job.worker_name || 'Not yet assigned'}
                       </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Timeline & Status */}
+              {/* Timeline & Status ... */}
               <Card className="border-0 shadow-md">
                 <CardHeader>
                   <CardTitle className="text-lg">Timeline</CardTitle>
@@ -282,7 +392,7 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
                     <div className="bg-slate-50 rounded-lg p-3">
                       {job.status === 'OPEN' && (
                         <p className="text-sm text-slate-700">
-                          🟢 This job is waiting for an employee to claim it.
+                          🟢 This job is waiting for an employee to apply and be approved.
                         </p>
                       )}
                       {job.status === 'IN_PROGRESS' && (
@@ -311,7 +421,7 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
               </Card>
             </div>
 
-            {/* Tasks Section */}
+            {/* Tasks Section ... */}
             {tasks.length > 0 && (
               <Card className="border-0 shadow-md">
                 <CardHeader>
@@ -337,7 +447,7 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
               </Card>
             )}
 
-            {/* Proof of Work Section */}
+            {/* Proof of Work Section ... */}
             {proofs.length > 0 && (
               <Card className="border-0 shadow-md">
                 <CardHeader>
@@ -370,7 +480,7 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
               </Card>
             )}
 
-            {/* Action Buttons */}
+            {/* Action Buttons ... */}
             <div className="flex gap-3 pt-4">
               {canMessage && (
                 <Button 
@@ -392,7 +502,7 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
               )}
             </div>
 
-            {/* Info Messages */}
+            {/* Info Messages ... */}
             {showApprove && isCustomer && job.status === 'IN_PROGRESS' && (
               <Card className="bg-amber-50 border-amber-200">
                 <CardContent className="pt-6">

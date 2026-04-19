@@ -136,17 +136,141 @@ export async function getCustomerJobs(status?: string) {
   return data
 }
 
-export async function claimJob(jobId: string) {
+export async function applyForJob(jobId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
-  const { error } = await supabase.rpc('claim_job', {
-    p_job_id: jobId,
-    p_employee_id: user.id,
-  })
+  // Create application
+  const { error: applyError } = await supabase.from('job_applications').insert({
+    job_id: jobId,
+    employee_id: user.id,
+    status: 'PENDING'
+  });
 
-  if (error) throw error
+  if (applyError) {
+    if (applyError.code === '23505') throw new Error('You have already applied for this job');
+    throw applyError;
+  }
+
+  // Get customer_id to notify them
+  const { data: job } = await supabase.from('jobs').select('customer_id').eq('id', jobId).single();
+  if (job?.customer_id) {
+    await supabase.from('notifications').insert({
+      user_id: job.customer_id,
+      type: 'APPLICATION_RECEIVED',
+      payload: {
+        job_id: jobId,
+        employee_id: user.id
+      }
+    });
+  }
+}
+
+export async function getJobApplications(jobId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const { data, error } = await supabase
+    .from('job_applications')
+    .select('*, employee_profile:profiles!employee_id(id, full_name, rating)')
+    .eq('job_id', jobId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function handleApplication(applicationId: string, status: 'ACCEPTED' | 'REJECTED') {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  // Get application details first
+  const { data: app, error: fetchError } = await supabase
+    .from('job_applications')
+    .select('*, job:jobs(id, customer_id)')
+    .eq('id', applicationId)
+    .single();
+
+  if (fetchError || !app) throw new Error('Application not found');
+  if (app.job.customer_id !== user.id) throw new Error('Unauthorized');
+
+  if (status === 'REJECTED') {
+    const { error } = await supabase
+      .from('job_applications')
+      .update({ status: 'REJECTED' })
+      .eq('id', applicationId);
+    if (error) throw error;
+
+    // Notify applicant
+    await supabase.from('notifications').insert({
+      user_id: app.employee_id,
+      type: 'APPLICATION_REJECTED',
+      payload: { job_id: app.job_id }
+    });
+  } else {
+    // ACCEPTED logic
+    // 1. Update this application
+    const { error: updateAppError } = await supabase
+      .from('job_applications')
+      .update({ status: 'ACCEPTED' })
+      .eq('id', applicationId);
+    if (updateAppError) throw updateAppError;
+
+    // 2. Reject all other pending applications for this job
+    await supabase
+      .from('job_applications')
+      .update({ status: 'REJECTED' })
+      .eq('job_id', app.job_id)
+      .eq('status', 'PENDING')
+      .neq('id', applicationId);
+
+    // 3. Update the job
+    const { data: workerProfile } = await supabase.from('profiles').select('full_name').eq('id', app.employee_id).single();
+    const { error: updateJobError } = await supabase
+      .from('jobs')
+      .update({
+        worker_id: app.employee_id,
+        worker_name: workerProfile?.full_name || 'Professional',
+        status: 'IN_PROGRESS',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', app.job_id);
+    if (updateJobError) throw updateJobError;
+
+    // 4. Notify everyone
+    // Winner
+    const { data: jobInfo } = await supabase.from('jobs').select('location_address').eq('id', app.job_id).single();
+    
+    await supabase.from('notifications').insert({
+      user_id: app.employee_id,
+      type: 'APPLICATION_ACCEPTED',
+      payload: { 
+        job_id: app.job_id,
+        location_address: jobInfo?.location_address || 'a cleaning job'
+      }
+    });
+
+    // Get others to notify of rejection
+    const { data: others } = await supabase
+      .from('job_applications')
+      .select('employee_id')
+      .eq('job_id', app.job_id)
+      .eq('status', 'REJECTED')
+      .neq('id', applicationId);
+
+    if (others && others.length > 0) {
+      await supabase.from('notifications').insert(
+        others.map(o => ({
+          user_id: o.employee_id,
+          type: 'APPLICATION_REJECTED',
+          payload: { job_id: app.job_id }
+        }))
+      );
+    }
+  }
 }
 
 export async function updateJobStatus(jobId: string, status: string, proofOfWork?: string[]) {

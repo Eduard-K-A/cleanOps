@@ -26,7 +26,7 @@ export function useJobDetail() {
       try {
         const { data, error } = await supabase
           .from('jobs')
-          .select('*')
+          .select('*, customer_profile:profiles!customer_id(id, full_name), worker_profile:profiles!worker_id(id, full_name)')
           .eq('id', id)
           .single();
 
@@ -37,23 +37,26 @@ export function useJobDetail() {
         }
         
         // Type cast to Database type
-        const jobData = data as Database['public']['Tables']['jobs']['Row'];
+        const jobData = data as any;
         
         // Transform Supabase data to match Job type
         const transformedJob: Job = {
           id: jobData.id,
           customer_id: jobData.customer_id,
           worker_id: jobData.worker_id,
+          worker_name: jobData.worker_name,
           status: jobData.status as Job['status'],
           urgency: jobData.urgency as Job['urgency'],
           price_amount: jobData.price_amount,
           money_transaction_id: jobData.money_transaction_id,
           location_address: jobData.location_address,
-          distance: (jobData as any).distance ?? null,
+          distance: jobData.distance ?? null,
           tasks: (jobData.tasks as any)?.map?.((task: any) => task.name || task) || [],
           proof_of_work: (jobData.proof_of_work as any)?.map?.((proof: any) => proof.url || proof) || [],
           created_at: jobData.created_at,
           updated_at: jobData.updated_at,
+          customer_profile: jobData.customer_profile,
+          worker_profile: jobData.worker_profile,
         };
         
         setJob(transformedJob);

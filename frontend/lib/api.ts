@@ -1,7 +1,9 @@
 import { ApiResponse, CreateJobRequest, Job, Message, Notification, Profile } from '../types';
 import { supabase } from './supabase';
 import { 
-  claimJob, 
+  applyForJob,
+  getJobApplications,
+  handleApplication,
   updateJobStatus, 
   approveJobCompletion,
   getNearbyJobs,
@@ -226,17 +228,43 @@ export const api = {
     }
   },
 
-  async claimJob(job_id: string): Promise<ApiResponse<Job>> {
+  async applyForJob(job_id: string): Promise<ApiResponse<null>> {
     try {
-      await claimJob(job_id);
-      
-      // Return a simple success response
+      await applyForJob(job_id);
+      return { success: true, data: null };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to apply for job';
+      return {
+        success: false,
+        error: errorMessage,
+        code: 500
+      };
+    }
+  },
+
+  async getJobApplications(jobId: string): Promise<ApiResponse<JobApplication[]>> {
+    try {
+      const apps = await getJobApplications(jobId);
       return {
         success: true,
-        data: {} as Job
+        data: apps as JobApplication[]
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to claim job';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get applications';
+      return {
+        success: false,
+        error: errorMessage,
+        code: 500
+      };
+    }
+  },
+
+  async handleApplication(applicationId: string, status: 'ACCEPTED' | 'REJECTED'): Promise<ApiResponse<null>> {
+    try {
+      await handleApplication(applicationId, status);
+      return { success: true, data: null };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to handle application';
       return {
         success: false,
         error: errorMessage,

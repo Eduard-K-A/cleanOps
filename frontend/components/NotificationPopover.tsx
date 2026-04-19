@@ -82,6 +82,9 @@ export function NotificationPopover() {
       case 'MESSAGE_RECEIVED': return 'New Message';
       case 'JOB_REPORTED': return 'Job Reported';
       case 'new_job_nearby': return 'New Job Nearby';
+      case 'APPLICATION_RECEIVED': return 'New Application';
+      case 'APPLICATION_ACCEPTED': return 'Application Approved';
+      case 'APPLICATION_REJECTED': return 'Application Declined';
       default: return 'New Notification';
     }
   };
@@ -97,6 +100,9 @@ export function NotificationPopover() {
       case 'MESSAGE_RECEIVED': return `New message about your job.`;
       case 'JOB_REPORTED': return `New issue reported: ${payload.reason}`;
       case 'new_job_nearby': return `New cleaning job available nearby!`;
+      case 'APPLICATION_RECEIVED': return `A professional applied to your job.`;
+      case 'APPLICATION_ACCEPTED': return `Your application for a job was approved!`;
+      case 'APPLICATION_REJECTED': return `Your application for a job was not selected.`;
       default: return 'New update available.';
     }
   };
