@@ -6,7 +6,7 @@ import { ApiResponse, CreateJobRequest, Job, Message, Notification, Profile } fr
 import { createClient } from '../../lib/supabase/client';
 import type { Database } from '../../lib/supabase/database.types';
 import { 
-  claimJob, 
+  applyForJob, 
   updateJobStatus, 
   approveJobCompletion,
   getNearbyJobs 
@@ -235,16 +235,16 @@ export const api = {
     }
   },
 
-  claimJob: async (jobId: string): Promise<ApiResponse<void>> => {
+  applyForJob: async (jobId: string): Promise<ApiResponse<void>> => {
     try {
-      await claimJob(jobId);
+      await applyForJob(jobId);
       return {
         success: true
       };
     } catch (error: any) {
       return {
         success: false,
-        error: error.message || 'Failed to claim job',
+        error: error.message || 'Failed to apply for job',
         code: 500
       };
     }

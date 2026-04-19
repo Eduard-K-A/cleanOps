@@ -6,7 +6,7 @@ import type { JobStatus, JobUrgency } from '@/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Centralized admin role verifier - uses SECURITY DEFINER function to bypass RLS
-async function verifyAdmin(supabase: SupabaseClient<Database>, userId: string) {
+async function verifyAdmin(supabase: any, userId: string) {
   // Use the SECURITY DEFINER function we created to bypass RLS
   const { data: isAdmin, error } = await supabase
     .rpc('is_admin_user', { user_id: userId });
@@ -34,7 +34,7 @@ export async function getAllJobsAdmin(filters: {
   
   await verifyAdmin(supabase, user.id);
 
-  let query = supabase
+  let query = (supabase as any)
     .from('jobs')
     .select('*, customer:profiles!customer_id(full_name), worker:profiles!worker_id(full_name)', { count: 'exact' });
 
@@ -99,7 +99,7 @@ export async function getAllUsersAdmin(filters: {
   if (!user) throw new Error('Unauthorized');
   await verifyAdmin(supabase, user.id);
 
-  let query = supabase.from('profiles').select('*');
+  let query = (supabase as any).from('profiles').select('*');
 
   if (filters.role && filters.role.toUpperCase() !== 'ALL') {
     query = query.eq('role', filters.role.toLowerCase());
@@ -128,7 +128,7 @@ export async function getAllUsersAdmin(filters: {
   if (authError) throw authError;
 
   // Combine
-  const usersWithEmail = (profiles || []).map((profile) => {
+  const usersWithEmail = (profiles || []).map((profile: any) => {
     const authUser = authData.users.find(u => u.id === profile.id);
     return {
       ...profile,
@@ -145,9 +145,9 @@ export async function updateUserRole(userId: string, targetRole: string) {
   if (!user) throw new Error('Unauthorized');
   await verifyAdmin(supabase, user.id);
 
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('profiles')
-    .update({ role: targetRole as any })
+    .update({ role: targetRole })
     .eq('id', userId);
     
   if (error) throw error;
@@ -177,11 +177,11 @@ export async function getUserActivity(userId: string) {
   if (!user) throw new Error('Unauthorized');
   await verifyAdmin(supabase, user.id);
 
-  const { data: asCustomer } = await supabase.from('jobs').select('*').eq('customer_id', userId);
-  const { data: asWorker } = await supabase.from('jobs').select('*').eq('worker_id', userId);
+  const { data: asCustomer } = await (supabase as any).from('jobs').select('*').eq('customer_id', userId);
+  const { data: asWorker } = await (supabase as any).from('jobs').select('*').eq('worker_id', userId);
 
-  const customerJobs = asCustomer || [];
-  const workerJobs = asWorker || [];
+  const customerJobs = (asCustomer || []) as any[];
+  const workerJobs = (asWorker || []) as any[];
 
   const totalSpent = customerJobs.reduce((sum, j) => sum + (j.price_amount || 0), 0);
   const totalEarned = workerJobs.filter((j) => j.status === 'COMPLETED').reduce((sum, j) => sum + (j.price_amount || 0), 0);
@@ -201,7 +201,7 @@ export async function adminAddMoney(userId: string, amount: number) {
   await verifyAdmin(supabase, user.id);
 
   // amount is in dollars
-  const { error } = await supabase.rpc('add_money', {
+  const { error } = await (supabase as any).rpc('add_money', {
     user_id: userId,
     amount: amount
   });
@@ -220,14 +220,14 @@ export async function getJobsByDay(days: number) {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('jobs')
     .select('created_at')
     .gte('created_at', startDate.toISOString());
 
   if (error) throw error;
 
-  const grouped = (data || []).reduce((acc: Record<string, number>, job) => {
+  const grouped = ((data as any[]) || []).reduce((acc: Record<string, number>, job: any) => {
     const date = new Date(job.created_at).toISOString().split('T')[0];
     acc[date] = (acc[date] || 0) + 1;
     return acc;
@@ -256,7 +256,7 @@ export async function getRevenueByWeek(weeks: number) {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - (weeks * 7));
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('jobs')
     .select('created_at, price_amount')
     .eq('status', 'COMPLETED')
@@ -264,7 +264,7 @@ export async function getRevenueByWeek(weeks: number) {
 
   if (error) throw error;
 
-  const grouped = (data || []).reduce((acc: Record<string, number>, job) => {
+  const grouped = ((data as any[]) || []).reduce((acc: Record<string, number>, job: any) => {
     const jobDate = new Date(job.created_at);
     // Simple grouping by start of week date or week string
     const yearStart = new Date(Date.UTC(jobDate.getUTCFullYear(),0,1));
@@ -283,10 +283,10 @@ export async function getJobStatusBreakdown() {
   if (!user) throw new Error('Unauthorized');
   await verifyAdmin(supabase, user.id);
 
-  const { data, error } = await supabase.from('jobs').select('status');
+  const { data, error } = await (supabase as any).from('jobs').select('status');
   if (error) throw error;
 
-  const grouped = (data || []).reduce((acc: Record<string, number>, job) => {
+  const grouped = ((data as any[]) || []).reduce((acc: Record<string, number>, job: any) => {
     acc[job.status] = (acc[job.status] || 0) + 1;
     return acc;
   }, {});
@@ -300,13 +300,13 @@ export async function getTopEmployees(limit: number) {
   if (!user) throw new Error('Unauthorized');
   await verifyAdmin(supabase, user.id);
 
-  const { data: employees } = await supabase.from('profiles').select('id, full_name, role').eq('role', 'employee');
-  const { data: jobs } = await supabase.from('jobs').select('worker_id, price_amount').eq('status', 'COMPLETED');
+  const { data: employees } = await (supabase as any).from('profiles').select('id, full_name, role').eq('role', 'employee');
+  const { data: jobs } = await (supabase as any).from('jobs').select('worker_id, price_amount').eq('status', 'COMPLETED');
 
   if (!employees || !jobs) return [];
 
-  const stats = employees.map((emp) => {
-    const wJobs = jobs.filter((j) => j.worker_id === emp.id);
+  const stats = (employees as any[]).map((emp) => {
+    const wJobs = (jobs as any[]).filter((j) => j.worker_id === emp.id);
     const totalEarned = wJobs.reduce((sum, j) => sum + (Number(j.price_amount || 0) * 0.85), 0);
     return { id: emp.id, full_name: emp.full_name, completedJobs: wJobs.length, totalEarned };
   });
@@ -320,13 +320,13 @@ export async function getTopCustomers(limit: number) {
   if (!user) throw new Error('Unauthorized');
   await verifyAdmin(supabase, user.id);
 
-  const { data: customers } = await supabase.from('profiles').select('id, full_name, role').eq('role', 'customer');
-  const { data: jobs } = await supabase.from('jobs').select('customer_id, price_amount').neq('status', 'CANCELLED');
+  const { data: customers } = await (supabase as any).from('profiles').select('id, full_name, role').eq('role', 'customer');
+  const { data: jobs } = await (supabase as any).from('jobs').select('customer_id, price_amount').neq('status', 'CANCELLED');
 
   if (!customers || !jobs) return [];
 
-  const stats = customers.map((cust) => {
-    const cJobs = jobs.filter((j) => j.customer_id === cust.id);
+  const stats = (customers as any[]).map((cust) => {
+    const cJobs = (jobs as any[]).filter((j) => j.customer_id === cust.id);
     const totalSpent = cJobs.reduce((sum, j) => sum + Number(j.price_amount || 0), 0);
     return { id: cust.id, full_name: cust.full_name, jobsCreated: cJobs.length, totalSpent };
   });
@@ -348,10 +348,10 @@ export async function getKpiTrend(days: number) {
   const previousStart = new Date();
   previousStart.setDate(currentStart.getDate() - days);
 
-  const { data: currentJobs } = await supabase.from('jobs').select('status, price_amount').gte('created_at', currentStart.toISOString());
-  const { data: previousJobs } = await supabase.from('jobs').select('status, price_amount').gte('created_at', previousStart.toISOString()).lt('created_at', currentStart.toISOString());
+  const { data: currentJobs } = await (supabase as any).from('jobs').select('status, price_amount').gte('created_at', currentStart.toISOString());
+  const { data: previousJobs } = await (supabase as any).from('jobs').select('status, price_amount').gte('created_at', previousStart.toISOString()).lt('created_at', currentStart.toISOString());
   
-  const { count: currentEmployees } = await supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'employee');
+  const { count: currentEmployees } = await (supabase as any).from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'employee');
 
   const calcRev = (arr: { status: string; price_amount: number }[]) => arr.filter(j => j.status === 'COMPLETED').reduce((sum, j) => sum + (Number(j.price_amount) || 0), 0);
   const calcPen = (arr: { status: string }[]) => arr.filter(j => j.status === 'PENDING_REVIEW').length;
@@ -378,10 +378,10 @@ export async function getPlatformConfig() {
   if (!user) throw new Error('Unauthorized');
   await verifyAdmin(supabase, user.id);
 
-  const { data, error } = await supabase.from('platform_config' as any).select('*');
+  const { data, error } = await (supabase as any).from('platform_config').select('*');
   if (error) throw error;
   
-  return ((data as any[]) || []).reduce((acc: Record<string, string>, row: any) => {
+  return (data || []).reduce((acc: Record<string, string>, row: any) => {
     acc[row.key] = row.value;
     return acc;
   }, {});
@@ -393,7 +393,7 @@ export async function upsertPlatformConfig(key: string, value: string) {
   if (!user) throw new Error('Unauthorized');
   await verifyAdmin(supabase, user.id);
 
-  const { error } = await (supabase.from('platform_config' as any) as any).upsert({
+  const { error } = await (supabase as any).from('platform_config').upsert({
     key,
     value,
     updated_by: user.id,

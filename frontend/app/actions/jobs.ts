@@ -26,9 +26,9 @@ export async function createJob(jobData: {
 
     // Hold escrow first - check balance
     console.log('Checking user balance...');
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
-      .select('money_balance')
+      .select('money_balance, full_name')
       .eq('id', user.id)
       .single()
     
@@ -46,7 +46,7 @@ export async function createJob(jobData: {
     }
 
     // Deduct from balance using dollars directly
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase as any)
       .from('profiles')
       .update({ 
         money_balance: profile.money_balance - jobPrice 
@@ -62,7 +62,7 @@ export async function createJob(jobData: {
 
     // Create the job with dollars directly
     console.log('Creating job in database...');
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('jobs')
       .insert([
         {
@@ -85,13 +85,13 @@ export async function createJob(jobData: {
     }
 
     // Notify all admins about the new job
-    const { data: admins } = await supabase
+    const { data: admins } = await (supabase as any)
       .from('profiles')
       .select('id')
       .eq('role', 'admin')
 
     if (admins && admins.length > 0) {
-      await supabase
+      await (supabase as any)
         .from('notifications')
         .insert(admins.map((admin: any) => ({
           user_id: admin.id,
@@ -117,7 +117,7 @@ export async function getCustomerJobs(status?: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
-  let query = supabase
+  let query = (supabase as any)
     .from('jobs')
     .select(`
       *,
@@ -142,7 +142,7 @@ export async function applyForJob(jobId: string) {
   if (!user) throw new Error('Unauthorized')
 
   // Create application
-  const { error: applyError } = await supabase.from('job_applications').insert({
+  const { error: applyError } = await (supabase as any).from('job_applications').insert({
     job_id: jobId,
     employee_id: user.id,
     status: 'PENDING'
@@ -154,9 +154,9 @@ export async function applyForJob(jobId: string) {
   }
 
   // Get customer_id to notify them
-  const { data: job } = await supabase.from('jobs').select('customer_id').eq('id', jobId).single();
+  const { data: job } = await (supabase as any).from('jobs').select('customer_id').eq('id', jobId).single();
   if (job?.customer_id) {
-    await supabase.from('notifications').insert({
+    await (supabase as any).from('notifications').insert({
       user_id: job.customer_id,
       type: 'APPLICATION_RECEIVED',
       payload: {
@@ -172,7 +172,7 @@ export async function getJobApplications(jobId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('job_applications')
     .select('*, employee_profile:profiles!employee_id(id, full_name, rating)')
     .eq('job_id', jobId)
@@ -188,7 +188,7 @@ export async function handleApplication(applicationId: string, status: 'ACCEPTED
   if (!user) throw new Error('Unauthorized')
 
   // Get application details first
-  const { data: app, error: fetchError } = await supabase
+  const { data: app, error: fetchError } = await (supabase as any)
     .from('job_applications')
     .select('*, job:jobs(id, customer_id)')
     .eq('id', applicationId)
@@ -198,14 +198,14 @@ export async function handleApplication(applicationId: string, status: 'ACCEPTED
   if (app.job.customer_id !== user.id) throw new Error('Unauthorized');
 
   if (status === 'REJECTED') {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('job_applications')
       .update({ status: 'REJECTED' })
       .eq('id', applicationId);
     if (error) throw error;
 
     // Notify applicant
-    await supabase.from('notifications').insert({
+    await (supabase as any).from('notifications').insert({
       user_id: app.employee_id,
       type: 'APPLICATION_REJECTED',
       payload: { job_id: app.job_id }
@@ -213,14 +213,14 @@ export async function handleApplication(applicationId: string, status: 'ACCEPTED
   } else {
     // ACCEPTED logic
     // 1. Update this application
-    const { error: updateAppError } = await supabase
+    const { error: updateAppError } = await (supabase as any)
       .from('job_applications')
       .update({ status: 'ACCEPTED' })
       .eq('id', applicationId);
     if (updateAppError) throw updateAppError;
 
     // 2. Reject all other pending applications for this job
-    await supabase
+    await (supabase as any)
       .from('job_applications')
       .update({ status: 'REJECTED' })
       .eq('job_id', app.job_id)
@@ -228,8 +228,8 @@ export async function handleApplication(applicationId: string, status: 'ACCEPTED
       .neq('id', applicationId);
 
     // 3. Update the job
-    const { data: workerProfile } = await supabase.from('profiles').select('full_name').eq('id', app.employee_id).single();
-    const { error: updateJobError } = await supabase
+    const { data: workerProfile } = await (supabase as any).from('profiles').select('full_name').eq('id', app.employee_id).single();
+    const { error: updateJobError } = await (supabase as any)
       .from('jobs')
       .update({
         worker_id: app.employee_id,
@@ -242,9 +242,9 @@ export async function handleApplication(applicationId: string, status: 'ACCEPTED
 
     // 4. Notify everyone
     // Winner
-    const { data: jobInfo } = await supabase.from('jobs').select('location_address').eq('id', app.job_id).single();
+    const { data: jobInfo } = await (supabase as any).from('jobs').select('location_address').eq('id', app.job_id).single();
     
-    await supabase.from('notifications').insert({
+    await (supabase as any).from('notifications').insert({
       user_id: app.employee_id,
       type: 'APPLICATION_ACCEPTED',
       payload: { 
@@ -254,7 +254,7 @@ export async function handleApplication(applicationId: string, status: 'ACCEPTED
     });
 
     // Get others to notify of rejection
-    const { data: others } = await supabase
+    const { data: others } = await (supabase as any)
       .from('job_applications')
       .select('employee_id')
       .eq('job_id', app.job_id)
@@ -262,8 +262,8 @@ export async function handleApplication(applicationId: string, status: 'ACCEPTED
       .neq('id', applicationId);
 
     if (others && others.length > 0) {
-      await supabase.from('notifications').insert(
-        others.map(o => ({
+      await (supabase as any).from('notifications').insert(
+        others.map((o: any) => ({
           user_id: o.employee_id,
           type: 'APPLICATION_REJECTED',
           payload: { job_id: app.job_id }
@@ -283,7 +283,7 @@ export async function updateJobStatus(jobId: string, status: string, proofOfWork
     updateData.proof_of_work = proofOfWork
   }
 
-  const { data: jobDataBefore, error: fetchError } = await supabase
+  const { data: jobDataBefore, error: fetchError } = await (supabase as any)
     .from('jobs')
     .select('customer_id, worker_id, status')
     .eq('id', jobId)
@@ -291,7 +291,7 @@ export async function updateJobStatus(jobId: string, status: string, proofOfWork
 
   if (fetchError || !jobDataBefore) throw new Error('Job not found')
 
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('jobs')
     .update(updateData)
     .eq('id', jobId)
@@ -302,7 +302,7 @@ export async function updateJobStatus(jobId: string, status: string, proofOfWork
   // Notify the other party
   const otherUserId = user.id === jobDataBefore.customer_id ? jobDataBefore.worker_id : jobDataBefore.customer_id
   if (otherUserId) {
-    await supabase
+    await (supabase as any)
       .from('notifications')
       .insert({
         user_id: otherUserId,
@@ -321,7 +321,7 @@ export async function approveJobCompletion(jobId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
-  const { data: job } = await supabase
+  const { data: job } = await (supabase as any)
     .from('jobs')
     .select('*').eq('id', jobId).single()
   if (!job || job.customer_id !== user.id) throw new Error('Forbidden')
@@ -333,14 +333,14 @@ export async function approveJobCompletion(jobId: string) {
   // Release escrow to employee
   if (!job.worker_id) throw new Error('Job has no worker assigned');
   
-  await supabase.rpc('release_escrow', {
+  await (supabase as any).rpc('release_escrow', {
     p_job_id: jobId,
     p_employee_id: job.worker_id,
     p_amount: job.price_amount,
     p_platform_fee: platformFee,
   })
 
-  const { error: completeError } = await supabase
+  const { error: completeError } = await (supabase as any)
     .from('jobs')
     .update({ status: 'COMPLETED' })
     .eq('id', jobId)
@@ -349,7 +349,7 @@ export async function approveJobCompletion(jobId: string) {
 
 export async function getNearbyJobs(lat: number, lng: number, radiusMeters = 50000) {
   const supabase = await createClient()
-  const { data, error } = await supabase.rpc('get_nearby_jobs', {
+  const { data, error } = await (supabase as any).rpc('get_nearby_jobs', {
     lat,
     lng,
     radius_meters: radiusMeters,
@@ -360,7 +360,7 @@ export async function getNearbyJobs(lat: number, lng: number, radiusMeters = 500
 
 export async function getAllOpenJobs() {
   const supabase = await createClient()
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('jobs')
     .select(`
       *,
@@ -378,7 +378,7 @@ export async function getEmployeeJobs(status?: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
-  let query = supabase
+  let query = (supabase as any)
     .from('jobs')
     .select(`
       *,
@@ -406,10 +406,10 @@ export async function getAllJobsAdmin() {
   if (!user) throw new Error('Unauthorized')
 
   // Verify Admin Role
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await (supabase as any).from('profiles').select('role').eq('id', user.id).single()
   if (!profile || profile.role !== 'admin') throw new Error('Forbidden')
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('jobs')
     .select('*, customer:profiles!customer_id(full_name), worker:profiles!worker_id(full_name)')
     .order('created_at', { ascending: false })
@@ -424,12 +424,12 @@ export async function adminUpdateJobStatus(jobId: string, status: string) {
   if (!user) throw new Error('Unauthorized')
 
   // Verify Admin Role
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await (supabase as any).from('profiles').select('role').eq('id', user.id).single()
   if (!profile || profile.role !== 'admin') throw new Error('Forbidden')
 
   const updateData: any = { status: status.toUpperCase() }
 
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('jobs')
     .update(updateData)
     .eq('id', jobId)

@@ -49,14 +49,13 @@ export async function POST(request: NextRequest) {
     const job = await createJob(jobData);
     console.log('Job created successfully:', job);
     
-    return NextResponse.json({
-      success: true,
-      data: {
-        job: job,
-        transactionId: job?.id || ''
-      }
-    });
-  } catch (error: any) {
+    return NextResponse.json({ 
+      success: true, 
+      data: { 
+        job: job, 
+        transactionId: (job as any)?.id || ''
+      } 
+    });  } catch (error: any) {
     console.error('API route error:', error);
     console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);

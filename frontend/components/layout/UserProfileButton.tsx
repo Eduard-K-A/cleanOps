@@ -331,11 +331,12 @@ export function UserProfileButton() {
     return fromName || 'U';
   }, [profile?.full_name, email]);
 
-  // Derived state for location label and phone number to avoid 'setState in effect'
-  const locationLabel = useMemo(() => {
-    if (!profile?.id || typeof window === 'undefined') return '';
+  // Use state with lazy initializer for location label to avoid 'setState in effect' 
+  // while still allowing setter access.
+  const [locationLabel, setLocationLabel] = useState(() => {
+    if (typeof window === 'undefined' || !profile?.id) return '';
     return window.localStorage.getItem(`cleanops_location_label_${profile.id}`) || '';
-  }, [profile?.id]);
+  });
 
   const phoneNumber = profile?.phone_number || '';
 
