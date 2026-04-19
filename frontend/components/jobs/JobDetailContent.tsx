@@ -56,13 +56,12 @@ function formatDate(dateString: string) {
   });
 }
 
-function formatPrice(cents: number) {
-  return new Intl.NumberFormat('en-US', { 
-    style: 'currency', 
-    currency: 'USD' 
-  }).format(cents / 100);
+function formatPrice(dollars: number) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(dollars);
 }
-
 function getProgressPercentage(status: JobStatus): number {
   const progressMap: Record<JobStatus, number> = {
     OPEN: 25,
@@ -328,7 +327,9 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
                         <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-100 text-sky-700 text-xs font-semibold shrink-0 mt-0.5">
                           {idx + 1}
                         </span>
-                        <span className="text-slate-700 py-1">{task}</span>
+                        <span className="text-slate-700 py-1">
+                          {typeof task === 'string' ? task : (task as any)?.name || (task as any)?.value || 'Task'}
+                        </span>
                       </li>
                     ))}
                   </ul>
