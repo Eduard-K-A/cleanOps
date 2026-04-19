@@ -62,8 +62,8 @@ const URGENCY_CONFIG = {
   }
 } as const;
 
-function formatPrice(cents: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
+function formatPrice(dollars: number) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(dollars);
 }
 
 function formatDate(dateStr: string) {
@@ -163,7 +163,7 @@ export function ModernCleaningJobCard({
                   key={idx}
                   className="px-2 py-1 text-xs font-medium text-slate-700 border border-slate-200 bg-slate-50 rounded-md"
                 >
-                  {task}
+                  {typeof task === 'string' ? task : (task as any)?.name || (task as any)?.value || 'Task'}
                 </span>
               ))}
               {tasks.length > 3 && (
