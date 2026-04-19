@@ -145,8 +145,8 @@ function BalanceSection({ balance, onRefresh }: BalanceSectionProps) {
     try {
       setBusy(true);
       const { addMoney } = await import('@/app/actions/payments');
-      // Convert dollars to cents for backend
-      await addMoney(Math.round(parsed * 100));
+      // Use dollars directly
+      await addMoney(parsed);
       await onRefresh();
       toast.success(formatCurrency(parsed) + ' deposited');
       setAmount('');
@@ -167,8 +167,8 @@ function BalanceSection({ balance, onRefresh }: BalanceSectionProps) {
     try {
       setBusy(true);
       const { withdrawMoney } = await import('@/app/actions/payments');
-      // Convert dollars to cents for backend
-      await withdrawMoney(Math.round(parsed * 100));
+      // Use dollars directly
+      await withdrawMoney(parsed);
       await onRefresh();
       toast.success(formatCurrency(parsed) + ' withdrawn');
       setAmount('');
@@ -309,13 +309,11 @@ export function UserProfileButton() {
   const router = useRouter();
   const { user, profile, mounted, logout, refetchProfile } = useAuth();
   const [open, setOpen] = useState(false);
-  const [locationLabel, setLocationLabel] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const email = user?.email ?? 'Unknown user';
-  // money_balance is stored in cents, convert to dollars for display
-  const balance = (profile?.money_balance ?? 0) / 100;
+  // Use dollars directly from the DB
+  const balance = profile?.money_balance ?? 0;
 
   const displayName = useMemo(() => {
     if (profile?.full_name && profile.full_name.trim().length > 0) return profile.full_name;
@@ -324,7 +322,7 @@ export function UserProfileButton() {
   }, [profile?.full_name, user?.email]);
 
   const initials = useMemo(() => {
-    const fromName = (profile?.full_name || email || '')
+    const fromName = (profile?.full_name || email || 'User')
       .split(' ')
       .filter(Boolean)
       .map((part) => part[0]?.toUpperCase())
@@ -333,19 +331,13 @@ export function UserProfileButton() {
     return fromName || 'U';
   }, [profile?.full_name, email]);
 
-  // Restore location label from localStorage
-  useEffect(() => {
-    if (!profile?.id || typeof window === 'undefined') return;
-    const stored = window.localStorage.getItem(`cleanops_location_label_${profile.id}`);
-    if (stored) setLocationLabel(stored);
+  // Derived state for location label and phone number to avoid 'setState in effect'
+  const locationLabel = useMemo(() => {
+    if (!profile?.id || typeof window === 'undefined') return '';
+    return window.localStorage.getItem(`cleanops_location_label_${profile.id}`) || '';
   }, [profile?.id]);
 
-  // Load phone number from profile when it changes
-  useEffect(() => {
-    if (profile?.phone_number) {
-      setPhoneNumber(profile.phone_number);
-    }
-  }, [profile?.phone_number]);
+  const phoneNumber = profile?.phone_number || '';
 
   // Close on outside click
   useEffect(() => {

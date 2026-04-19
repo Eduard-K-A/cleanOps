@@ -108,9 +108,8 @@ export default function AdminDashboardPage() {
                             <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 font-mono">
                               <span>#{job.id.slice(0,8)}</span>
                               <span>•</span>
-                              <span>${(job.price_amount / 100).toFixed(2)}</span>
-                            </div>
-                          </div>
+                              <span>${Number(job.price_amount).toFixed(2)}</span>
+                              </div>                          </div>
                           <div>
                             <span className="px-2.5 py-1 rounded bg-slate-100 text-xs font-semibold text-slate-600 border border-slate-200">
                               {job.status.replace('_', ' ')}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
@@ -144,10 +144,6 @@ export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOp
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [internalMobileOpen, setInternalMobileOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  // Stable role: once a role is known, hold it until a *confirmed* different
-  // role arrives. This prevents the nav from flickering to "customer" during
-  // the brief window where profile is null mid-revalidation.
-  const [stableRole, setStableRole] = useState<string | undefined>(undefined);
   const [reviewQueueCount, setReviewQueueCount] = useState(0);
 
   const pathname = usePathname();
@@ -155,6 +151,14 @@ export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOp
   const { profile, user, logout, loading, mounted } = useAuth();
   const { unreadCount } = useUnreadCount();
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Derive role to prevent nav flickering without 'setState in effect'
+  const stableRole = useMemo(() => {
+    if (!mounted || loading) return undefined;
+    if (profile?.role) return profile.role;
+    if (user?.user_metadata?.role) return user.user_metadata.role;
+    return undefined;
+  }, [mounted, loading, profile?.role, user?.user_metadata?.role]);
 
   // Use external mobile state if provided, otherwise use internal state
   const mobileOpen = isMobileOpen !== undefined ? isMobileOpen : internalMobileOpen;
@@ -165,14 +169,6 @@ export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOp
       setInternalMobileOpen(open);
     }
   };
-
-  // Update stableRole only when we have a confirmed role AND revalidation is done.
-  // This prevents the nav from flickering during the snapshot → real profile transition.
-  useEffect(() => {
-    if (mounted && !loading && profile?.role) {
-      setStableRole(profile.role);
-    }
-  }, [mounted, loading, profile?.role]);
 
   // Realtime subscription for Admin Review Queue
   useEffect(() => {

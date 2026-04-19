@@ -43,8 +43,8 @@ const STATUS_CONFIG = {
   }
 } as const;
 
-function formatPrice(cents: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
+function formatPrice(dollars: number) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(dollars);
 }
 
 export function CleaningJobCard({

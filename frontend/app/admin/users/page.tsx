@@ -274,7 +274,7 @@ export default function AdminUsersPage() {
                                             <div className="bg-white p-3 rounded border border-slate-200 text-sm space-y-1">
                                               <p><strong>Jobs Requested:</strong> {userActivityCache[user.id].customerJobs.length}</p>
                                               <p><strong>Active Jobs:</strong> {userActivityCache[user.id].customerJobs.filter((j:any) => ['OPEN', 'IN_PROGRESS'].includes(j.status)).length}</p>
-                                              <p><strong>Total Spent:</strong> ${(userActivityCache[user.id].totalSpent / 100).toFixed(2)}</p>
+                                              <p><strong>Total Spent:</strong> ${Number(userActivityCache[user.id].totalSpent).toFixed(2)}</p>
                                               <Button 
                                                 variant="link" 
                                                 className="px-0 pt-2 h-auto text-blue-600"
@@ -290,7 +290,7 @@ export default function AdminUsersPage() {
                                               <div className="bg-white p-3 rounded border border-slate-200 text-sm space-y-1">
                                                 <p><strong>Jobs Worked:</strong> {userActivityCache[user.id].workerJobs.length}</p>
                                                 <p><strong>Active Jobs:</strong> {userActivityCache[user.id].workerJobs.filter((j:any) => ['OPEN', 'IN_PROGRESS'].includes(j.status)).length}</p>
-                                                <p><strong>Total Earned:</strong> ${(userActivityCache[user.id].totalEarned / 100).toFixed(2)}</p>
+                                                <p><strong>Total Earned:</strong> ${Number(userActivityCache[user.id].totalEarned).toFixed(2)}</p>
                                                 <Button 
                                                   variant="link" 
                                                   className="px-0 pt-2 h-auto text-blue-600"

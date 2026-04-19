@@ -112,7 +112,7 @@ export default function EmployeeDashboardPage() {
       earningsTrend,
       urgencyDistribution,
       jobStatusBreakdown,
-      balance: (profile?.money_balance || 0) * 100 // Convert to cents
+      balance: profile?.money_balance || 0
     };
   }, [myJobs, completedJobs, activeJobs, pendingReviewJobs, allJobs, profile?.money_balance]);
 
@@ -164,7 +164,7 @@ export default function EmployeeDashboardPage() {
                     <DollarSign className="h-5 w-5 text-emerald-600" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-emerald-900">${(analytics.totalEarnings / 100).toFixed(2)}</div>
+                    <div className="text-3xl font-bold text-emerald-900">${analytics.totalEarnings.toFixed(2)}</div>
                     <p className="text-xs text-emerald-700 mt-1">85% of job prices (after 15% platform fee)</p>
                   </CardContent>
                 </Card>
@@ -286,7 +286,7 @@ export default function EmployeeDashboardPage() {
                     <CardTitle className="text-sm font-medium">Avg. Job Price</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">${(analytics.avgJobPrice / 100).toFixed(2)}</div>
+                    <div className="text-2xl font-bold">${analytics.avgJobPrice.toFixed(2)}</div>
                     <p className="text-xs text-slate-500 mt-1">Based on all your jobs</p>
                   </CardContent>
                 </Card>
@@ -296,7 +296,7 @@ export default function EmployeeDashboardPage() {
                     <CardTitle className="text-sm font-medium">Avg. Earning/Job</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">${(analytics.avgEarningsPerJob / 100).toFixed(2)}</div>
+                    <div className="text-2xl font-bold">${analytics.avgEarningsPerJob.toFixed(2)}</div>
                     <p className="text-xs text-slate-500 mt-1">Your 85% share per job</p>
                   </CardContent>
                 </Card>
@@ -306,7 +306,7 @@ export default function EmployeeDashboardPage() {
                     <CardTitle className="text-sm font-medium">Account Balance</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">${(analytics.balance / 100).toFixed(2)}</div>
+                    <div className="text-2xl font-bold">${analytics.balance.toFixed(2)}</div>
                     <p className="text-xs text-slate-500 mt-1">Ready to withdraw</p>
                   </CardContent>
                 </Card>
@@ -354,10 +354,9 @@ export default function EmployeeDashboardPage() {
                                 {job.status.replace('_', ' ')}
                               </Badge>
                               <span className="text-sm text-slate-600">
-                                ${(job.price_amount / 100).toFixed(2)}
+                                ${Number(job.price_amount).toFixed(2)}
                               </span>
-                            </div>
-                            <Button
+                            </div>                            <Button
                               size="sm"
                               variant="ghost"
                               onClick={() => router.push(`/employee/jobs/${job.id}`)}
