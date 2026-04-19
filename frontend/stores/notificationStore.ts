@@ -149,6 +149,9 @@ function getNotificationTitle(notification: Notification): string {
     case 'MESSAGE_RECEIVED': return 'New Message';
     case 'JOB_REPORTED': return 'Job Reported';
     case 'new_job_nearby': return 'New Job Nearby';
+    case 'APPLICATION_RECEIVED': return 'New Application';
+    case 'APPLICATION_ACCEPTED': return 'Application Approved';
+    case 'APPLICATION_REJECTED': return 'Application Declined';
     default: return 'New Notification';
   }
 }
@@ -164,6 +167,9 @@ function getNotificationDescription(notification: Notification): string {
     case 'MESSAGE_RECEIVED': return `You have a new message regarding a job.`;
     case 'JOB_REPORTED': return `A new issue has been reported: ${payload.reason}`;
     case 'new_job_nearby': return `A new cleaning job is available in your area!`;
+    case 'APPLICATION_RECEIVED': return `A professional has applied to your job.`;
+    case 'APPLICATION_ACCEPTED': return `Your application for ${payload.location_address || 'a cleaning job'} was approved!`;
+    case 'APPLICATION_REJECTED': return `Your application for a job was not selected.`;
     default: return 'You have a new update in CleanOps.';
   }
 }
