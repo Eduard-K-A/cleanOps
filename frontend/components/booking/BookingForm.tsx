@@ -22,12 +22,12 @@ const URGENCIES: { value: JobUrgency; label: string; icon: React.ReactNode }[] =
 ];
 const TASKS = ['Dusting', 'Vacuuming', 'Mopping', 'Bathrooms', 'Kitchen', 'Windows'];
 
-// Compute price (in cents) based on size base, urgency multiplier and number of tasks.
+// Compute price (in dollars) based on size base, urgency multiplier and number of tasks.
 function computePrice(base: number, urgency: JobUrgency, taskCount: number) {
   const mult = urgency === 'HIGH' ? 1.3 : urgency === 'LOW' ? 0.9 : 1;
   // Per-task surcharge: 12% of base price per task (works for 0..n tasks)
   const taskMultiplier = 1 + 0.12 * taskCount;
-  return Math.round(base * mult * taskMultiplier);
+  return Number((base * mult * taskMultiplier).toFixed(2));
 }
 
 // Progress Stepper Component
@@ -162,9 +162,8 @@ function BookingSummary() {
               Estimated Total
             </p>
             <p className="text-3xl font-bold text-blue-600 mt-2">
-              ${(price_amount / 100).toFixed(2)}
-            </p>
-            <p className="text-xs text-gray-600 mt-1">
+             ${price_amount.toFixed(2)}
+            </p>            <p className="text-xs text-gray-600 mt-1">
               Held in escrow until completion
             </p>
           </div>
@@ -332,7 +331,7 @@ function StepLocation() {
 
 function StepUrgency() {
   const { urgency, setUrgency, tasks, setTasks, setStep, setPriceAmount, size } = useBookingStore();
-  const base = size?.toLowerCase().includes('large') ? 15000 : size?.toLowerCase().includes('medium') ? 10000 : 6500;
+  const base = size?.toLowerCase().includes('large') ? 135.00 : size?.toLowerCase().includes('medium') ? 95.00 : 65.00;
   const price = computePrice(base, urgency, tasks.length);
 
   const toggleTask = (t: string) => {
@@ -438,7 +437,7 @@ function StepUrgency() {
         {/* Price Summary */}
         <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-5">
           <p className="text-xs font-semibold text-green-800 uppercase tracking-wide">Estimated Price</p>
-          <p className="text-3xl font-bold text-green-700 mt-2">${(price / 100).toFixed(2)}</p>
+          <p className="text-3xl font-bold text-green-700 mt-2">${price.toFixed(2)}</p>
           <p className="text-xs text-green-700 mt-1">Held in escrow until job completion</p>
         </div>
 
@@ -479,7 +478,7 @@ function StepPayment() {
       return;
     }
 
-    if (tasks.length === 0 || price_amount < 100) {
+    if (tasks.length === 0 || price_amount < 1.00) {
       toast.error('Missing tasks or invalid price.');
       return;
     }
@@ -571,7 +570,7 @@ function StepPayment() {
         {/* Payment Amount */}
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6">
           <p className="text-xs font-semibold text-blue-900 uppercase tracking-widest">Payment Amount</p>
-          <p className="text-4xl font-bold text-blue-600 mt-3">${(price_amount / 100).toFixed(2)}</p>
+          <p className="text-4xl font-bold text-blue-600 mt-3">${price_amount.toFixed(2)}</p>
           <div className="mt-4 space-y-2 pt-4 border-t border-blue-200">
             <div className="flex items-start gap-2">
               <span className="text-blue-600 text-lg mt-0.5">✓</span>
