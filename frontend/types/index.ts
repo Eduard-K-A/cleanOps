@@ -84,7 +84,19 @@ export interface Conversation {
 export interface Notification {
   id: string;
   user_id: string;
-  type: 'JOB_ASSIGNED' | 'JOB_UPDATED' | 'MESSAGE_RECEIVED' | 'PAYMENT_RECEIVED' | 'DISPATCH_ALERT' | 'JOB_REPORTED';
+  type: 
+    | 'JOB_ASSIGNED' 
+    | 'JOB_UPDATED' 
+    | 'MESSAGE_RECEIVED' 
+    | 'PAYMENT_RECEIVED' 
+    | 'DISPATCH_ALERT' 
+    | 'JOB_REPORTED'
+    | 'money_added'
+    | 'payout_received'
+    | 'payout_sent'
+    | 'job_claimed'
+    | 'job_completed'
+    | 'new_job_nearby';
   payload: Record<string, any>;
   is_read: boolean;
   created_at: string;

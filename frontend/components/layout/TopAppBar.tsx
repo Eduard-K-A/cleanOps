@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Search, Bell } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { UserProfileButton } from './UserProfileButton';
+import { NotificationPopover } from '../NotificationPopover';
 
 interface TopAppBarProps {
   onMenuClick?: () => void;
@@ -77,16 +78,7 @@ export function TopAppBar({
 
         {/* Notifications */}
         {showNotifications && (
-          <button
-            className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors relative"
-            style={{ color: 'var(--md-on-surface)' }}
-          >
-            <Bell size={20} />
-            <span
-              className="absolute top-1 right-1 w-2 h-2 rounded-full"
-              style={{ backgroundColor: 'var(--md-error)' }}
-            />
-          </button>
+          <NotificationPopover />
         )}
 
         {/* User profile */}

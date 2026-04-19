@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { NavigationDrawer } from './NavigationDrawer';
 import { Menu } from 'lucide-react';
 import { UserProfileButton } from './UserProfileButton';
+import { NotificationPopover } from '../NotificationPopover';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -59,7 +60,10 @@ export function MainLayout({ children, title, subtitle, breadcrumb }: MainLayout
               </div>
 
               {/* User profile button with dropdown */}
-              <UserProfileButton />
+              <div className="flex items-center gap-2 pl-2 border-l border-gray-100">
+                <NotificationPopover />
+                <UserProfileButton />
+              </div>
             </div>
           )}
           

@@ -24,12 +24,12 @@ import {
 
 
 // Helper function to format Supabase responses to match API response format
-function formatSupabaseResponse<T>(data: T | null, error: any): ApiResponse<T> {
+function formatSupabaseResponse<T>(data: T | null, error: { message: string; code?: string } | null): ApiResponse<T> {
   if (error) {
     return {
       success: false,
       error: error.message || 'Unknown error',
-      code: error.code || 500
+      code: parseInt(error.code || '500', 10)
     };
   }
   
@@ -49,9 +49,14 @@ function formatSupabaseResponse<T>(data: T | null, error: any): ApiResponse<T> {
 
 export const api = {
   // Generic methods using Supabase - simplified to avoid typing issues
-  async get<T = any>(table: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
+  async get<T = any>(table: string, params?: { 
+    id?: string; 
+    filters?: Record<string, any>; 
+    orderBy?: { column: string; ascending?: boolean };
+    limit?: number;
+  }): Promise<ApiResponse<T>> {
     try {
-      let query: any = supabase.from(table).select('*');
+      let query = (supabase.from(table as any) as any).select('*');
       
       if (params?.id) {
         query = query.eq('id', params.id).single();
@@ -73,10 +78,11 @@ export const api = {
       
       const { data, error } = await query;
       return formatSupabaseResponse(data as T, error);
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return {
         success: false,
-        error: error.message || 'Unknown error',
+        error: errorMessage,
         code: 500
       };
     }
@@ -84,22 +90,20 @@ export const api = {
 
   async patch<T = any>(table: string, id: string, data?: Record<string, any>): Promise<ApiResponse<T>> {
     try {
-      // Bypass TypeScript type inference completely
-      const supabaseAny = supabase as any;
       const updateData = data || {};
       
-      const { data: result, error } = await supabaseAny
-        .from(table)
+      const { data: result, error } = await (supabase.from(table as any) as any)
         .update(updateData)
         .eq('id', id)
         .select()
         .single();
       
       return formatSupabaseResponse(result as T, error);
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return {
         success: false,
-        error: error.message || 'Unknown error',
+        error: errorMessage,
         code: 500
       };
     }
@@ -107,21 +111,19 @@ export const api = {
 
   async post<T = any>(table: string, data?: Record<string, any>): Promise<ApiResponse<T>> {
     try {
-      // Bypass TypeScript type inference completely
-      const supabaseAny = supabase as any;
       const insertData = data || {};
       
-      const { data: result, error } = await supabaseAny
-        .from(table)
+      const { data: result, error } = await (supabase.from(table as any) as any)
         .insert(insertData)
         .select()
         .single();
       
       return formatSupabaseResponse(result as T, error);
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return {
         success: false,
-        error: error.message || 'Unknown error',
+        error: errorMessage,
         code: 500
       };
     }
@@ -139,20 +141,22 @@ export const api = {
       });
 
       const result = await response.json();
-      console.log('API response result:', result);
 
       if (!response.ok) {
-        const errorMessage = result.error || result.details || 'Failed to create job';
-        console.error('API Error:', errorMessage);
-        throw new Error(errorMessage);
+        return {
+          success: false,
+          error: result.error || 'Failed to create job',
+          code: response.status
+        };
       }
 
       return result;
-    } catch (error: any) {
-      console.error('createJob API error:', error);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create job';
+      console.error('api.createJob critical error:', errorMessage);
       return {
         success: false,
-        error: error.message || 'Failed to create job',
+        error: errorMessage,
         code: 500
       };
     }
@@ -177,10 +181,11 @@ export const api = {
         success: true,
         data: (jobs || []) as Job[]
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch jobs';
       return {
         success: false,
-        error: error.message || 'Failed to fetch jobs',
+        error: errorMessage,
         code: 500
       };
     }
@@ -193,10 +198,11 @@ export const api = {
         success: true,
         data: jobs as Job[]
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch employee jobs';
       return {
         success: false,
-        error: error.message || 'Failed to fetch employee jobs',
+        error: errorMessage,
         code: 500
       };
     }
@@ -210,10 +216,11 @@ export const api = {
         success: true,
         data: (jobs || []) as Job[]
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get job feed';
       return {
         success: false,
-        error: error.message || 'Failed to get job feed',
+        error: errorMessage,
         code: 500
       };
     }
@@ -228,10 +235,11 @@ export const api = {
         success: true,
         data: {} as Job
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to claim job';
       return {
         success: false,
-        error: error.message || 'Failed to claim job',
+        error: errorMessage,
         code: 500
       };
     }
@@ -249,10 +257,11 @@ export const api = {
         success: true,
         data: {} as Job
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update job status';
       return {
         success: false,
-        error: error.message || 'Failed to update job status',
+        error: errorMessage,
         code: 500 
       };
     }
@@ -266,10 +275,11 @@ export const api = {
         success: true,
         data: {} as Job
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to approve job';
       return {
         success: false,
-        error: error.message || 'Failed to approve job',
+        error: errorMessage,
         code: 500
       };
     }
@@ -284,10 +294,11 @@ export const api = {
         success: true,
         data: messages as Message[]
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get messages';
       return {
         success: false,
-        error: error.message || 'Failed to get messages',
+        error: errorMessage,
         code: 500
       };
     }
@@ -305,10 +316,11 @@ export const api = {
         success: true,
         data: latestMessage as Message
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
       return {
         success: false,
-        error: error.message || 'Failed to send message',
+        error: errorMessage,
         code: 500
       };
     }
@@ -338,10 +350,11 @@ export const api = {
         success: true,
         data: data as Notification[]
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get notifications';
       return {
         success: false,
-        error: error.message || 'Failed to get notifications',
+        error: errorMessage,
         code: 500
       };
     }
@@ -349,9 +362,10 @@ export const api = {
 
   async markNotificationRead(notificationId: string): Promise<ApiResponse<null>> {
     try {
-      // @ts-expect-error - Supabase SDK type limitation, runtime is valid
-      const notifUpdate = supabase.from('notifications').update({ read: true })
-      const { error } = await notifUpdate.eq('id', notificationId);
+      const { error } = await (supabase as any)
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', notificationId);
 
       if (error) throw error;
 
@@ -359,10 +373,11 @@ export const api = {
         success: true,
         data: null
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to mark notification as read';
       return {
         success: false,
-        error: error.message || 'Failed to mark notification as read',
+        error: errorMessage,
         code: 500
       };
     }
@@ -405,10 +420,11 @@ export const api = {
         success: true,
         data: data as Profile
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get profile';
       return {
         success: false,
-        error: error.message || 'Failed to get profile',
+        error: errorMessage,
         code: 500
       };
     }
@@ -425,9 +441,8 @@ export const api = {
         };
       }
 
-      // @ts-expect-error - Supabase SDK type limitation, runtime is valid
-      const profileUpdate = supabase.from('profiles').update(data)
-      const { data: result, error } = await profileUpdate
+      const { data: result, error } = await supabase.from('profiles')
+        .update(data as any)
         .eq('id', user.id)
         .select()
         .single();
@@ -438,10 +453,11 @@ export const api = {
         success: true,
         data: result as Profile
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update profile';
       return {
         success: false,
-        error: error.message || 'Failed to update profile',
+        error: errorMessage,
         code: 500
       };
     }
@@ -487,10 +503,11 @@ export const api = {
         success: true,
         data: profileData
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to sign up';
       return {
         success: false,
-        error: error.message || 'Failed to sign up',
+        error: errorMessage,
         code: 500
       };
     }
@@ -506,10 +523,11 @@ export const api = {
         success: true,
         data: {} as Profile // Return empty profile, actual data will be loaded by auth context
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to sign in';
       return {
         success: false,
-        error: error.message || 'Failed to sign in',
+        error: errorMessage,
         code: 500
       };
     }
@@ -523,10 +541,11 @@ export const api = {
         success: true,
         data: null
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to sign out';
       return {
         success: false,
-        error: error.message || 'Failed to sign out',
+        error: errorMessage,
         code: 500
       };
     }
@@ -540,10 +559,11 @@ export const api = {
         success: true,
         data: result
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
       return {
         success: false,
-        error: error.message || 'Failed to upload image',
+        error: errorMessage,
         code: 500
       };
     }
@@ -556,12 +576,14 @@ export const api = {
         success: true,
         data: null
       };
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete image';
       return {
         success: false,
-        error: error.message || 'Failed to delete image',
+        error: errorMessage,
         code: 500
       };
     }
   },
 };
+

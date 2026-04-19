@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ClientToaster } from "@/components/ClientToaster";
 import { AuthProvider } from "@/lib/authContext";
+import { NotificationListener } from "@/components/NotificationListener";
+import { Toaster as SonnerToaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +33,8 @@ export default function RootLayout({
       >
         <AuthProvider>
           <ClientToaster />
+          <SonnerToaster position="top-right" expand={true} richColors />
+          <NotificationListener />
           <div className="min-h-main-content">{children}</div>
         </AuthProvider>
       </body>
