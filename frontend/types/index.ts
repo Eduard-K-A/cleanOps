@@ -81,6 +81,16 @@ export interface Conversation {
   unread_count: number;
 }
 
+export interface JobApplication {
+  id: string;
+  job_id: string;
+  employee_id: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  created_at: string;
+  updated_at: string;
+  employee_profile?: Pick<Profile, 'id' | 'full_name' | 'rating'> | null;
+}
+
 export interface Notification {
   id: string;
   user_id: string;
@@ -96,7 +106,10 @@ export interface Notification {
     | 'payout_sent'
     | 'job_claimed'
     | 'job_completed'
-    | 'new_job_nearby';
+    | 'new_job_nearby'
+    | 'APPLICATION_RECEIVED'
+    | 'APPLICATION_ACCEPTED'
+    | 'APPLICATION_REJECTED';
   payload: Record<string, any>;
   is_read: boolean;
   created_at: string;
