@@ -73,7 +73,7 @@ function PaymentContent() {
         <CardHeader>
           <CardTitle>Complete payment (mock)</CardTitle>
           <CardDescription>
-            Job <code className="rounded bg-slate-100 px-1">{jobId.slice(0, 8)}…</code>. Amount: <code className="rounded bg-slate-100 px-1">${(amount / 100).toFixed(2)}</code>. Funds are held in escrow until you approve the work.
+            Job <code className="rounded bg-slate-100 px-1">{jobId.slice(0, 8)}…</code>. Amount: <code className="rounded bg-slate-100 px-1">${amount.toFixed(2)}</code>. Funds are held in escrow until you approve the work.
           </CardDescription>
         </CardHeader>
         <CardContent>
