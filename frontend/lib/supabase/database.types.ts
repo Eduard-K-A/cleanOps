@@ -151,6 +151,12 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
+      is_admin_user: {
+        Args: {
+          user_id: string
+        }
+        Returns: boolean
+      }
       add_money: {
         Args: {
           user_id: string
