@@ -7,7 +7,7 @@ import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { getAllJobsAdmin } from '@/app/actions/admin';
-import { updateJobStatus, approveJobCompletion } from '@/app/actions/jobs';
+import { adminApproveJobCompletion, adminUpdateJobStatus } from '@/app/actions/jobs';
 import type { Job, JobStatus, JobUrgency } from '@/types';
 import toast from 'react-hot-toast';
 import { Badge } from '@/components/ui/badge';
@@ -130,10 +130,10 @@ function AdminJobsContent() {
     setIsActionLoading(true);
     try {
       if (modalAction === 'cancel') {
-        await updateJobStatus(selectedJob.id, 'CANCELLED');
+        await adminUpdateJobStatus(selectedJob.id, 'CANCELLED');
         toast.success(`Job CANCELLED successfully.`);
       } else if (modalAction === 'complete') {
-        await approveJobCompletion(selectedJob.id);
+        await adminApproveJobCompletion(selectedJob.id);
         toast.success(`Job FORCE COMPLETED. Escrow released.`);
       }
       await refetch();

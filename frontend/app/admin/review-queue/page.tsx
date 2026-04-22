@@ -6,7 +6,7 @@ import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { getAllJobsAdmin } from '@/app/actions/admin';
-import { adminUpdateJobStatus } from '@/app/actions/jobs';
+import { adminApproveJobCompletion, adminUpdateJobStatus } from '@/app/actions/jobs';
 import { createBrowserClient } from '@supabase/ssr';
 import type { Database } from '@/lib/supabase/database.types';
 import { Badge } from '@/components/ui/badge';
@@ -77,7 +77,7 @@ export default function ReviewQueuePage() {
     setIsActionLoading(true);
     try {
       if (actionModal.type === 'APPROVE') {
-        await adminUpdateJobStatus(actionModal.jobId, 'COMPLETED');
+        await adminApproveJobCompletion(actionModal.jobId);
         toast.success(`Job #${actionModal.jobId.slice(0, 8)} approved successfully. Funds released.`);
       } else {
         await adminUpdateJobStatus(actionModal.jobId, 'CANCELLED');
