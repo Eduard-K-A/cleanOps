@@ -197,7 +197,10 @@ export function ModernCleaningJobCard({
             {job.status === 'OPEN' && (
               <button
                 type="button"
-                onClick={() => onCancel(job.id)}
+                onClick={() => {
+                  if (isCancelling) return;
+                  onCancel(job.id);
+                }}
                 disabled={isCancelling}
                 className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 active:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >

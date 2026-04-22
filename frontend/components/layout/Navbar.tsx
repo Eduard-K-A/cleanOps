@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
 import { UserProfileButton } from './UserProfileButton';
+import { getNavigationConfig } from './navigationConfig';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -13,38 +14,8 @@ export default function Navbar() {
     return null;
   }
 
-  const employeeLinks = [
-    { href: '/homepage', label: 'Home' },
-    { href: '/employee/feed', label: 'Jobs Feed' },
-    { href: '/employee/my-jobs', label: 'My Jobs' },
-    { href: '/employee/history', label: 'History' },
-    { href: '/employee/messages', label: 'Messages' },
-    { href: '/employee/dashboard', label: 'Dashboard' },
-  ];
-
-  const customerLinks = [
-    { href: '/homepage', label: 'Home' },
-    { href: '/customer/order', label: 'Book service' },
-    { href: '/customer/requests', label: 'My requests' },
-    { href: '/customer/messages', label: 'Messages' },
-    { href: '/dashboard', label: 'Dashboard' },
-  ];
-
-  const adminLinks = [
-    { href: '/homepage', label: 'Home' },
-    { href: '/admin/dashboard', label: 'Dashboard' },
-    { href: '/admin/jobs', label: 'Jobs' },
-    { href: '/admin/review-queue', label: 'Review Queue' },
-    { href: '/admin/users', label: 'Users' },
-  ];
-
-  const links = !mounted || !isLoggedIn
-    ? customerLinks
-    : profile?.role === 'admin'
-    ? adminLinks
-    : profile?.role === 'employee'
-    ? employeeLinks
-    : customerLinks;
+  const role = !mounted || !isLoggedIn ? undefined : profile?.role;
+  const links = getNavigationConfig(role);
 
   return (
     <>

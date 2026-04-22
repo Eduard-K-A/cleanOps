@@ -7,7 +7,7 @@ import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { getAllJobsAdmin } from '@/app/actions/admin';
-import { updateJobStatus, approveJobCompletion } from '@/app/actions/jobs';
+import { adminApproveJobCompletion, adminUpdateJobStatus } from '@/app/actions/jobs';
 import type { Job, JobStatus, JobUrgency } from '@/types';
 import toast from 'react-hot-toast';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,7 @@ import {
   Copy
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { AdminFilterBar } from '@/components/admin/AdminFilterBar';
 
 import { Suspense } from 'react';
 
@@ -65,6 +66,7 @@ function AdminJobsContent() {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [modalAction, setModalAction] = useState<'complete' | 'cancel' | null>(null);
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
   // Sync page to URL
   useEffect(() => {
@@ -123,22 +125,24 @@ function AdminJobsContent() {
   };
 
   const executeAction = async () => {
-    if (!selectedJob || !modalAction) return;
+    if (!selectedJob || !modalAction || isActionLoading) return;
 
+    setIsActionLoading(true);
     try {
       if (modalAction === 'cancel') {
-        await updateJobStatus(selectedJob.id, 'CANCELLED');
+        await adminUpdateJobStatus(selectedJob.id, 'CANCELLED');
         toast.success(`Job CANCELLED successfully.`);
       } else if (modalAction === 'complete') {
-        await approveJobCompletion(selectedJob.id);
+        await adminApproveJobCompletion(selectedJob.id);
         toast.success(`Job FORCE COMPLETED. Escrow released.`);
       }
       await refetch();
+      setSelectedJob(null);
+      setModalAction(null);
     } catch (e: any) {
       toast.error(e.message || `Failed to modify job`);
     } finally {
-      setSelectedJob(null);
-      setModalAction(null);
+      setIsActionLoading(false);
     }
   };
 
@@ -162,99 +166,58 @@ function AdminJobsContent() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <TopAppBar onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} title="Manage Jobs" />
           
-          <main className="flex-1 overflow-auto p-6">
-            <div className="max-w-7xl mx-auto space-y-6">
+          <AdminFilterBar
+            searchQuery={searchQuery}
+            onSearchChange={(v) => { setSearchQuery(v); setPage(1); }}
+            searchPlaceholder="Address or Job ID..."
+            filters={[
+              {
+                label: 'Status',
+                value: statusFilter,
+                options: ['All', 'OPEN', 'IN_PROGRESS', 'PENDING_REVIEW', 'COMPLETED', 'CANCELLED'],
+                onChange: (v) => { setStatusFilter(v); setPage(1); },
+                type: 'pills'
+              },
+              {
+                label: 'Urgency',
+                value: urgencyFilter,
+                options: ['All', 'LOW', 'NORMAL', 'HIGH'],
+                onChange: (v) => { setUrgencyFilter(v); setPage(1); },
+                type: 'select'
+              }
+            ]}
+            onReset={resetFilters}
+            summary={
+              <>
+                <span>Showing {data.jobs.length} of {data.total} jobs matching criteria</span>
+                <span>Displayed Value: ${totalValue.toFixed(2)}</span>
+              </>
+            }
+          >
+            <div className="flex flex-col">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Sort</label>
+              <select 
+                className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={sortBy}
+                onChange={e => { setSortBy(e.target.value as any); setPage(1); }}
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="price_high">Price: High → Low</option>
+                <option value="price_low">Price: Low → High</option>
+              </select>
+            </div>
+          </AdminFilterBar>
+
+          <main className="flex-1 overflow-auto p-6 pt-0">
+            <div className="max-w-7xl mx-auto py-6">
               
-              {/* Header & Sticky Filter Bar */}
-              <div className="sticky top-0 z-10 bg-slate-50 pb-4 space-y-4">
-                <div className="flex flex-col md:flex-row gap-4 items-end justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                  
-                  {/* Search */}
-                  <div className="w-full md:w-1/4">
-                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Search</label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <input 
-                        className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Address or Job ID..."
-                        value={searchQuery}
-                        onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Status Pills */}
-                  <div className="flex-1 flex flex-col">
-                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Status</label>
-                    <div className="flex flex-wrap gap-2">
-                      {['All', 'OPEN', 'IN_PROGRESS', 'PENDING_REVIEW', 'COMPLETED', 'CANCELLED'].map(s => (
-                        <button
-                          key={s}
-                          onClick={() => { setStatusFilter(s as any); setPage(1); }}
-                          className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                            statusFilter === s 
-                              ? 'bg-blue-600 text-white shadow-sm' 
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                          }`}
-                        >
-                          {s.replace('_', ' ')}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Urgency */}
-                  <div className="flex flex-col">
-                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Urgency</label>
-                    <select 
-                      className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={urgencyFilter}
-                      onChange={e => { setUrgencyFilter(e.target.value as any); setPage(1); }}
-                    >
-                      <option value="All">All</option>
-                      <option value="LOW">Low</option>
-                      <option value="NORMAL">Normal</option>
-                      <option value="HIGH">High</option>
-                    </select>
-                  </div>
-
-                  {/* Sort */}
-                  <div className="flex flex-col">
-                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Sort</label>
-                    <select 
-                      className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={sortBy}
-                      onChange={e => { setSortBy(e.target.value as any); setPage(1); }}
-                    >
-                      <option value="newest">Newest First</option>
-                      <option value="oldest">Oldest First</option>
-                      <option value="price_high">Price: High → Low</option>
-                      <option value="price_low">Price: Low → High</option>
-                    </select>
-                  </div>
-
-                  {/* Reset */}
-                  <div className="flex items-end h-full">
-                    <Button variant="outline" size="sm" onClick={resetFilters} className="text-slate-500 border-slate-300 hover:bg-slate-100 px-3 h-9">
-                      <FilterX className="w-4 h-4 mr-2" /> Reset
-                    </Button>
-                  </div>
-
-                </div>
-
-                {/* Summary Bar */}
-                <div className="bg-blue-50 text-blue-800 text-sm font-medium px-4 py-2 rounded-lg border border-blue-100 flex justify-between">
-                  <span>Showing {data.jobs.length} of {data.total} jobs matching criteria</span>
-                  <span>Displayed Value: ${totalValue.toFixed(2)}</span>
-                </div>
-              </div>
-
               {/* Table */}
-              <div className="bg-white rounded-xl shadow-[var(--md-elevation-1)] overflow-hidden border border-slate-200">
+              <div className="bg-white rounded-xl shadow-[var(--md-elevation-1)] border border-slate-200">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200">
+                    <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
+                      <tr>
                         <th className="p-4 w-12"></th>
                         <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Job ID</th>
                         <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
@@ -472,6 +435,7 @@ function AdminJobsContent() {
             <Button 
               variant={modalAction === 'cancel' ? 'destructive' : 'default'}
               onClick={executeAction}
+              loading={isActionLoading}
             >
               Confirm
             </Button>

@@ -169,11 +169,13 @@ export default function RequestsPage() {
   const statusCounts = getStatusCounts();
 
   async function handleRefresh() {
+    if (isRefreshing) return;
     setIsRefreshing(true);
     await fetchJobs();
   }
 
   async function handleApprove(id: string) {
+    if (approving) return;
     try {
       setApproving(id);
       await api.approveJob(id);
@@ -193,6 +195,7 @@ export default function RequestsPage() {
   }
 
   async function handleCancel(id: string) {
+    if (cancelling) return;
     try {
       setCancelling(id);
       await api.updateJobStatus(id, "CANCELLED");
@@ -216,6 +219,7 @@ export default function RequestsPage() {
 
   // Handle submitting report
   const handleSubmitReport = async () => {
+    if (isSubmittingReport) return;
     if (!selectedJobForReport || !reportReason.trim()) {
       toast.error("Please select a reason for the report");
       return;

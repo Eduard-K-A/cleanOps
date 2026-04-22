@@ -43,6 +43,7 @@ export default function EmployeeMyJobsPage() {
   }
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    if (uploading) return;
     const files = e.target.files;
     if (!files || files.length === 0) return;
     
@@ -96,10 +97,12 @@ export default function EmployeeMyJobsPage() {
   }
 
   async function removeUploadedFile(index: number) {
+    if (uploading) return;
     const file = uploadedFiles[index];
     if (!file) return;
 
     try {
+      setUploading(true);
       const response = await api.deleteProofOfWork(file.path);
       if (response.success) {
         setUploadedFiles(prev => prev.filter((_, i) => i !== index));
@@ -109,10 +112,13 @@ export default function EmployeeMyJobsPage() {
       }
     } catch (error) {
       toast.error('Failed to remove image');
+    } finally {
+      setUploading(false);
     }
   }
 
   async function submitMarkDone() {
+    if (markingDone) return;
     if (!selectedJob) return;
 
     if (uploadedFiles.length === 0) {

@@ -471,6 +471,7 @@ function StepPayment() {
   const router = useRouter();
 
   const handleCreate = async () => {
+    if (loading) return;
     // Validate address format before creating job
     const addressValidation = validateAddressFormat(address);
     if (!addressValidation.isValid) {
@@ -615,20 +616,11 @@ function StepPayment() {
           </Button>
           <Button
             onClick={handleCreate}
-            disabled={loading}
+            loading={loading}
             className="gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
           >
-            {loading ? (
-              <>
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                Creating job…
-              </>
-            ) : (
-              <>
-                <Check className="h-4 w-4" />
-                Create job & authorize payment
-              </>
-            )}
+            <Check className="h-4 w-4" />
+            Create job & authorize payment
           </Button>
         </div>
       </CardContent>

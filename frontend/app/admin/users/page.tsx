@@ -14,6 +14,7 @@ import { Modal } from '@/components/ui/modal';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Search, ChevronDown, ChevronRight, Star } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { AdminFilterBar } from '@/components/admin/AdminFilterBar';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -40,6 +41,7 @@ export default function AdminUsersPage() {
   
   const [balanceModalUser, setBalanceModalUser] = useState<any>(null);
   const [balanceAmount, setBalanceAmount] = useState<string>('');
+  const [isSubmittingBalance, setIsSubmittingBalance] = useState(false);
 
   const { data: users, loading, refetch } = useAsyncData<any[]>({
     fetchFn: async () => {
@@ -88,13 +90,16 @@ export default function AdminUsersPage() {
   };
 
   const handleAddBalance = async () => {
-    if (!balanceModalUser || !balanceAmount) return;
+    if (!balanceModalUser || !balanceAmount || isSubmittingBalance) return;
+    
+    const amount = parseFloat(balanceAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+
+    setIsSubmittingBalance(true);
     try {
-      const amount = parseFloat(balanceAmount);
-      if (isNaN(amount) || amount <= 0) {
-        toast.error("Please enter a valid amount");
-        return;
-      }
       await adminAddMoney(balanceModalUser.id, amount);
       toast.success(`Added $${amount.toFixed(2)} to ${balanceModalUser.full_name}'s balance.`);
       setBalanceModalUser(null);
@@ -102,7 +107,15 @@ export default function AdminUsersPage() {
       await refetch();
     } catch (e) {
       toast.error('Failed to add balance');
+    } finally {
+      setIsSubmittingBalance(false);
     }
+  };
+
+  const resetFilters = () => {
+    setSearchQuery('');
+    setRoleFilter('All');
+    setSortBy('newest');
   };
 
   // Helpers
@@ -126,62 +139,45 @@ export default function AdminUsersPage() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <TopAppBar onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} title="Manage Users" />
           
-          <main className="flex-1 overflow-auto p-6">
-            <div className="max-w-6xl mx-auto space-y-6">
+          <AdminFilterBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Name..."
+            filters={[
+              {
+                label: 'Filter by Role',
+                value: roleFilter,
+                options: ['All', 'customer', 'employee', 'admin'],
+                onChange: setRoleFilter,
+                type: 'pills'
+              }
+            ]}
+            onReset={resetFilters}
+          >
+            <div className="flex flex-col">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Sort By</label>
+              <select 
+                className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value as any)}
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="balance_high">Balance: High → Low</option>
+                <option value="rating_high">Rating: High → Low</option>
+              </select>
+            </div>
+          </AdminFilterBar>
+
+          <main className="flex-1 overflow-auto p-6 pt-0">
+            <div className="max-w-6xl mx-auto py-6">
               
-              {/* Filter Bar */}
-              <div className="flex flex-col md:flex-row gap-4 items-end justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                <div className="w-full md:w-1/3">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Search Users</label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input 
-                      className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Name..."
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex-1 flex flex-col">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Filter by Role</label>
-                  <div className="flex flex-wrap gap-2">
-                    {['All', 'customer', 'employee', 'admin'].map(r => (
-                      <button
-                        key={r}
-                        onClick={() => setRoleFilter(r)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-full capitalize transition-colors ${
-                          roleFilter === r ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        {r}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex flex-col">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Sort By</label>
-                  <select 
-                    className="px-3 py-2 text-sm border border-slate-300 rounded-lg"
-                    value={sortBy}
-                    onChange={e => setSortBy(e.target.value as any)}
-                  >
-                    <option value="newest">Newest First</option>
-                    <option value="oldest">Oldest First</option>
-                    <option value="balance_high">Balance: High → Low</option>
-                    <option value="rating_high">Rating: High → Low</option>
-                  </select>
-                </div>
-              </div>
-
               {/* Table */}
-              <div className="bg-white rounded-xl shadow-[var(--md-elevation-1)] border border-slate-200 overflow-visible z-0">
+              <div className="bg-white rounded-xl shadow-[var(--md-elevation-1)] border border-slate-200">
                 <div className="overflow-x-auto min-h-[60vh]">
                   <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200">
+                    <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
+                      <tr>
                         <th className="p-4 w-12 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider"></th>
                         <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">User</th>
                         <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</th>
@@ -339,15 +335,16 @@ export default function AdminUsersPage() {
               step="0.01"
               value={balanceAmount}
               onChange={e => setBalanceAmount(e.target.value)}
+              disabled={isSubmittingBalance}
               placeholder="e.g. 50.00"
-              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             />
           </div>
           <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
-            <Button variant="outline" onClick={() => { setBalanceModalUser(null); setBalanceAmount(''); }}>
+            <Button variant="outline" onClick={() => { setBalanceModalUser(null); setBalanceAmount(''); }} disabled={isSubmittingBalance}>
               Cancel
             </Button>
-            <Button variant="default" onClick={handleAddBalance}>
+            <Button variant="default" onClick={handleAddBalance} loading={isSubmittingBalance}>
               Add Funds
             </Button>
           </div>

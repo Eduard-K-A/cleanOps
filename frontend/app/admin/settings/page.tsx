@@ -36,6 +36,7 @@ export default function AdminSettingsPage() {
   });
 
   const handleSave = async (key: string, value: string) => {
+    if (savingKey === key) return;
     setSavingKey(key);
     try {
       await upsertPlatformConfig(key, value);
@@ -123,7 +124,7 @@ export default function AdminSettingsPage() {
 
                     <div className="flex justify-end pt-4 border-t border-slate-100 mt-6 items-center gap-3">
                       {savedKey === 'platform_fee_pct' && <span className="text-sm text-green-600 flex items-center gap-1 font-medium"><Check className="w-4 h-4"/> Saved</span>}
-                      <Button onClick={() => handleSave('platform_fee_pct', String(fee))} disabled={savingKey === 'platform_fee_pct'} className="bg-blue-600 hover:bg-blue-700">
+                      <Button onClick={() => handleSave('platform_fee_pct', String(fee))} loading={savingKey === 'platform_fee_pct'} className="bg-blue-600 hover:bg-blue-700">
                         {savingKey === 'platform_fee_pct' ? 'Saving...' : 'Save Financials'}
                       </Button>
                     </div>
@@ -162,7 +163,7 @@ export default function AdminSettingsPage() {
 
                     <div className="flex justify-end pt-4 border-t border-slate-100 mt-6 items-center gap-3">
                       {savedKey === 'max_active_jobs' && <span className="text-sm text-green-600 flex items-center gap-1 font-medium"><Check className="w-4 h-4"/> Saved</span>}
-                      <Button onClick={() => handleSave('max_active_jobs', String(maxJobs))} disabled={savingKey === 'max_active_jobs'} variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+                      <Button onClick={() => handleSave('max_active_jobs', String(maxJobs))} loading={savingKey === 'max_active_jobs'} variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
                         {savingKey === 'max_active_jobs' ? 'Saving...' : 'Save Operations'}
                       </Button>
                     </div>

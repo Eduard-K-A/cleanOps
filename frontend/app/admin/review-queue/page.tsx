@@ -6,7 +6,7 @@ import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { getAllJobsAdmin } from '@/app/actions/admin';
-import { adminUpdateJobStatus } from '@/app/actions/jobs';
+import { adminApproveJobCompletion, adminUpdateJobStatus } from '@/app/actions/jobs';
 import { createBrowserClient } from '@supabase/ssr';
 import type { Database } from '@/lib/supabase/database.types';
 import { Badge } from '@/components/ui/badge';
@@ -18,12 +18,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { ReviewQueueSkeleton } from '@/components/ui/Skeleton';
+import { AdminFilterBar } from '@/components/admin/AdminFilterBar';
 
 export default function ReviewQueuePage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [actionModal, setActionModal] = useState<{ type: 'APPROVE' | 'CANCEL', jobId: string } | null>(null);
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
   // We fetch initial data via useAsyncData, but subsequent realtime updates will trigger refetch
   const { data: jobsResponse, loading, refetch } = useAsyncData({
@@ -70,12 +72,12 @@ export default function ReviewQueuePage() {
   }, [refetch]);
 
   const handleActionSubmit = async () => {
-    if (!actionModal) return;
+    if (!actionModal || isActionLoading) return;
     
-    // We update manually logic
+    setIsActionLoading(true);
     try {
       if (actionModal.type === 'APPROVE') {
-        await adminUpdateJobStatus(actionModal.jobId, 'COMPLETED');
+        await adminApproveJobCompletion(actionModal.jobId);
         toast.success(`Job #${actionModal.jobId.slice(0, 8)} approved successfully. Funds released.`);
       } else {
         await adminUpdateJobStatus(actionModal.jobId, 'CANCELLED');
@@ -85,6 +87,8 @@ export default function ReviewQueuePage() {
       await refetch();
     } catch (err) {
       toast.error('Operation failed. Check permissions.');
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
@@ -96,18 +100,11 @@ export default function ReviewQueuePage() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <TopAppBar onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} title="Review Queue" />
 
-          <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-10">
-            <div className="relative w-full max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search location or ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-colors"
-              />
-            </div>
-            
+          <AdminFilterBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Search location or ID..."
+          >
             <div className="flex items-center gap-3">
                <button 
                  onClick={() => refetch()}
@@ -117,10 +114,10 @@ export default function ReviewQueuePage() {
                  Sync
                </button>
             </div>
-          </div>
+          </AdminFilterBar>
 
-          <main className="flex-1 overflow-auto p-6">
-            <div className="max-w-7xl mx-auto space-y-4">
+          <main className="flex-1 overflow-auto p-6 pt-0">
+            <div className="max-w-7xl mx-auto py-6 space-y-4">
               
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -237,6 +234,7 @@ export default function ReviewQueuePage() {
               <Button variant="outline" onClick={() => setActionModal(null)}>Go Back</Button>
               <Button 
                 onClick={handleActionSubmit}
+                loading={isActionLoading}
                 className={actionModal.type === 'APPROVE' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
               >
                 {actionModal.type === 'APPROVE' ? 'Confirm Approval' : 'Force Cancel'}

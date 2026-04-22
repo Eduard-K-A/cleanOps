@@ -6,7 +6,7 @@ import type { JobStatus, JobUrgency } from '@/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Centralized admin role verifier - uses SECURITY DEFINER function to bypass RLS
-async function verifyAdmin(supabase: any, userId: string) {
+export async function verifyAdmin(supabase: any, userId: string) {
   // Use the SECURITY DEFINER function we created to bypass RLS
   const { data: isAdmin, error } = await supabase
     .rpc('is_admin_user', { user_id: userId });
@@ -117,26 +117,36 @@ export async function getAllUsersAdmin(filters: {
   const { data: profiles, error } = await query;
   if (error) throw error;
 
-  // Use raw JS Supabase client to fetch auth.users
-  const { createClient: createRawClient } = await import('@supabase/supabase-js');
-  const supabaseAdmin = createRawClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  // If we already have the email column in the database, we can skip the slow auth list
+  if (profiles && profiles.length > 0 && 'email' in profiles[0] && profiles[0].email) {
+    return profiles;
+  }
 
-  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-  if (authError) throw authError;
+  // Fallback: Use raw JS Supabase client to fetch auth.users if email column is missing or empty
+  try {
+    const { createClient: createRawClient } = await import('@supabase/supabase-js');
+    const supabaseAdmin = createRawClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-  // Combine
-  const usersWithEmail = (profiles || []).map((profile: any) => {
-    const authUser = authData.users.find(u => u.id === profile.id);
-    return {
-      ...profile,
-      email: authUser?.email || 'No email'
-    };
-  });
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+    if (authError) throw authError;
 
-  return usersWithEmail;
+    // Combine
+    const usersWithEmail = (profiles || []).map((profile: any) => {
+      const authUser = authData.users.find(u => u.id === profile.id);
+      return {
+        ...profile,
+        email: authUser?.email || 'No email'
+      };
+    });
+
+    return usersWithEmail;
+  } catch (err) {
+    console.error('Error in getAllUsersAdmin fallback:', err);
+    return profiles || [];
+  }
 }
 
 export async function updateUserRole(userId: string, targetRole: string) {

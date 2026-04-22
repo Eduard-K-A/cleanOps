@@ -13,12 +13,15 @@ interface MoneyAccountStatus {
 export function StripeConnect() {
   const [status, setStatus] = useState<MoneyAccountStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadBalance();
   }, []);
 
   const loadBalance = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
     try {
       const { getBalance } = await import('@/app/actions/payments');
       const balance = await getBalance();
@@ -27,6 +30,7 @@ export function StripeConnect() {
       console.error('Failed to load balance:', error);
       toast.error('Failed to load account balance');
     } finally {
+      setRefreshing(false);
       setLoading(false);
     }
   };
@@ -59,7 +63,7 @@ export function StripeConnect() {
         <div className="text-sm text-slate-700">
           Current balance: <strong>${(status?.balance ?? 0).toFixed(2)} {status?.currency || 'USD'}</strong>
         </div>
-        <Button variant="outline" onClick={loadBalance} className="w-full">
+        <Button variant="outline" onClick={loadBalance} loading={refreshing} className="w-full">
           Refresh Balance
         </Button>
       </CardContent>

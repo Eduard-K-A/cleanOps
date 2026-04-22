@@ -1,6 +1,52 @@
 'use server'
 import { createClient } from '@/lib/supabase/server'
 import { JobStatus } from '@/types'
+import { verifyAdmin } from '@/app/actions/admin'
+
+async function releaseEscrowAndCompleteJob(supabase: any, jobId: string) {
+  const { data: job, error: jobError } = await (supabase as any)
+    .from('jobs')
+    .select('id, customer_id, worker_id, price_amount, status')
+    .eq('id', jobId)
+    .single()
+
+  if (jobError || !job) throw new Error('Job not found')
+
+  if (!job.worker_id) {
+    throw new Error('Job has no worker assigned')
+  }
+
+  if (job.status === 'COMPLETED') {
+    throw new Error('Job is already completed')
+  }
+
+  if (job.status === 'CANCELLED') {
+    throw new Error('Cancelled jobs cannot be completed')
+  }
+
+  const platformFee = Math.round(Number(job.price_amount) * 0.15)
+
+  const { error: escrowError } = await (supabase as any).rpc('release_escrow', {
+    p_job_id: jobId,
+    p_employee_id: job.worker_id,
+    p_amount: job.price_amount,
+    p_platform_fee: platformFee,
+  })
+
+  if (escrowError) throw escrowError
+
+  const { error: completeError } = await (supabase as any)
+    .from('jobs')
+    .update({
+      status: 'COMPLETED',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', jobId)
+
+  if (completeError) throw completeError
+
+  return job
+}
 
 export async function createJob(jobData: {
   title: string
@@ -323,28 +369,10 @@ export async function approveJobCompletion(jobId: string) {
 
   const { data: job } = await (supabase as any)
     .from('jobs')
-    .select('*').eq('id', jobId).single()
+    .select('id, customer_id').eq('id', jobId).single()
   if (!job || job.customer_id !== user.id) throw new Error('Forbidden')
 
-  // Calculate payout (85% to employee, 15% platform fee)
-  const platformFee = Math.round(job.price_amount * 0.15)
-  // const payout = job.price_amount - platformFee // payout is unused
-
-  // Release escrow to employee
-  if (!job.worker_id) throw new Error('Job has no worker assigned');
-  
-  await (supabase as any).rpc('release_escrow', {
-    p_job_id: jobId,
-    p_employee_id: job.worker_id,
-    p_amount: job.price_amount,
-    p_platform_fee: platformFee,
-  })
-
-  const { error: completeError } = await (supabase as any)
-    .from('jobs')
-    .update({ status: 'COMPLETED' })
-    .eq('id', jobId)
-  if (completeError) throw completeError
+  await releaseEscrowAndCompleteJob(supabase, jobId)
 }
 
 export async function getNearbyJobs(lat: number, lng: number, radiusMeters = 50000) {
@@ -423,9 +451,7 @@ export async function adminUpdateJobStatus(jobId: string, status: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
-  // Verify Admin Role
-  const { data: profile } = await (supabase as any).from('profiles').select('role').eq('id', user.id).single()
-  if (!profile || profile.role !== 'admin') throw new Error('Forbidden')
+  await verifyAdmin(supabase, user.id)
 
   const updateData: any = { status: status.toUpperCase() }
 
@@ -435,4 +461,14 @@ export async function adminUpdateJobStatus(jobId: string, status: string) {
     .eq('id', jobId)
 
   if (error) throw error
+}
+
+export async function adminApproveJobCompletion(jobId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  await verifyAdmin(supabase, user.id)
+
+  await releaseEscrowAndCompleteJob(supabase, jobId)
 }

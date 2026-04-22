@@ -49,6 +49,7 @@ function PaymentContent() {
   const { jobId, amount } = data;
 
   const handleAuthorize = async () => {
+    if (loading) return;
     setLoading(true);
     try {
       // Since we're using Server Actions and Supabase, payment is already held in escrow

@@ -34,6 +34,7 @@ export default function SignupPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedFullName = fullName.trim();
 

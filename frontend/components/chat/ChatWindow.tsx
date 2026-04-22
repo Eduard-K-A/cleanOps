@@ -28,7 +28,7 @@ export function ChatWindow({ jobId }: ChatWindowProps) {
   }, [messages]);
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !user) return;
+    if (sending || !newMessage.trim() || !user) return;
 
     setSending(true);
     try {
