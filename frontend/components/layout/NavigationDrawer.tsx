@@ -5,15 +5,12 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
 import { useUnreadCount } from '@/hooks/realtime/useUnreadCount';
-import { createClient } from '@/lib/supabase/client';
 import {
   LayoutDashboard,
   Briefcase,
   ClipboardCheck,
-  TrendingUp,
   Users,
   Settings,
-  Menu,
   X,
   ChevronLeft,
   ChevronRight,
@@ -21,14 +18,13 @@ import {
   Calendar,
   FileText,
   BarChart3,
-  Sparkles,
-  LogOut,
   User,
   LogOut as SignOutIcon,
   MessageSquare,
   PlayCircle
 } from 'lucide-react';
 import { createBrowserClient } from '@supabase/ssr';
+import { getNavigationConfig, type NavigationRole } from './navigationConfig';
 
 interface NavigationItem {
   id: string;
@@ -36,108 +32,39 @@ interface NavigationItem {
   icon: React.ReactNode;
   href: string;
   badge?: number;
-  requiredRole?: 'customer' | 'employee' | 'admin';
+  requiredRole?: NavigationRole;
 }
 
-const getNavigationItems = (role?: string, reviewQueueCount?: number, unreadCount?: number): NavigationItem[] => {
-  const customerItems: NavigationItem[] = [
-    {
-      id: 'home',
-      label: 'Home',
-      icon: <Home size={20} />,
-      href: '/homepage'
-    },
-    {
-      id: 'book',
-      label: 'Book Service',
-      icon: <Calendar size={20} />,
-      href: '/customer/order',
-      requiredRole: 'customer'
-    },
-    {
-      id: 'requests',
-      label: 'My Requests',
-      icon: <FileText size={20} />,
-      href: '/customer/requests',
-      requiredRole: 'customer'
-    },
-    {
-      id: 'messages',
-      label: 'Messages',
-      icon: <MessageSquare size={20} />,
-      href: '/customer/messages',
-      requiredRole: 'customer',
-      badge: unreadCount || undefined
-    },
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: <LayoutDashboard size={20} />,
-      href: '/dashboard'
-    }
-  ];
+const navigationIcons: Record<string, React.ReactNode> = {
+  home: <Home size={20} />,
+  book: <Calendar size={20} />,
+  requests: <FileText size={20} />,
+  messages: <MessageSquare size={20} />,
+  dashboard: <LayoutDashboard size={20} />,
+  jobs: <Briefcase size={20} />,
+  'my-jobs': <PlayCircle size={20} />,
+  history: <FileText size={20} />,
+  'review-queue': <ClipboardCheck size={20} />,
+  users: <Users size={20} />,
+  analytics: <BarChart3 size={20} />,
+  settings: <Settings size={20} />,
+};
 
-  const employeeItems: NavigationItem[] = [
-    {
-      id: 'home',
-      label: 'Home',
-      icon: <Home size={20} />,
-      href: '/homepage'
-    },
-    {
-      id: 'jobs',
-      label: 'Jobs Feed',
-      icon: <Briefcase size={20} />,
-      href: '/employee/feed',
-      requiredRole: 'employee'
-    },
-    {
-      id: 'my-jobs',
-      label: 'My Jobs',
-      icon: <PlayCircle size={20} />,
-      href: '/employee/my-jobs',
-      requiredRole: 'employee'
-    },
-    {
-      id: 'history',
-      label: 'History',
-      icon: <FileText size={20} />,
-      href: '/employee/history',
-      requiredRole: 'employee'
-    },
-    {
-      id: 'messages',
-      label: 'Messages',
-      icon: <MessageSquare size={20} />,
-      href: '/employee/messages',
-      requiredRole: 'employee',
-      badge: unreadCount || undefined
-    },
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: <LayoutDashboard size={20} />,
-      href: '/employee/dashboard'
-    }
-  ];
-
-  const adminItems: NavigationItem[] = [
-    { id: 'home',         label: 'Home',         icon: <Home size={20} />,           href: '/homepage' },
-    { id: 'dashboard',   label: 'Dashboard',    icon: <LayoutDashboard size={20} />, href: '/admin/dashboard' },
-    { id: 'jobs',        label: 'Jobs',         icon: <Briefcase size={20} />,       href: '/admin/jobs' },
-    {
-      id: 'review-queue',
-      label: 'Review Queue',
-      icon: <ClipboardCheck size={20} />,
-      href: '/admin/review-queue',
-      badge: reviewQueueCount || undefined   // hide badge when 0
-    },
-    { id: 'users',       label: 'Users',        icon: <Users size={20} />,           href: '/admin/users' },
-    { id: 'analytics',   label: 'Analytics',    icon: <BarChart3 size={20} />,       href: '/admin/analytics' },
-    { id: 'settings',    label: 'Settings',     icon: <Settings size={20} />,        href: '/admin/settings' },
-  ];
-
-  return role === 'employee' ? employeeItems : role === 'admin' ? adminItems : customerItems;
+const getNavigationItems = (
+  role?: string,
+  reviewQueueCount?: number,
+  unreadCount?: number
+): NavigationItem[] => {
+  return getNavigationConfig(role).map((item) => ({
+    ...item,
+    icon: navigationIcons[item.id] ?? <Home size={20} />,
+    badge:
+      item.id === 'review-queue'
+        ? reviewQueueCount || undefined
+        : item.id === 'messages'
+          ? unreadCount || undefined
+          : undefined,
+  }));
 };
 
 export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOpen?: boolean; setIsMobileOpen?: (open: boolean) => void } = {}) {
