@@ -117,8 +117,14 @@ export async function getAllUsersAdmin(filters: {
   const { data: profiles, error } = await query;
   if (error) throw error;
 
-  // Use raw JS Supabase client to fetch auth.users
-  const { createClient: createRawClient } = await import('@supabase/supabase-js');
+  // If we already have the email column in the database, we can skip the slow auth list
+  if (profiles && profiles.length > 0 && 'email' in profiles[0] && profiles[0].email) {
+    return profiles;
+  }
+
+  // Fallback: Use raw JS Supabase client to fetch auth.users if email column is missing or empty
+  try {
+    const { createClient: createRawClient } = await import('@supabase/supabase-js');
   const supabaseAdmin = createRawClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -137,6 +143,25 @@ export async function getAllUsersAdmin(filters: {
   });
 
   return usersWithEmail;
+}
+
+export async function runAdminSql(sql: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+  
+  // Verify admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+    
+  if (profile?.role !== 'admin') throw new Error('Unauthorized: Admin access required');
+
+  const { data, error } = await supabase.rpc('exec_sql', { sql_query: sql });
+  if (error) throw error;
+  return data;
 }
 
 export async function updateUserRole(userId: string, targetRole: string) {
