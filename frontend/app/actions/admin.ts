@@ -6,7 +6,7 @@ import type { JobStatus, JobUrgency } from '@/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Centralized admin role verifier - uses SECURITY DEFINER function to bypass RLS
-async function verifyAdmin(supabase: any, userId: string) {
+export async function verifyAdmin(supabase: any, userId: string) {
   // Use the SECURITY DEFINER function we created to bypass RLS
   const { data: isAdmin, error } = await supabase
     .rpc('is_admin_user', { user_id: userId });
