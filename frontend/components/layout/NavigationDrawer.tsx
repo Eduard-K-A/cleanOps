@@ -133,7 +133,6 @@ const getNavigationItems = (role?: string, reviewQueueCount?: number, unreadCoun
       badge: reviewQueueCount || undefined   // hide badge when 0
     },
     { id: 'users',       label: 'Users',        icon: <Users size={20} />,           href: '/admin/users' },
-    { id: 'sql-editor',  label: 'SQL Editor',   icon: <PlayCircle size={20} />,      href: '/admin/sql' },
     { id: 'analytics',   label: 'Analytics',    icon: <BarChart3 size={20} />,       href: '/admin/analytics' },
     { id: 'settings',    label: 'Settings',     icon: <Settings size={20} />,        href: '/admin/settings' },
   ];
@@ -225,12 +224,18 @@ export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOp
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
     try {
       await logout();
       router.push('/login');
     } catch (error) {
       console.error('Logout failed:', error);
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 

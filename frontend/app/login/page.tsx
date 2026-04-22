@@ -39,6 +39,7 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     if (!email.trim() || !password) {
       toast.error('Email and password required');
       return;

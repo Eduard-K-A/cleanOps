@@ -93,6 +93,7 @@ export default function EmployeeFeedPage() {
   useEffect(() => { setJobsList(jobs); }, [jobs]);
 
   const handleApply = useCallback(async (id: string) => {
+    if (applying) return;
     try {
       setApplying(id);
       await api.applyForJob(id);

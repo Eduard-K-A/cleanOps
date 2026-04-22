@@ -78,7 +78,7 @@ function EditableField({ label, value, readOnly, onSave }: EditableFieldProps) {
               if (e.key === 'Escape') { e.preventDefault(); setEditing(false); setDraft(value); }
             }}
           />
-          <Button type="button" size="sm" disabled={saving} onClick={() => void handleSave()}>Save</Button>
+          <Button type="button" size="sm" loading={saving} onClick={() => void handleSave()}>Save</Button>
           <Button type="button" size="sm" variant="ghost" disabled={saving}
             onClick={() => { setEditing(false); setDraft(value); }}>
             Cancel
@@ -232,10 +232,10 @@ function BalanceSection({ balance, onRefresh }: BalanceSectionProps) {
               type="button"
               size="sm"
               className="flex-1 bg-orange-600 text-white hover:bg-orange-700"
-              disabled={busy}
+              loading={busy}
               onClick={() => void handleWithdraw()}
             >
-              {busy ? 'Withdrawing…' : 'Confirm'}
+              Confirm
             </Button>
             <button
               type="button"
@@ -278,17 +278,15 @@ function BalanceSection({ balance, onRefresh }: BalanceSectionProps) {
           <Button
             type="button"
             size="sm"
-            disabled={busy || !isValidAmount || exceedsBalance}
+            loading={busy}
+            disabled={!isValidAmount || exceedsBalance}
             onClick={() => tab === 'deposit' ? void handleDeposit() : void handleWithdraw()}
             className={cn(
               'whitespace-nowrap',
               tab === 'withdraw' && 'bg-orange-600 hover:bg-orange-700 text-white'
             )}
           >
-            {busy
-              ? (tab === 'deposit' ? 'Adding…' : 'Next…')
-              : (tab === 'deposit' ? 'Add' : 'Withdraw')
-            }
+            {tab === 'deposit' ? 'Add' : 'Withdraw'}
           </Button>
         </div>
       )}
@@ -391,12 +389,18 @@ export function UserProfileButton() {
     await refetchProfile();
   }
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
     try {
       await logout();
       router.push('/login');
     } catch (error) {
       console.error('Logout failed:', error);
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -496,6 +500,7 @@ export function UserProfileButton() {
                 variant="ghost"
                 size="sm"
                 className="w-full justify-start text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
+                loading={isLoggingOut}
                 onClick={handleLogout}
               >
                 <LogOut className="mr-2 h-4 w-4" />

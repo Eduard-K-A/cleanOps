@@ -56,7 +56,7 @@ export default function ProfilePage() {
   };
 
   const handleSave = async (field: string) => {
-    if (!profile) return;
+    if (!profile || saving) return;
     
     try {
       setSaving(true);

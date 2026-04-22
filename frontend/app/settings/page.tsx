@@ -117,6 +117,7 @@ export default function SettingsPage() {
   };
 
   const handleSaveAll = async () => {
+    if (saving) return;
     setSaving(true);
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));

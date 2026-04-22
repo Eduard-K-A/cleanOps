@@ -33,6 +33,19 @@ export function NotificationPopover() {
     loading 
   } = useNotificationStore();
 
+  const [isMarkingAllRead, setIsMarkingAllRead] = React.useState(false);
+
+  const handleMarkAllAsRead = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isMarkingAllRead) return;
+    setIsMarkingAllRead(true);
+    try {
+      await markAllAsRead();
+    } finally {
+      setIsMarkingAllRead(false);
+    }
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'money_added':
@@ -139,14 +152,12 @@ export function NotificationPopover() {
           </div>
           {unreadCount > 0 && (
             <button 
-              onClick={(e) => {
-                e.preventDefault();
-                markAllAsRead();
-              }}
-              className="text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1.5 transition-colors group"
+              onClick={handleMarkAllAsRead}
+              disabled={isMarkingAllRead}
+              className="text-xs text-blue-600 hover:text-blue-700 disabled:opacity-50 font-semibold flex items-center gap-1.5 transition-colors group"
             >
               <CheckCheck className="w-3.5 h-3.5" />
-              <span>Mark all read</span>
+              <span>{isMarkingAllRead ? 'Marking...' : 'Mark all read'}</span>
             </button>
           )}
         </DropdownMenuLabel>

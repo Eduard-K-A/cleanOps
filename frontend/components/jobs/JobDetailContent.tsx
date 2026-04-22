@@ -107,6 +107,7 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
   }, [isCustomer, job?.id, job?.status]);
 
   const onHandleApp = async (appId: string, status: 'ACCEPTED' | 'REJECTED') => {
+    if (processingApp) return;
     try {
       setProcessingApp(appId);
       await api.handleApplication(appId, status);
@@ -493,7 +494,10 @@ export function JobDetailContent({ backPath, backLabel, showApprove = false }: J
               )}
               {canApprove && (
                 <Button 
-                  onClick={handleApprove} 
+                  onClick={() => {
+                    if (approving) return;
+                    handleApprove();
+                  }} 
                   disabled={approving}
                   className="flex-1"
                 >
