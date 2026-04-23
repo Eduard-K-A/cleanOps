@@ -1,21 +1,34 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useMemo } from 'react';
 import { useAuth } from '@/lib/authContext';
 import { UserProfileButton } from './UserProfileButton';
-import { getNavigationConfig } from './navigationConfig';
+import { getNavigationConfig, prefetchNavigationRoutes } from './navigationConfig';
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { isLoggedIn, mounted, profile } = useAuth();
-
-  if (pathname !== '/homepage' && pathname !== '/login' && pathname !== '/signup') {
-    return null;
-  }
+  const shouldRender = pathname === '/homepage' || pathname === '/login' || pathname === '/signup';
 
   const role = !mounted || !isLoggedIn ? undefined : profile?.role;
-  const links = getNavigationConfig(role);
+  const links = useMemo(
+    () => (shouldRender ? getNavigationConfig(role) : []),
+    [role, shouldRender]
+  );
+
+  useEffect(() => {
+    return prefetchNavigationRoutes(
+      (href) => router.prefetch(href),
+      links.map((link) => link.href)
+    );
+  }, [links, router]);
+
+  if (!shouldRender) {
+    return null;
+  }
 
   return (
     <>

@@ -118,3 +118,26 @@ export function getNavigationConfig(role?: string): NavigationConfigItem[] {
   if (role === 'employee') return employeeItems;
   return customerItems;
 }
+
+export function prefetchNavigationRoutes(
+  prefetch: (href: string) => void,
+  routes: string[]
+) {
+  if (typeof window === 'undefined' || routes.length === 0) return () => {};
+
+  const uniqueRoutes = Array.from(new Set(routes));
+
+  if ('requestIdleCallback' in window) {
+    const callbackId = window.requestIdleCallback(() => {
+      uniqueRoutes.forEach(prefetch);
+    }, { timeout: 2000 });
+
+    return () => window.cancelIdleCallback(callbackId);
+  }
+
+  const timeoutId = globalThis.setTimeout(() => {
+    uniqueRoutes.forEach(prefetch);
+  }, 250);
+
+  return () => globalThis.clearTimeout(timeoutId);
+}
