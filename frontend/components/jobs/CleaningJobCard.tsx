@@ -58,9 +58,9 @@ export function CleaningJobCard({
   const canCancel = job.status === 'OPEN' || job.status === 'IN_PROGRESS';
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 overflow-hidden">
-      {/* Header with status */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+    <div className="flex flex-col h-full rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 overflow-hidden">
+      {/* Header with status - Fixed Height Area */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 h-[60px]">
         <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border ${statusConfig.color}`}>
           <span className={`p-0.5 rounded ${statusConfig.iconBg}`}>
             <StatusIcon className="h-3.5 w-3.5" />
@@ -70,23 +70,27 @@ export function CleaningJobCard({
         <p className="text-sm font-bold text-slate-900">{formatPrice(job.price_amount)}</p>
       </div>
 
-      {/* Content */}
-      <div className="p-4">
-        {/* Tasks summary */}
-        <p className="text-sm text-slate-700 mb-3 line-clamp-2">
-          {job.tasks.join(', ') || 'Cleaning Service'}
-        </p>
+      {/* Content - Flex Grow */}
+      <div className="flex flex-col flex-1 p-4">
+        {/* Tasks summary - Fixed height for alignment */}
+        <div className="min-h-[40px] mb-3">
+          <p className="text-sm text-slate-700 line-clamp-2 leading-relaxed">
+            {job.tasks.map((t: any) => typeof t === 'string' ? t : t?.name || t?.value || 'Task').join(', ') || 'Cleaning Service'}
+          </p>
+        </div>
 
-        {/* Location */}
-        {job.location_address && (
-          <div className="flex gap-2 mb-4">
-            <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
-            <p className="text-sm text-slate-600 line-clamp-1">{job.location_address}</p>
-          </div>
-        )}
+        {/* Location - Fixed height for alignment */}
+        <div className="min-h-[40px] mb-4">
+          {job.location_address && (
+            <div className="flex gap-2">
+              <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
+              <p className="text-sm text-slate-600 line-clamp-2 leading-snug">{job.location_address}</p>
+            </div>
+          )}
+        </div>
 
-        {/* Action buttons */}
-        <div className="flex gap-2">
+        {/* Action buttons - Pushed to bottom */}
+        <div className="flex gap-2 mt-auto pt-2">
           <button
             type="button"
             onClick={() => onView(job.id)}
@@ -106,12 +110,12 @@ export function CleaningJobCard({
               {isCancelling ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Cancelling
+                  <span className="hidden sm:inline">Cancelling</span>
                 </>
               ) : (
                 <>
                   <XCircle className="h-4 w-4" />
-                  Cancel
+                  <span className="hidden sm:inline">Cancel</span>
                 </>
               )}
             </button>
