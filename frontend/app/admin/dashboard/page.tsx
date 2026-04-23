@@ -1,17 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { getKpiTrend, getAllJobsAdmin, getAllUsersAdmin } from '@/app/actions/admin';
-import { Briefcase, DollarSign, Users, Clock, ArrowRight, UserCheck } from 'lucide-react';
+import { Briefcase, DollarSign, Users, Clock, ArrowRight } from 'lucide-react';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import { useAuth } from '@/lib/authContext';
 
 export default function AdminDashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { mounted, loading: authLoading, isLoggedIn, profile } = useAuth();
 
   // Fetch KPI data for 30d window
   const { data: dashboard, loading } = useAsyncData({
@@ -23,7 +25,10 @@ export default function AdminDashboardPage() {
       ]);
       return { success: true, data: { kpi, jobs: jobsRes.data?.jobs || [], users: usersRes } };
     },
-    defaultValue: null
+    defaultValue: null,
+    enabled: mounted && !authLoading && isLoggedIn && profile?.role === 'admin',
+    cacheKey: 'admin-dashboard',
+    cacheTTL: 2 * 60 * 1000,
   });
 
   if (!dashboard && loading) {

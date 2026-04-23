@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
-import { useAsyncData } from '@/hooks/useAsyncData';
+import { invalidateAsyncDataCache, useAsyncData } from '@/hooks/useAsyncData';
 import { getAllJobsAdmin } from '@/app/actions/admin';
 import { adminApproveJobCompletion, adminUpdateJobStatus } from '@/app/actions/jobs';
 import { createBrowserClient } from '@supabase/ssr';
@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { ReviewQueueSkeleton } from '@/components/ui/Skeleton';
 import { AdminFilterBar } from '@/components/admin/AdminFilterBar';
+import { useAuth } from '@/lib/authContext';
 
 export default function ReviewQueuePage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -26,11 +27,15 @@ export default function ReviewQueuePage() {
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [actionModal, setActionModal] = useState<{ type: 'APPROVE' | 'CANCEL', jobId: string } | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const { mounted, loading: authLoading, isLoggedIn, profile } = useAuth();
 
   // We fetch initial data via useAsyncData, but subsequent realtime updates will trigger refetch
   const { data: jobsResponse, loading, refetch } = useAsyncData({
     fetchFn: () => getAllJobsAdmin({ status: 'PENDING_REVIEW', limit: 100 }),
-    defaultValue: { jobs: [], total: 0 }
+    defaultValue: { jobs: [], total: 0 },
+    enabled: mounted && !authLoading && isLoggedIn && profile?.role === 'admin',
+    cacheKey: 'admin-review-queue',
+    cacheTTL: 60 * 1000,
   });
 
   const jobs = (jobsResponse?.jobs || []) as Database['public']['Tables']['jobs']['Row'][];
@@ -78,9 +83,11 @@ export default function ReviewQueuePage() {
     try {
       if (actionModal.type === 'APPROVE') {
         await adminApproveJobCompletion(actionModal.jobId);
+        invalidateAsyncDataCache(/^admin-(jobs|dashboard|analytics|review-queue)/);
         toast.success(`Job #${actionModal.jobId.slice(0, 8)} approved successfully. Funds released.`);
       } else {
         await adminUpdateJobStatus(actionModal.jobId, 'CANCELLED');
+        invalidateAsyncDataCache(/^admin-(jobs|dashboard|analytics|review-queue)/);
         toast.success(`Job #${actionModal.jobId.slice(0, 8)} cancelled. Please process escrow refund.`);
       }
       setActionModal(null);
