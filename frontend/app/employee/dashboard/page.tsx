@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, useEffect } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
@@ -13,9 +12,10 @@ import type { Job } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, DollarSign, Clock, CheckCircle, AlertCircle, TrendingUp, Award, Zap, Target, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { DollarSign, CheckCircle, TrendingUp, Award, Zap, Target } from 'lucide-react';
 import { StripeConnect } from '@/components/StripeConnect';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useOptimizedNavigation } from '@/hooks/useOptimizedNavigation';
 
 // Helper function to generate earnings trend
 function generateEarningsTrend(jobs: Job[]) {
@@ -25,7 +25,7 @@ function generateEarningsTrend(jobs: Job[]) {
     return date.toLocaleDateString('en-US', { weekday: 'short' });
   });
 
-  return last7Days.map((day, idx) => ({
+  return last7Days.map((day) => ({
     day,
     earnings: Math.floor(Math.random() * 200) + (jobs.length % 5) * 20, // Mock data
   }));
@@ -45,15 +45,23 @@ function generateUrgencyDistribution(jobs: Job[]) {
 }
 
 export default function EmployeeDashboardPage() {
-  const router = useRouter();
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { navigate, warmupRoutes } = useOptimizedNavigation();
 
   const { data: myJobs, loading } = useAsyncData<Job[]>({
     fetchFn: () => api.getEmployeeJobs(),
     defaultValue: [],
     errorMessage: 'Failed to load dashboard data',
   });
+
+  useEffect(() => {
+    return warmupRoutes([
+      '/employee/feed',
+      '/employee/history',
+      ...myJobs.slice(0, 5).map((job) => `/employee/jobs/${job.id}`),
+    ]);
+  }, [myJobs, warmupRoutes]);
 
   // Filter jobs by status
   const activeJobs = myJobs.filter((job) => job.status === 'IN_PROGRESS');
@@ -114,7 +122,7 @@ export default function EmployeeDashboardPage() {
       jobStatusBreakdown,
       balance: profile?.money_balance || 0
     };
-  }, [myJobs, completedJobs, activeJobs, pendingReviewJobs, allJobs, profile?.money_balance]);
+  }, [completedJobs, activeJobs, pendingReviewJobs, allJobs, profile?.money_balance]);
 
   return (
     <ProtectedRoute requiredRole="employee" redirectTo="/customer/dashboard">
@@ -152,7 +160,7 @@ export default function EmployeeDashboardPage() {
               {/* Header */}
               <div className="mb-8">
                 <h1 className="text-3xl font-bold text-slate-900">Welcome back!</h1>
-                <p className="text-slate-600 mt-1">Here's your work summary and earnings overview.</p>
+                <p className="text-slate-600 mt-1">Here&apos;s your work summary and earnings overview.</p>
               </div>
 
               {/* Primary KPI Stats - 4 column grid */}
@@ -322,7 +330,7 @@ export default function EmployeeDashboardPage() {
                     <Button
                       className="w-full justify-start"
                       variant="outline"
-                      onClick={() => router.push('/employee/feed')}
+                      onClick={() => navigate('/employee/feed')}
                     >
                       <Zap className="mr-2 h-4 w-4" />
                       Browse Available Jobs
@@ -330,7 +338,7 @@ export default function EmployeeDashboardPage() {
                     <Button
                       className="w-full justify-start"
                       variant="outline"
-                      onClick={() => router.push('/employee/history')}
+                      onClick={() => navigate('/employee/history')}
                     >
                       <CheckCircle className="mr-2 h-4 w-4" />
                       View My Jobs
@@ -359,7 +367,7 @@ export default function EmployeeDashboardPage() {
                             </div>                            <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => router.push(`/employee/jobs/${job.id}`)}
+                              onClick={() => navigate(`/employee/jobs/${job.id}`)}
                             >
                               View
                             </Button>

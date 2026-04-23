@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
@@ -11,17 +10,22 @@ import { useAsyncData } from '@/hooks/useAsyncData';
 import { api } from '@/lib/api';
 import type { Job } from '@/types';
 import { CheckCircle, FileText } from 'lucide-react';
+import { useOptimizedNavigation } from '@/hooks/useOptimizedNavigation';
 
 export default function EmployeeHistoryPage() {
-  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { navigate, warmupRoutes } = useOptimizedNavigation();
 
   // Fetch only COMPLETED jobs for history
-  const { data: historyJobs, loading, refetch } = useAsyncData<Job[]>({
+  const { data: historyJobs, loading } = useAsyncData<Job[]>({
     fetchFn: () => api.getEmployeeJobs('COMPLETED'),
     defaultValue: [],
     errorMessage: 'Failed to load history',
   });
+
+  useEffect(() => {
+    return warmupRoutes(historyJobs.slice(0, 8).map((job) => `/employee/jobs/${job.id}`));
+  }, [historyJobs, warmupRoutes]);
 
   return (
     <ProtectedRoute requiredRole="employee" redirectTo="/customer/dashboard">
@@ -85,7 +89,7 @@ export default function EmployeeHistoryPage() {
                   <button
                     type="button"
                     className="inline-flex items-center justify-center rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
-                    onClick={() => router.push('/employee/my-jobs')}
+                    onClick={() => navigate('/employee/my-jobs')}
                   >
                     Go to My Jobs
                   </button>
@@ -102,7 +106,6 @@ export default function EmployeeHistoryPage() {
                           job={job}
                           showClaim={false}
                           onClaim={() => {}}
-                          onView={(id: string) => router.push(`/employee/jobs/${id}`)}
                         />
                       </div>
                     ))}
