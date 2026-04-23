@@ -13,6 +13,7 @@ import {
   Pencil,
   Phone,
   User as UserIcon,
+  Wallet,
   X,
 } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
@@ -29,6 +30,8 @@ function formatCurrency(amount: number): string {
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { Modal } from '@/components/ui/modal';
+import { PaymentSimulation, TransactionType } from '@/components/payment/PaymentSimulation';
 
 // ─── EditableField ────────────────────────────────────────────────────────────
 
@@ -108,195 +111,49 @@ function EditableField({ label, value, readOnly, onSave }: EditableFieldProps) {
 
 // ─── BalanceSection ───────────────────────────────────────────────────────────
 
-type BalanceTab = 'deposit' | 'withdraw';
-type WithdrawStep = 'input' | 'confirm';
-
 interface BalanceSectionProps {
   balance: number;
-  onRefresh: () => Promise<void>;
+  onAction: (type: TransactionType) => void;
 }
 
-function BalanceSection({ balance, onRefresh }: BalanceSectionProps) {
-  const [tab, setTab] = useState<BalanceTab>('deposit');
-  const [amount, setAmount] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [withdrawStep, setWithdrawStep] = useState<WithdrawStep>('input');
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const parsed = Number(amount);
-  const isValidAmount = amount !== '' && !isNaN(parsed) && parsed > 0;
-  const exceedsBalance = tab === 'withdraw' && isValidAmount && parsed > balance;
-
-  // Reset state when switching tabs
-  function switchTab(next: BalanceTab) {
-    setTab(next);
-    setAmount('');
-    setWithdrawStep('input');
-  }
-
-  // reset confirm step if amount changes
-  useEffect(() => {
-    if (withdrawStep === 'confirm') setWithdrawStep('input');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [amount]);
-
-  async function handleDeposit() {
-    if (!isValidAmount) return;
-    try {
-      setBusy(true);
-      const { addMoney } = await import('@/app/actions/payments');
-      // Use dollars directly
-      await addMoney(parsed);
-      await onRefresh();
-      toast.success(formatCurrency(parsed) + ' deposited');
-      setAmount('');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to deposit');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleWithdraw() {
-    if (!isValidAmount || exceedsBalance) return;
-    if (withdrawStep === 'input') {
-      setWithdrawStep('confirm');
-      return;
-    }
-    // confirmed
-    try {
-      setBusy(true);
-      const { withdrawMoney } = await import('@/app/actions/payments');
-      // Use dollars directly
-      await withdrawMoney(parsed);
-      await onRefresh();
-      toast.success(formatCurrency(parsed) + ' withdrawn');
-      setAmount('');
-      setWithdrawStep('input');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to withdraw');
-      setWithdrawStep('input');
-    } finally {
-      setBusy(false);
-    }
-  }
-
+function BalanceSection({ balance, onAction }: BalanceSectionProps) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {/* Balance display */}
-      <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">
-          <DollarSign className="h-4 w-4 text-green-600" />
-        </div>
-        <div>
-          <div className="text-sm font-medium text-gray-900">{formatCurrency(balance)}</div>
-          <div className="text-[10px] text-slate-400">Available balance</div>
+      <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 shadow-sm ring-4 ring-green-50">
+            <DollarSign className="h-5 w-5 text-green-600" />
+          </div>
+          <div>
+            <div className="text-lg font-bold text-slate-900">{formatCurrency(balance)}</div>
+            <div className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Available Funds</div>
+          </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex rounded-lg bg-slate-100 p-0.5">
-        {(['deposit', 'withdraw'] as BalanceTab[]).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => switchTab(t)}
-            className={cn(
-              'flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition-all',
-              tab === t
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            )}
-          >
-            {t === 'deposit'
-              ? <ArrowDownLeft className="h-3 w-3 text-green-500" />
-              : <ArrowUpRight className="h-3 w-3 text-orange-500" />
-            }
-            {t === 'deposit' ? 'Deposit' : 'Withdraw'}
-          </button>
-        ))}
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => onAction('DEPOSIT')}
+          className="flex items-center justify-center gap-1.5 h-9 border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300"
+        >
+          <ArrowDownLeft className="h-3.5 w-3.5" />
+          Deposit
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => onAction('WITHDRAWAL')}
+          className="flex items-center justify-center gap-1.5 h-9 border-orange-200 text-orange-700 hover:bg-orange-50 hover:border-orange-300"
+        >
+          <ArrowUpRight className="h-3.5 w-3.5" />
+          Withdraw
+        </Button>
       </div>
-
-      {/* Confirm step overlay for withdraw */}
-      {tab === 'withdraw' && withdrawStep === 'confirm' ? (
-        <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 space-y-2">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
-            <p className="text-xs text-orange-800">
-              Withdraw <span className="font-bold">${parsed.toFixed(2)}</span> from your balance?
-              This cannot be undone.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              size="sm"
-              className="flex-1 bg-orange-600 text-white hover:bg-orange-700"
-              loading={busy}
-              onClick={() => void handleWithdraw()}
-            >
-              Confirm
-            </Button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setWithdrawStep('input')}
-              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 transition-colors"
-            >
-              <X className="h-3 w-3" /> Cancel
-            </button>
-          </div>
-        </div>
-      ) : (
-        /* Amount input row */
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">$</span>
-            <input
-              ref={inputRef}
-              type="number"
-              placeholder="0.00"
-              value={amount}
-              min="0.01"
-              step="0.01"
-              disabled={busy}
-              onChange={(e) => setAmount(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  tab === 'deposit' ? void handleDeposit() : void handleWithdraw();
-                }
-              }}
-              className={cn(
-                'h-8 w-full rounded-md border pl-6 pr-2 text-sm outline-none transition-colors',
-                'border-slate-200 bg-white text-slate-900 placeholder-slate-400',
-                'focus:border-sky-400 focus:ring-1 focus:ring-sky-400',
-                exceedsBalance && 'border-red-300 focus:border-red-400 focus:ring-red-400'
-              )}
-            />
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            loading={busy}
-            disabled={!isValidAmount || exceedsBalance}
-            onClick={() => tab === 'deposit' ? void handleDeposit() : void handleWithdraw()}
-            className={cn(
-              'whitespace-nowrap',
-              tab === 'withdraw' && 'bg-orange-600 hover:bg-orange-700 text-white'
-            )}
-          >
-            {tab === 'deposit' ? 'Add' : 'Withdraw'}
-          </Button>
-        </div>
-      )}
-
-      {/* Validation hint */}
-      {exceedsBalance && (
-        <p className="text-[10px] text-red-500">
-          Exceeds balance ({formatCurrency(balance)} available)
-        </p>
-      )}
     </div>
   );
 }
@@ -308,6 +165,10 @@ export function UserProfileButton() {
   const { user, profile, mounted, logout, refetchProfile } = useAuth();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Simulation State
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simType, setSimType] = useState<TransactionType>('DEPOSIT');
 
   const email = user?.email ?? 'Unknown user';
   // Use dollars directly from the DB
@@ -404,6 +265,11 @@ export function UserProfileButton() {
     }
   };
 
+  const handleAction = (type: TransactionType) => {
+    setSimType(type);
+    setIsSimulating(true);
+  };
+
   if (!mounted || !user) return null;
 
   return (
@@ -489,8 +355,8 @@ export function UserProfileButton() {
 
             {/* Balance — Deposit / Withdraw */}
             <div className="space-y-1">
-              <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Balance</div>
-              <BalanceSection balance={balance} onRefresh={refetchProfile} />
+              <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Account Balance</div>
+              <BalanceSection balance={balance} onAction={handleAction} />
             </div>
 
             {/* Sign out */}
@@ -510,6 +376,26 @@ export function UserProfileButton() {
           </div>
         </div>
       )}
+
+      <Modal
+        isOpen={isSimulating}
+        onClose={() => setIsSimulating(false)}
+        title={
+          <div className="flex items-center gap-2">
+            <Wallet className="w-5 h-5 text-blue-600" />
+            <span>{simType === 'DEPOSIT' ? 'Deposit Funds' : 'Withdraw Funds'}</span>
+          </div>
+        }
+      >
+        <PaymentSimulation
+          type={simType}
+          currentBalance={balance}
+          onCancel={() => setIsSimulating(false)}
+          onSuccess={() => {
+            void refetchProfile();
+          }}
+        />
+      </Modal>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
@@ -8,13 +8,13 @@ import { useAuth } from '@/lib/authContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Modal } from '@/components/ui/modal';
 import { api } from '@/lib/api';
+import { PaymentSimulation, TransactionType } from '@/components/payment/PaymentSimulation';
 import toast from 'react-hot-toast';
 import {
   User,
   MapPin,
-  Phone,
-  Wallet,
   Shield,
   Star,
   Calendar,
@@ -22,7 +22,10 @@ import {
   Check,
   X,
   Mail,
-  Clock
+  Clock,
+  CreditCard,
+  Building2,
+  Wallet
 } from 'lucide-react';
 
 export default function ProfilePage() {
@@ -36,6 +39,16 @@ export default function ProfilePage() {
     location: '',
   });
   const [saving, setSaving] = useState(false);
+
+  // Payment Simulation State
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [transactionType, setTransactionType] = useState<TransactionType>('DEPOSIT');
+  const [linkedAccounts, setLinkedAccounts] = useState<string[]>([]);
+
+  const handleStartSimulation = (type: TransactionType) => {
+    setTransactionType(type);
+    setIsPaymentModalOpen(true);
+  };
 
   const handleEdit = (field: string) => {
     setEditingField(field);
@@ -65,28 +78,22 @@ export default function ProfilePage() {
       if (field === 'full_name') {
         updates.full_name = editValues.full_name;
       } else if (field === 'phone_number') {
-        // Philippines phone validation
         const phone = editValues.phone_number.trim();
-        
-        // Valid formats: 09XX XXX XXXX, 09XXXXXXXXX, +63 XXX XXX XXXX, +63XXXXXXXXX
         const philippinesMobileRegex = /^(09\d{9}|\+63\d{10})$/;
         const philippinesLandlineRegex = /^(0\d{1,2}\d{7,8})$/;
         
-        // Remove all non-digit characters except leading +
         const cleaned = phone.startsWith('+') 
           ? '+' + phone.replace(/\D/g, '') 
           : phone.replace(/\D/g, '');
         
-        // Validate format
         const isValidMobile = philippinesMobileRegex.test(cleaned);
         const isValidLandline = philippinesLandlineRegex.test(cleaned);
         
         if (!isValidMobile && !isValidLandline) {
-          toast.error('Please enter a valid Philippines phone number (e.g., 09171234567 or +639171234567)');
+          toast.error('Please enter a valid Philippines phone number');
           setSaving(false);
           return;
         }
-        
         updates.phone_number = cleaned;
       }
       
@@ -95,7 +102,6 @@ export default function ProfilePage() {
         await refetchProfile();
         toast.success('Profile updated successfully');
       }
-      
       setEditingField(null);
     } catch (error) {
       toast.error('Failed to update profile');
@@ -117,7 +123,6 @@ export default function ProfilePage() {
     switch (role) {
       case 'admin': return <Shield className="w-4 h-4" />;
       case 'employee': return <Star className="w-4 h-4" />;
-      case 'customer': return <User className="w-4 h-4" />;
       default: return <User className="w-4 h-4" />;
     }
   };
@@ -149,10 +154,8 @@ export default function ProfilePage() {
           
           <main className="flex-1 overflow-auto p-6">
             <div className="max-w-5xl mx-auto">
-              {/* Header Card */}
               <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 rounded-2xl p-8 text-white mb-6 shadow-xl">
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-                  {/* Avatar */}
                   <div className="relative">
                     <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-3xl font-bold border-4 border-white/30">
                       {profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
@@ -165,7 +168,6 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   
-                  {/* User Info */}
                   <div className="flex-1 text-center md:text-left">
                     <h1 className="text-3xl font-bold mb-1">
                       {profile?.full_name || user?.email?.split('@')[0] || 'User'}
@@ -191,9 +193,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Column - Profile Info */}
                 <div className="lg:col-span-2 space-y-6">
-                  {/* Personal Information */}
                   <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                       <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
@@ -203,7 +203,6 @@ export default function ProfilePage() {
                     </div>
                     
                     <div className="p-6 space-y-5">
-                      {/* Full Name */}
                       <div>
                         <Label className="text-sm font-medium text-slate-700">Full Name</Label>
                         <div className="mt-1.5 flex items-center gap-3">
@@ -213,38 +212,20 @@ export default function ProfilePage() {
                                 value={editValues.full_name}
                                 onChange={(e) => setEditValues({ ...editValues, full_name: e.target.value })}
                                 className="flex-1"
-                                placeholder="Enter your full name"
                               />
-                              <Button
-                                size="sm"
-                                onClick={() => handleSave('full_name')}
-                                disabled={saving}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
+                              <Button size="sm" onClick={() => handleSave('full_name')} disabled={saving} className="bg-green-600">
                                 <Check className="w-4 h-4" />
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={handleCancel}
-                                disabled={saving}
-                              >
+                              <Button size="sm" variant="outline" onClick={handleCancel} disabled={saving}>
                                 <X className="w-4 h-4" />
                               </Button>
                             </div>
                           ) : (
                             <>
                               <div className="flex-1 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                                <span className="text-slate-800 font-medium">
-                                  {profile?.full_name || 'Not set'}
-                                </span>
+                                <span className="text-slate-800 font-medium">{profile?.full_name || 'Not set'}</span>
                               </div>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleEdit('full_name')}
-                                className="text-slate-500 hover:text-blue-600"
-                              >
+                              <Button size="sm" variant="ghost" onClick={() => handleEdit('full_name')} className="text-slate-500 hover:text-blue-600">
                                 <Edit2 className="w-4 h-4" />
                               </Button>
                             </>
@@ -252,7 +233,6 @@ export default function ProfilePage() {
                         </div>
                       </div>
 
-                      {/* Phone Number */}
                       <div>
                         <Label className="text-sm font-medium text-slate-700">Phone Number</Label>
                         <div className="mt-1.5 flex items-center gap-3">
@@ -262,38 +242,20 @@ export default function ProfilePage() {
                                 value={editValues.phone_number}
                                 onChange={(e) => setEditValues({ ...editValues, phone_number: e.target.value })}
                                 className="flex-1"
-                                placeholder="09171234567 or +639171234567"
                               />
-                              <Button
-                                size="sm"
-                                onClick={() => handleSave('phone_number')}
-                                disabled={saving}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
+                              <Button size="sm" onClick={() => handleSave('phone_number')} disabled={saving} className="bg-green-600">
                                 <Check className="w-4 h-4" />
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={handleCancel}
-                                disabled={saving}
-                              >
+                              <Button size="sm" variant="outline" onClick={handleCancel} disabled={saving}>
                                 <X className="w-4 h-4" />
                               </Button>
                             </div>
                           ) : (
                             <>
                               <div className="flex-1 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                                <span className="text-slate-800 font-medium">
-                                  {profile?.phone_number || 'Not set'}
-                                </span>
+                                <span className="text-slate-800 font-medium">{profile?.phone_number || 'Not set'}</span>
                               </div>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleEdit('phone_number')}
-                                className="text-slate-500 hover:text-blue-600"
-                              >
+                              <Button size="sm" variant="ghost" onClick={() => handleEdit('phone_number')} className="text-slate-500 hover:text-blue-600">
                                 <Edit2 className="w-4 h-4" />
                               </Button>
                             </>
@@ -301,18 +263,15 @@ export default function ProfilePage() {
                         </div>
                       </div>
 
-                      {/* Email (read-only) */}
                       <div>
                         <Label className="text-sm font-medium text-slate-700">Email Address</Label>
                         <div className="mt-1.5 p-3 bg-slate-100 rounded-lg border border-slate-200">
                           <span className="text-slate-600">{user?.email}</span>
                         </div>
-                        <p className="text-xs text-slate-500 mt-1">Email cannot be changed</p>
                       </div>
                     </div>
                   </section>
 
-                  {/* Location */}
                   <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                       <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
@@ -322,7 +281,7 @@ export default function ProfilePage() {
                     </div>
                     <div className="p-6">
                       <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
                           <MapPin className="w-6 h-6 text-blue-600" />
                         </div>
                         <div>
@@ -332,18 +291,13 @@ export default function ProfilePage() {
                               ? `${profile.location_lat.toFixed(4)}, ${profile.location_lng.toFixed(4)}`
                               : 'Location not set'}
                           </p>
-                          <p className="text-xs text-slate-400 mt-2">
-                            Location is managed through your device settings or during job booking
-                          </p>
                         </div>
                       </div>
                     </div>
                   </section>
                 </div>
 
-                {/* Right Column - Stats & Actions */}
                 <div className="space-y-6">
-                  {/* Balance Card */}
                   <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                     <div className="p-6">
                       <div className="flex items-center gap-3 mb-4">
@@ -352,34 +306,44 @@ export default function ProfilePage() {
                         </div>
                         <div>
                           <p className="text-sm text-slate-500">Account Balance</p>
-                          <p className="text-2xl font-bold text-slate-800">
-                            {formatCurrency(profile?.money_balance || 0)}
-                          </p>
+                          <p className="text-2xl font-bold text-slate-800">{formatCurrency(profile?.money_balance || 0)}</p>
                         </div>
                       </div>
-                      
                       <div className="space-y-3">
-                        <Button 
-                          variant="outline" 
-                          className="w-full border-blue-600 text-blue-600 hover:bg-blue-50"
-                          onClick={() => toast.success('Add money feature coming soon!')}
-                        >
+                        <Button variant="outline" className="w-full border-blue-600 text-blue-600 hover:bg-blue-50" onClick={() => handleStartSimulation('DEPOSIT')}>
                           Add Money
                         </Button>
-                        {profile?.role === 'employee' && (
-                          <Button 
-                            variant="outline" 
-                            className="w-full"
-                            onClick={() => toast.success('Withdraw feature coming soon!')}
-                          >
-                            Withdraw
-                          </Button>
-                        )}
+                        <Button variant="outline" className="w-full" onClick={() => handleStartSimulation('WITHDRAWAL')}>
+                          Withdraw
+                        </Button>
                       </div>
                     </div>
                   </section>
 
-                  {/* Account Stats */}
+                  {linkedAccounts.length > 0 && (
+                    <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                      <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                        <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                          <CreditCard className="w-4 h-4 text-blue-600" />
+                          Linked Accounts
+                        </h3>
+                      </div>
+                      <div className="p-4 space-y-2">
+                        {linkedAccounts.map((account, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                <Building2 className="w-4 h-4 text-blue-600" />
+                              </div>
+                              <span className="text-sm font-medium text-slate-700">{account}</span>
+                            </div>
+                            <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full border border-green-100">Active</span>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
                   <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                       <h3 className="font-semibold text-slate-800 flex items-center gap-2">
@@ -390,65 +354,11 @@ export default function ProfilePage() {
                     <div className="p-6 space-y-4">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-slate-500">Account Type</span>
-                        <span className="text-sm font-medium text-slate-800 capitalize">
-                          {profile?.role}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-slate-500">User ID</span>
-                        <span className="text-xs font-mono text-slate-600">
-                          {user?.id?.slice(0, 8)}...
-                        </span>
+                        <span className="text-sm font-medium text-slate-800 capitalize">{profile?.role}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-slate-500">Joined</span>
                         <span className="text-sm text-slate-800">{joinDate}</span>
-                      </div>
-                      {profile?.rating && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-slate-500">Rating</span>
-                          <div className="flex items-center gap-1">
-                            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                            <span className="text-sm font-medium text-slate-800">
-                              {profile.rating.toFixed(1)}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </section>
-
-                  {/* Quick Links */}
-                  <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                      <h3 className="font-semibold text-slate-800">Quick Actions</h3>
-                    </div>
-                    <div className="p-4">
-                      <div className="space-y-2">
-                        <Button 
-                          variant="ghost" 
-                          className="w-full justify-start text-slate-600 hover:text-blue-600"
-                          onClick={() => window.location.href = '/settings'}
-                        >
-                          <Shield className="w-4 h-4 mr-2" />
-                          Account Settings
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          className="w-full justify-start text-slate-600 hover:text-blue-600"
-                          onClick={() => toast.success('Password change feature coming soon!')}
-                        >
-                          <Shield className="w-4 h-4 mr-2" />
-                          Change Password
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          className="w-full justify-start text-slate-600 hover:text-blue-600"
-                          onClick={() => toast.success('Notification preferences coming soon!')}
-                        >
-                          <Clock className="w-4 h-4 mr-2" />
-                          Notifications
-                        </Button>
                       </div>
                     </div>
                   </section>
@@ -458,6 +368,28 @@ export default function ProfilePage() {
           </main>
         </div>
       </div>
+      <Modal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        title={
+          <div className="flex items-center gap-2">
+            <Wallet className="w-5 h-5 text-blue-600" />
+            <span>{transactionType === 'DEPOSIT' ? 'Deposit Funds' : 'Withdraw Funds'}</span>
+          </div>
+        }
+      >
+        <PaymentSimulation 
+          type={transactionType}
+          currentBalance={profile?.money_balance || 0}
+          onCancel={() => setIsPaymentModalOpen(false)}
+          onSuccess={(amount, method) => {
+            if (!linkedAccounts.includes(method)) {
+              setLinkedAccounts(prev => [...prev, method]);
+            }
+            void refetchProfile();
+          }}
+        />
+      </Modal>
     </ProtectedRoute>
   );
 }

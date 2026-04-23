@@ -1,42 +1,194 @@
 'use client';
 
-import React from 'react';
-import { 
-  Bell, 
-  CheckCheck, 
-  Circle, 
-  MessageSquare, 
-  DollarSign, 
-  Briefcase, 
-  AlertCircle,
-  Clock
+import React, { useState } from 'react';
+import {
+  Bell,
+  CheckCheck,
+  Clock,
+  Inbox,
+  Settings,
+  MoreHorizontal,
+  Info,
+  ArrowUpRight,
+  ArrowDownLeft,
+  X,
 } from 'lucide-react';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
-import { useNotificationStore } from '@/stores/notificationStore';
+import {
+  useNotificationStore,
+  getNotificationTitle,
+  getNotificationDescription,
+} from '@/stores/notificationStore';
 import { formatDistanceToNow } from 'date-fns';
-import { Notification } from '@/types';
 import { cn } from '@/lib/utils';
+import { Notification } from '@/types';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Parse a dollar amount out of the notification description, e.g. "$1,000" */
+function parseAmount(description: string): { amount: string; isCredit: boolean; label: string } | null {
+  const match = description.match(/\$([\d,]+(?:\.\d{2})?)/);
+  if (!match) return null;
+  
+  // Custom labels based on keywords
+  let label = 'Transaction';
+  const isCredit = /added|received|deposit/i.test(description) && !/withdrawn/i.test(description);
+  
+  if (/added|deposit/i.test(description)) label = 'Deposit Success';
+  else if (/received/i.test(description)) label = 'Payout Received';
+  else if (/released|sent|withdrawn/i.test(description)) label = 'Funds Withdrawn';
+  else if (isCredit) label = 'Credit Added';
+  else label = 'Funds Reduced';
+
+  return { amount: match[0], isCredit, label };
+}
+
+// ---------------------------------------------------------------------------
+// NotificationItem
+// ---------------------------------------------------------------------------
+
+interface NotificationItemProps {
+  notification: Notification;
+  onRead: (id: string) => void;
+  onDismiss: (id: string) => void;
+}
+
+const NotificationItem = ({ notification, onRead, onDismiss }: NotificationItemProps) => {
+  const isUnread = !notification.is_read;
+  const description = getNotificationDescription(notification);
+  const amountData = parseAmount(description);
+
+  return (
+    <DropdownMenuItem
+      className={cn(
+        'group relative flex gap-3 px-4 py-3.5 cursor-pointer outline-none transition-colors duration-150',
+        'border-b border-slate-50 last:border-b-0',
+        isUnread ? 'bg-blue-50/30 hover:bg-blue-50/60' : 'bg-white hover:bg-slate-50/60',
+      )}
+      onClick={(e) => {
+        if (isUnread) {
+          e.preventDefault();
+          onRead(notification.id);
+        }
+      }}
+    >
+      {/* Left: icon bubble — Blue & White Theme */}
+      <div className="shrink-0 mt-0.5">
+        <div
+          className={cn(
+            'w-10 h-10 rounded-full flex items-center justify-center border',
+            isUnread 
+              ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
+              : 'bg-blue-50 text-blue-600 border-blue-100'
+          )}
+        >
+          {amountData ? (
+            amountData.isCredit ? (
+              <ArrowDownLeft className="w-4 h-4" strokeWidth={2.5} />
+            ) : (
+              <ArrowUpRight className="w-4 h-4" strokeWidth={2.5} />
+            )
+          ) : (
+            <Info className="w-4 h-4" strokeWidth={2.5} />
+          )}
+        </div>
+      </div>
+
+      {/* Right: content */}
+      <div className="flex-1 min-w-0 pr-6">
+        {/* Row 1 – title + timestamp */}
+        <div className="flex items-start justify-between gap-2">
+          <span
+            className={cn(
+              'text-sm leading-snug',
+              isUnread ? 'font-bold text-slate-900' : 'font-semibold text-slate-600',
+            )}
+          >
+            {getNotificationTitle(notification)}
+          </span>
+          <span className="shrink-0 text-[10px] font-medium text-slate-400 whitespace-nowrap mt-px bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+            {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+          </span>
+        </div>
+
+        {/* Row 2 – description */}
+        <p className={cn(
+          "mt-0.5 text-xs line-clamp-2 leading-relaxed",
+          isUnread ? "text-slate-700" : "text-slate-500"
+        )}>
+          {description}
+        </p>
+
+        {/* Row 3 – amount badge — Professional Blue Labels */}
+        {amountData && (
+          <div className="flex items-center gap-2 mt-2">
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border',
+                amountData.isCredit
+                  ? 'bg-blue-100 text-blue-700 border-blue-200'
+                  : 'bg-slate-100 text-slate-600 border-slate-200',
+              )}
+            >
+              <span
+                className={cn(
+                  'w-1.5 h-1.5 rounded-full',
+                  amountData.isCredit ? 'bg-blue-600 shadow-[0_0_4px_rgba(37,99,235,0.4)]' : 'bg-slate-400',
+                )}
+              />
+              {amountData.label}: {amountData.amount}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Dismiss Action */}
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onDismiss(notification.id);
+        }}
+        className="absolute right-2 top-2 p-1.5 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all opacity-0 group-hover:opacity-100"
+        title="Dismiss"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+
+      {/* Unread indicator */}
+      {isUnread && (
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600" />
+      )}
+    </DropdownMenuItem>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// NotificationPopover
+// ---------------------------------------------------------------------------
 
 export function NotificationPopover() {
-  const { 
-    notifications, 
-    unreadCount, 
-    markAsRead, 
-    markAllAsRead, 
-    loading 
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    dismissNotification,
+    loading,
   } = useNotificationStore();
 
-  const [isMarkingAllRead, setIsMarkingAllRead] = React.useState(false);
+  const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
 
   const handleMarkAllAsRead = async (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (isMarkingAllRead) return;
     setIsMarkingAllRead(true);
     try {
@@ -46,183 +198,112 @@ export function NotificationPopover() {
     }
   };
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case 'money_added':
-      case 'payout_received':
-      case 'payout_sent':
-        return (
-          <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 border border-emerald-100">
-            <DollarSign className="w-5 h-5 text-emerald-600" />
-          </div>
-        );
-      case 'job_claimed':
-      case 'job_completed':
-      case 'new_job_nearby':
-        return (
-          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0 border border-blue-100">
-            <Briefcase className="w-5 h-5 text-blue-600" />
-          </div>
-        );
-      case 'MESSAGE_RECEIVED':
-        return (
-          <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center shrink-0 border border-purple-100">
-            <MessageSquare className="w-5 h-5 text-purple-600" />
-          </div>
-        );
-      case 'JOB_REPORTED':
-        return (
-          <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center shrink-0 border border-rose-100">
-            <AlertCircle className="w-5 h-5 text-rose-600" />
-          </div>
-        );
-      default:
-        return (
-          <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100">
-            <Bell className="w-5 h-5 text-slate-400" />
-          </div>
-        );
-    }
-  };
-
-  const getTitle = (notification: Notification): string => {
-    switch (notification.type) {
-      case 'money_added': return 'Balance Updated';
-      case 'job_claimed': return 'Job Claimed';
-      case 'job_completed': return 'Job Completed';
-      case 'payout_received': return 'Payout Received';
-      case 'payout_sent': return 'Payout Sent';
-      case 'MESSAGE_RECEIVED': return 'New Message';
-      case 'JOB_REPORTED': return 'Job Reported';
-      case 'new_job_nearby': return 'New Job Nearby';
-      case 'APPLICATION_RECEIVED': return 'New Application';
-      case 'APPLICATION_ACCEPTED': return 'Application Approved';
-      case 'APPLICATION_REJECTED': return 'Application Declined';
-      default: return 'New Notification';
-    }
-  };
-
-  const getDescription = (notification: Notification): string => {
-    const { payload } = notification;
-    switch (notification.type) {
-      case 'money_added': return `$${payload.amount} added to balance.`;
-      case 'job_claimed': return `A professional claimed your job.`;
-      case 'job_completed': return `Cleaning job completed successfully.`;
-      case 'payout_received': return `Payout of $${payload.amount} received.`;
-      case 'payout_sent': return `Payment of $${payload.amount} released.`;
-      case 'MESSAGE_RECEIVED': return `New message about your job.`;
-      case 'JOB_REPORTED': return `New issue reported: ${payload.reason}`;
-      case 'new_job_nearby': return `New cleaning job available nearby!`;
-      case 'APPLICATION_RECEIVED': return `A professional applied to your job.`;
-      case 'APPLICATION_ACCEPTED': return `Your application for a job was approved!`;
-      case 'APPLICATION_REJECTED': return `Your application for a job was not selected.`;
-      default: return 'New update available.';
-    }
-  };
-
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
+      {/* ── Trigger ── */}
       <DropdownMenuTrigger asChild>
         <button
-          className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-slate-50 transition-all duration-200 relative focus:outline-none group active:scale-95"
+          className="flex items-center justify-center w-10 h-10 rounded-xl hover:bg-blue-50 transition-all duration-300 relative focus:outline-none group active:scale-95"
           aria-label="Notifications"
         >
-          <Bell size={20} className="text-slate-500 group-hover:text-blue-600 transition-colors" />
+          <Bell size={20} className="text-slate-500 group-hover:text-blue-600 transition-colors duration-300" />
           {unreadCount > 0 && (
-            <span
-              className="absolute top-2 right-2 w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white shadow-sm animate-in zoom-in duration-300"
-            >
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-blue-600 text-white text-[10px] font-black flex items-center justify-center border-2 border-white shadow-sm animate-in zoom-in duration-300">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        align="end" 
-        className="w-80 sm:w-[400px] p-0 bg-white shadow-2xl border border-slate-200/60 rounded-2xl overflow-hidden animate-in slide-in-from-top-2 duration-200"
+
+      {/* ── Panel ── */}
+      <DropdownMenuContent
+        align="end"
+        sideOffset={8}
+        className="w-[380px] p-0 bg-white border border-slate-200 shadow-[0_10px_40px_rgba(0,0,0,0.1)] rounded-2xl overflow-hidden z-[100] animate-in slide-in-from-top-2 duration-200"
       >
-        <DropdownMenuLabel className="px-5 py-4 flex items-center justify-between bg-slate-50/40 backdrop-blur-sm">
-          <div className="flex items-center gap-2.5">
-            <span className="font-bold text-slate-800 text-base">Notifications</span>
-            {unreadCount > 0 && (
-              <span className="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                {unreadCount} New
-              </span>
-            )}
+        {/* Header */}
+        <div className="px-5 py-4 flex items-center justify-between bg-white border-b border-slate-100">
+          <div>
+            <h3 className="text-base font-bold text-slate-900 tracking-tight">Activity</h3>
+            <p className="text-[11px] font-medium mt-px">
+              {unreadCount > 0 ? (
+                <span className="text-blue-600">{unreadCount} new updates</span>
+              ) : (
+                <span className="text-slate-400 font-normal italic">All caught up</span>
+              )}
+            </p>
           </div>
-          {unreadCount > 0 && (
-            <button 
-              onClick={handleMarkAllAsRead}
-              disabled={isMarkingAllRead}
-              className="text-xs text-blue-600 hover:text-blue-700 disabled:opacity-50 font-semibold flex items-center gap-1.5 transition-colors group"
-            >
-              <CheckCheck className="w-3.5 h-3.5" />
-              <span>{isMarkingAllRead ? 'Marking...' : 'Mark all read'}</span>
+
+          <div className="flex items-center gap-1">
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllAsRead}
+                disabled={isMarkingAllRead}
+                className="h-8 px-3 text-[11px] font-bold text-blue-600 hover:bg-blue-50 disabled:opacity-50 rounded-lg transition-all flex items-center gap-1.5 border border-transparent hover:border-blue-100"
+              >
+                {isMarkingAllRead ? (
+                  <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <CheckCheck className="w-3.5 h-3.5" />
+                )}
+                Mark all read
+              </button>
+            )}
+            <button className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+              <Settings className="w-4 h-4" />
             </button>
-          )}
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator className="m-0 bg-slate-100" />
-        
-        <div className="max-h-[440px] overflow-y-auto custom-scrollbar">
+          </div>
+        </div>
+
+        {/* Scrollable list */}
+        <div
+          className="max-h-[440px] overflow-y-auto bg-white custom-scrollbar"
+        >
+          <style>{`
+            .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+            .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+              background-color: #e2e8f0;
+              border-radius: 99px;
+            }
+          `}</style>
+
           {loading && notifications.length === 0 ? (
-            <div className="p-12 text-center">
-              <Clock className="w-10 h-10 text-blue-100 animate-spin mx-auto mb-3" />
-              <p className="text-sm font-medium text-slate-400">Fetching updates...</p>
+            <div className="py-16 flex flex-col items-center gap-3">
+              <div className="w-8 h-8 border-2 border-slate-100 border-t-blue-600 rounded-full animate-spin" />
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Updating...</p>
             </div>
           ) : notifications.length === 0 ? (
-            <div className="p-16 text-center">
-              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
-                <Bell className="w-8 h-8 text-slate-200" />
+            <div className="py-20 px-8 text-center flex flex-col items-center gap-4">
+              <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center border border-blue-100 shadow-inner">
+                <Inbox className="w-8 h-8 text-blue-200" />
               </div>
-              <p className="text-base font-bold text-slate-800">All caught up!</p>
-              <p className="text-sm text-slate-500 mt-1 max-w-[200px] mx-auto">No new notifications at this time.</p>
+              <div>
+                <p className="text-sm font-bold text-slate-800 tracking-tight">Nothing here yet</p>
+                <p className="text-[11px] text-slate-400 mt-1 leading-relaxed max-w-[200px] mx-auto">
+                  When you have new activity, it will show up here.
+                </p>
+              </div>
             </div>
           ) : (
-            notifications.map((notif) => (
-              <DropdownMenuItem 
-                key={notif.id}
-                className={cn(
-                  "px-5 py-4 flex gap-4 cursor-pointer focus:bg-slate-50/80 border-b border-slate-50 last:border-0 transition-colors duration-200 outline-none",
-                  !notif.is_read && "bg-blue-50/25"
-                )}
-                onClick={() => !notif.is_read && markAsRead(notif.id)}
-              >
-                {getIcon(notif.type)}
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start mb-1">
-                    <p className={cn(
-                      "text-sm truncate",
-                      !notif.is_read ? "font-bold text-slate-900" : "font-semibold text-slate-600"
-                    )}>
-                      {getTitle(notif)}
-                    </p>
-                    <span className="text-[10px] font-medium text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 ml-2">
-                      {formatDistanceToNow(new Date(notif.created_at), { addSuffix: false })}
-                    </span>
-                  </div>
-                  <p className={cn(
-                    "text-xs line-clamp-2 leading-relaxed",
-                    !notif.is_read ? "text-slate-700" : "text-slate-500"
-                  )}>
-                    {getDescription(notif)}
-                  </p>
-                  {!notif.is_read && (
-                    <div className="mt-2.5 flex items-center gap-1.5">
-                      <Circle className="w-1.5 h-1.5 fill-blue-600 text-blue-600 shadow-[0_0_4px_rgba(37,99,235,0.4)]" />
-                      <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-widest">Unread</span>
-                    </div>
-                  )}
-                </div>
-              </DropdownMenuItem>
-            ))
+            <div className="flex flex-col">
+              {notifications.map((notif) => (
+                <NotificationItem
+                  key={notif.id}
+                  notification={notif}
+                  onRead={markAsRead}
+                  onDismiss={dismissNotification}
+                />
+              ))}
+            </div>
           )}
         </div>
-        
-        <DropdownMenuSeparator className="m-0 bg-slate-100" />
-        <div className="p-3 bg-white">
-          <button className="w-full py-2.5 text-[11px] font-bold text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all uppercase tracking-[0.1em]">
-            View Activity History
+
+        {/* Footer */}
+        <div className="p-3 bg-slate-50/50 border-t border-slate-100">
+          <button className="w-full py-2.5 text-[10px] font-black text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all flex items-center justify-center gap-2 uppercase tracking-[0.2em] border border-transparent hover:border-slate-200 hover:shadow-sm">
+            <MoreHorizontal className="w-4 h-4" />
+            Activity History
           </button>
         </div>
       </DropdownMenuContent>
