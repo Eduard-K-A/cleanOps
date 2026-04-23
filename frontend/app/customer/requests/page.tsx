@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { ModernCleaningJobCard } from "@/components/jobs/ModernCleaningJobCard";
@@ -22,7 +21,7 @@ import {
   AlertTriangle,
   ChevronDown,
 } from "lucide-react";
-import type { JobStatus } from "@/types";
+import { useOptimizedNavigation } from "@/hooks/useOptimizedNavigation";
 
 // Sort options configuration
 const SORT_OPTIONS = [
@@ -36,17 +35,8 @@ const SORT_OPTIONS = [
 
 type SortOption = typeof SORT_OPTIONS[number]["value"];
 
-const STATUS_OPTIONS: { value: string; label: string; color: string }[] = [
-  { value: "all", label: "All Requests", color: "bg-slate-100" },
-  { value: "OPEN", label: "Open", color: "bg-blue-100" },
-  { value: "IN_PROGRESS", label: "In Progress", color: "bg-yellow-100" },
-  { value: "PENDING_REVIEW", label: "Pending Review", color: "bg-orange-100" },
-  { value: "COMPLETED", label: "Completed", color: "bg-green-100" },
-  { value: "CANCELLED", label: "Cancelled", color: "bg-red-100" },
-];
-
 export default function RequestsPage() {
-  const router = useRouter();
+  const { navigate, warmupRoutes } = useOptimizedNavigation();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
@@ -153,6 +143,15 @@ export default function RequestsPage() {
       return matchesStatus && matchesSearch;
     })
   );
+
+  useEffect(() => {
+    return warmupRoutes(
+      filteredJobs.slice(0, 8).flatMap((job) => [
+        `/customer/jobs/${job.id}`,
+        ...(job.status === 'IN_PROGRESS' && job.worker_id ? [`/customer/messages?job=${job.id}`] : []),
+      ])
+    );
+  }, [filteredJobs, warmupRoutes]);
 
   const getStatusCounts = () => {
     const counts = {
@@ -413,7 +412,7 @@ export default function RequestsPage() {
             {!searchQuery && statusFilter === "all" && (
               <button
                 className="btn-primary"
-                onClick={() => router.push("/customer/order")}
+                onClick={() => navigate("/customer/order")}
               >
                 Create your first request
               </button>
@@ -436,12 +435,10 @@ export default function RequestsPage() {
               <div key={job.id} style={{ animationDelay: `${index * 50}ms` }}>
                 <ModernCleaningJobCard
                   job={job}
-                  onView={(id: string) => router.push(`/customer/jobs/${id}`)}
                   onCancel={handleCancel}
                   onReport={handleOpenReport}
                   isCancelling={cancelling === job.id}
                   customerName={job.customer_profile?.full_name}
-                  workerName={job.worker_profile?.full_name}
                 />
                 {job.status === "PENDING_REVIEW" && (
                   <Button
