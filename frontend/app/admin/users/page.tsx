@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
-import { useAsyncData } from '@/hooks/useAsyncData';
+import { invalidateAsyncDataCache, useAsyncData } from '@/hooks/useAsyncData';
 import { getAllUsersAdmin, updateUserRole, getUserActivity, adminAddMoney } from '@/app/actions/admin';
 import toast from 'react-hot-toast';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { Search, ChevronDown, ChevronRight, Star } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { AdminFilterBar } from '@/components/admin/AdminFilterBar';
+import { useAuth } from '@/lib/authContext';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -28,6 +29,7 @@ function useDebounce<T>(value: T, delay: number): T {
 export default function AdminUsersPage() {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { mounted, loading: authLoading, isLoggedIn, profile } = useAuth();
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,12 +55,11 @@ export default function AdminUsersPage() {
       return { success: true, data: response };
     },
     defaultValue: [],
-    errorMessage: 'Failed to load users'
+    errorMessage: 'Failed to load users',
+    enabled: mounted && !authLoading && isLoggedIn && profile?.role === 'admin',
+    cacheKey: `admin-users:${JSON.stringify({ search: debouncedSearch, role: roleFilter, sortBy })}`,
+    cacheTTL: 2 * 60 * 1000,
   });
-
-  useEffect(() => {
-    refetch();
-  }, [debouncedSearch, roleFilter, sortBy]);
 
   const toggleRow = async (userId: string) => {
     const newExpanded = new Set(expandedRows);
@@ -82,6 +83,7 @@ export default function AdminUsersPage() {
   const handleChangeRole = async (userId: string, newRole: string) => {
     try {
       await updateUserRole(userId, newRole);
+      invalidateAsyncDataCache(/^admin-(users|dashboard|analytics)/);
       toast.success(`Role updated to ${newRole}`);
       await refetch();
     } catch (e) {
@@ -101,6 +103,7 @@ export default function AdminUsersPage() {
     setIsSubmittingBalance(true);
     try {
       await adminAddMoney(balanceModalUser.id, amount);
+      invalidateAsyncDataCache(/^admin-(users|dashboard|analytics)/);
       toast.success(`Added $${amount.toFixed(2)} to ${balanceModalUser.full_name}'s balance.`);
       setBalanceModalUser(null);
       setBalanceAmount('');

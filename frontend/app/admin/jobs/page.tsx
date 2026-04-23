@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
-import { useAsyncData } from '@/hooks/useAsyncData';
+import { invalidateAsyncDataCache, useAsyncData } from '@/hooks/useAsyncData';
 import { getAllJobsAdmin } from '@/app/actions/admin';
 import { adminApproveJobCompletion, adminUpdateJobStatus } from '@/app/actions/jobs';
 import type { Job, JobStatus, JobUrgency } from '@/types';
@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { AdminFilterBar } from '@/components/admin/AdminFilterBar';
+import { useAuth } from '@/lib/authContext';
 
 import { Suspense } from 'react';
 
@@ -54,6 +55,7 @@ function AdminJobsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { mounted, loading: authLoading, isLoggedIn, profile } = useAuth();
 
   // States
   const [searchQuery, setSearchQuery] = useState('');
@@ -95,13 +97,17 @@ function AdminJobsContent() {
     },
     defaultValue: { jobs: [], total: 0 },
     errorMessage: 'Failed to load jobs',
-    autoFetch: false
+    enabled: mounted && !authLoading && isLoggedIn && profile?.role === 'admin',
+    cacheKey: `admin-jobs:${JSON.stringify({
+      search: debouncedSearch,
+      status: statusFilter,
+      urgency: urgencyFilter,
+      sortBy,
+      page,
+      limit: 20,
+    })}`,
+    cacheTTL: 2 * 60 * 1000,
   });
-
-  // Refetch when filters change
-  useEffect(() => {
-    refetch();
-  }, [debouncedSearch, statusFilter, urgencyFilter, sortBy, page]);
 
   // Actions
   const toggleRow = (id: string) => {
@@ -131,9 +137,11 @@ function AdminJobsContent() {
     try {
       if (modalAction === 'cancel') {
         await adminUpdateJobStatus(selectedJob.id, 'CANCELLED');
+        invalidateAsyncDataCache(/^admin-(jobs|dashboard|analytics|review-queue)/);
         toast.success(`Job CANCELLED successfully.`);
       } else if (modalAction === 'complete') {
         await adminApproveJobCompletion(selectedJob.id);
+        invalidateAsyncDataCache(/^admin-(jobs|dashboard|analytics|review-queue)/);
         toast.success(`Job FORCE COMPLETED. Escrow released.`);
       }
       await refetch();

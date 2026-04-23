@@ -1,16 +1,19 @@
 'use client';
 
+import Link from 'next/link';
 import { MapPin, Eye, Loader2, MessageCircle, Zap, AlertCircle, PlayCircle, Clock, CheckCircle, XCircle } from 'lucide-react';
 import type { Job } from '@/types';
+import { useOptimizedNavigation } from '@/hooks/useOptimizedNavigation';
 
 interface EmployeeJobCardProps {
   job: Job;
-  onView: (id: string) => void;
   onClaim: (id: string) => void;
   showClaim?: boolean;
   isClaiming?: boolean;
   customerName?: string | null;
   hasApplied?: boolean;
+  onMarkDone?: (job: Job) => void;
+  isMarkingDone?: boolean;
 }
 
 const STATUS_CONFIG = {
@@ -78,24 +81,28 @@ function timeAgo(dateStr: string) {
 
 export function EmployeeJobCard({
   job,
-  onView,
   onClaim,
   showClaim = true,
   isClaiming = false,
   customerName,
   hasApplied = false,
+  onMarkDone,
+  isMarkingDone = false,
 }: EmployeeJobCardProps) {
   const tasks = Array.isArray(job.tasks) ? job.tasks : [];
   const canApply = job.status === 'OPEN' && !isClaiming && !hasApplied;
   const statusConfig = STATUS_CONFIG[job.status];
   const urgencyConfig = URGENCY_CONFIG[job.urgency];
   const StatusIcon = statusConfig.icon;
+  const { navigate, getIntentHandlers } = useOptimizedNavigation();
+  const detailHref = `/employee/jobs/${job.id}`;
+  const messageHref = `/employee/messages?job=${job.id}`;
 
   return (
-    <article className="relative flex flex-col rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 overflow-hidden">
+    <article className="flex flex-col h-full rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 overflow-hidden">
       
-      {/* Top bar with status indicator */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+      {/* Top bar with status indicator - Fixed Height */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 h-[60px]">
         <div className="flex items-center gap-2">
           <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border ${statusConfig.color}`}>
             <span className={`p-0.5 rounded ${statusConfig.iconBg}`}>
@@ -119,15 +126,15 @@ export function EmployeeJobCard({
         <span className="text-xs text-slate-500">{timeAgo(job.created_at)}</span>
       </div>
 
-      {/* Main content */}
-      <div className="flex flex-col gap-4 p-4">
+      {/* Main content - Flex Grow */}
+      <div className="flex flex-col flex-1 gap-4 p-4">
         
-        {/* Location */}
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900 mb-1">Location</h3>
+        {/* Location - Fixed height area */}
+        <div className="min-h-[60px]">
+          <h3 className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Location</h3>
           <div className="flex items-start gap-2">
             <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" aria-hidden="true" />
-            <p className="text-sm text-slate-700 line-clamp-2">
+            <p className="text-sm text-slate-700 line-clamp-2 leading-relaxed">
               {job.location_address ?? 'Address on confirmation'}
             </p>
           </div>
@@ -135,9 +142,9 @@ export function EmployeeJobCard({
 
         {/* Posted by and Price */}
         <div className="grid grid-cols-2 gap-4">
-          <div>
+          <div className="min-w-0">
             <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Posted by</p>
-            <p className="text-sm font-medium text-slate-900">{customerName || 'Unknown'}</p>
+            <p className="text-sm font-medium text-slate-900 truncate">{customerName || 'Unknown'}</p>
           </div>
           <div>
             <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Payout</p>
@@ -145,47 +152,71 @@ export function EmployeeJobCard({
           </div>
         </div>
 
-        {/* Tasks */}
-        {tasks.length > 0 && (
-          <div>
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-2">Tasks</p>
-            <div className="flex flex-wrap gap-1">
-              {tasks.slice(0, 3).map((task, i) => (
-                <span
-                  key={i}
-                  className="rounded-md px-2 py-1 text-xs font-medium text-slate-700 border border-slate-200 bg-slate-50"
-                >
-                  {typeof task === 'string' ? task : (task as any)?.name || (task as any)?.value || 'Task'}
-                </span>
-              ))}
-              {tasks.length > 3 && (
-                <span className="rounded-md px-2 py-1 text-xs font-medium text-slate-600 border border-slate-200 bg-slate-50">
-                  +{tasks.length - 3} more
-                </span>
-              )}
-            </div>
+        {/* Tasks - Fixed container height for alignment */}
+        <div className="mt-auto pt-2">
+          <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-2">Tasks</p>
+          <div className="flex flex-wrap gap-1 min-h-[56px] content-start">
+            {tasks.length > 0 ? (
+              <>
+                {tasks.slice(0, 2).map((task: any, i) => (
+                  <span
+                    key={i}
+                    className="rounded-md px-2 py-1 text-xs font-medium text-slate-700 border border-slate-200 bg-slate-50 truncate max-w-[120px]"
+                  >
+                    {typeof task === 'string' ? task : task?.name || task?.value || 'Task'}
+                  </span>
+                ))}
+                {tasks.length > 2 && (
+                  <span className="rounded-md px-2 py-1 text-xs font-medium text-slate-600 border border-slate-200 bg-slate-50">
+                    +{tasks.length - 2} more
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-xs text-slate-400 italic">No specific tasks listed</span>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Action buttons */}
-        <div className="flex gap-2 pt-2">
+        {/* Action buttons - Pushed to bottom */}
+        <div className="flex gap-2 pt-4 mt-auto border-t border-slate-100">
           <button
             type="button"
-            onClick={() => onView(job.id)}
+            onClick={() => navigate(detailHref)}
+            {...getIntentHandlers(detailHref)}
             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100"
           >
             <Eye className="h-4 w-4" aria-hidden="true" />
-            Details
+            <span className="hidden sm:inline">Details</span>
           </button>
 
           {job.status === 'IN_PROGRESS' && (
-            <a
-              href={`/employee/messages?job=${job.id}`}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100"
+            <Link
+              href={messageHref}
+              prefetch
+              {...getIntentHandlers(messageHref)}
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100"
             >
               <MessageCircle className="h-4 w-4" aria-hidden="true" />
-              Message
-            </a>
+            </Link>
+          )}
+
+          {job.status === 'IN_PROGRESS' && onMarkDone && (
+            <button
+              type="button"
+              onClick={() => onMarkDone(job)}
+              disabled={isMarkingDone}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-green-600 text-sm font-semibold text-white transition-colors hover:bg-green-700 active:bg-green-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isMarkingDone ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4" aria-hidden="true" />
+                  Done
+                </>
+              )}
+            </button>
           )}
 
           {showClaim && (
@@ -196,14 +227,11 @@ export function EmployeeJobCard({
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-slate-900 text-sm font-semibold text-white transition-colors hover:bg-slate-800 active:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-slate-900"
             >
               {isClaiming ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  Applying…
-                </>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               ) : hasApplied ? (
                 'Applied'
               ) : (
-                'Apply Now'
+                'Apply'
               )}
             </button>
           )}

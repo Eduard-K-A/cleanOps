@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
+import { useOptimizedNavigation } from '@/hooks/useOptimizedNavigation';
 
 // ---------------------------------------------------------------------------
 // LoginPage — refactored for instant redirect.
@@ -31,11 +31,16 @@ function dashboardForRole(role?: string) {
 }
 
 export default function LoginPage() {
-  const router = useRouter();
+  const { navigate, prefetch } = useOptimizedNavigation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    prefetch('/signup');
+    prefetch('/forgot-password');
+  }, [prefetch]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -62,16 +67,16 @@ export default function LoginPage() {
       // ────────────────────────────────────────────────────────────────────
       const role = data.session?.user?.user_metadata?.role as string | undefined;
       toast.success('Signed in!');
-      router.push(dashboardForRole(role));
-    } catch (err: any) {
+      navigate(dashboardForRole(role));
+    } catch (err: unknown) {
       // AbortError is a harmless Supabase SDK internal cleanup signal.
       // The sign-in still succeeded — redirect anyway.
-      if (err?.name === 'AbortError') {
+      if (err instanceof Error && err.name === 'AbortError') {
         toast.success('Signed in!');
-        router.push('/dashboard'); // safe fallback; authContext will correct role
+        navigate('/dashboard'); // safe fallback; authContext will correct role
         return;
       }
-      toast.error(err?.message || 'Sign in failed');
+      toast.error(err instanceof Error ? err.message : 'Sign in failed');
     } finally {
       setLoading(false);
     }
@@ -326,7 +331,7 @@ export default function LoginPage() {
       <div className="login-shell">
         {/* Left panel */}
         <div className="login-panel-left">
-          <a href="/" className="left-brand">
+          <Link href="/homepage" className="left-brand">
             <div className="left-brand-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                 <path d="M3 21l7-7m0 0l7.5-7.5M10 14l2-2m5.5-5.5L20 3M10 14L6 10l8.5-8.5 4 4L10 14z"
@@ -334,7 +339,7 @@ export default function LoginPage() {
               </svg>
             </div>
             <span className="left-brand-name">CleanOps</span>
-          </a>
+          </Link>
 
           <div className="left-content">
             <p className="left-eyebrow">Professional cleaning</p>

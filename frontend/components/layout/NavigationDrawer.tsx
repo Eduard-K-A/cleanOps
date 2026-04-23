@@ -24,7 +24,7 @@ import {
   PlayCircle
 } from 'lucide-react';
 import { createBrowserClient } from '@supabase/ssr';
-import { getNavigationConfig, type NavigationRole } from './navigationConfig';
+import { getNavigationConfig, prefetchNavigationRoutes, type NavigationRole } from './navigationConfig';
 
 interface NavigationItem {
   id: string;
@@ -171,6 +171,13 @@ export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOp
   const filteredNavItems = navigationItems.filter(item => 
     !item.requiredRole || item.requiredRole === stableRole
   );
+
+  useEffect(() => {
+    return prefetchNavigationRoutes(
+      (href) => router.prefetch(href),
+      filteredNavItems.map((item) => item.href)
+    );
+  }, [filteredNavItems, router]);
 
   return (
     <>

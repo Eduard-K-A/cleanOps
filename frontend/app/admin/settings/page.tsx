@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
-import { useAsyncData } from '@/hooks/useAsyncData';
+import { invalidateAsyncDataCache, useAsyncData } from '@/hooks/useAsyncData';
 import { getPlatformConfig, upsertPlatformConfig } from '@/app/actions/admin';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { AlertTriangle, Info, Check, Power } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 
 export default function AdminSettingsPage() {
-  const { profile } = useAuth();
+  const { profile, mounted, loading: authLoading, isLoggedIn } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [savingKey, setSavingKey] = useState<string | null>(null);
@@ -23,7 +23,7 @@ export default function AdminSettingsPage() {
   const [maxJobs, setMaxJobs] = useState(2);
   const [maintenance, setMaintenance] = useState(false);
 
-  const { loading, refetch } = useAsyncData({
+  const { refetch } = useAsyncData({
     fetchFn: async () => {
       const config = await getPlatformConfig();
       if (config['platform_fee_pct']) setFee(parseInt(config['platform_fee_pct']));
@@ -32,7 +32,10 @@ export default function AdminSettingsPage() {
       return { success: true, data: config };
     },
     defaultValue: null,
-    errorMessage: 'Failed to load platform configuration.'
+    errorMessage: 'Failed to load platform configuration.',
+    enabled: mounted && !authLoading && isLoggedIn && profile?.role === 'admin',
+    cacheKey: 'admin-settings',
+    cacheTTL: 5 * 60 * 1000,
   });
 
   const handleSave = async (key: string, value: string) => {
@@ -40,6 +43,7 @@ export default function AdminSettingsPage() {
     setSavingKey(key);
     try {
       await upsertPlatformConfig(key, value);
+      invalidateAsyncDataCache('admin-settings');
       setSavedKey(key);
       toast.success('Setting updated');
       setTimeout(() => setSavedKey(null), 2000);

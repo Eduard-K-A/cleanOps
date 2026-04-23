@@ -1,8 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { useBookingStore } from '@/stores/bookingStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +12,7 @@ import toast from 'react-hot-toast';
 import type { JobUrgency } from '@/types/index';
 import { ChevronLeft, ChevronRight, MapPin, Zap, Ruler, Check, Clock, AlertCircle } from 'lucide-react';
 import { validateAddressFormat } from '@/lib/mockLocations';
+import { useOptimizedNavigation } from '@/hooks/useOptimizedNavigation';
 
 const SIZES = ['Small (1–2 rooms)', 'Medium (3–4 rooms)', 'Large (5+ rooms)'];
 const URGENCIES: { value: JobUrgency; label: string; icon: React.ReactNode }[] = [
@@ -285,7 +285,7 @@ function StepLocation() {
           />
           <p className="text-sm text-gray-600 flex items-center gap-2">
             <span className="h-1 w-1 rounded-full bg-gray-400" />
-            Format: "Street Address, City, ZIP"
+            Format: &quot;Street Address, City, ZIP&quot;
           </p>
         </div>
 
@@ -307,9 +307,9 @@ function StepLocation() {
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p className="text-sm text-blue-900 font-medium">
-            ✓ Required format: "Street Address, City, ZIP"
+            ✓ Required format: &quot;Street Address, City, ZIP&quot;
           </p>
-          <p className="text-sm text-blue-800 mt-1">Example: "123 Main St, New York, 10001"</p>
+          <p className="text-sm text-blue-800 mt-1">Example: &quot;123 Main St, New York, 10001&quot;</p>
         </div>
 
         <div className="flex justify-between gap-3 pt-4">
@@ -468,7 +468,11 @@ function StepUrgency() {
 function StepPayment() {
   const { address, distance, urgency, tasks, price_amount, reset, setStep } = useBookingStore();
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const { navigate, prefetch } = useOptimizedNavigation();
+
+  useEffect(() => {
+    prefetch('/customer/payment');
+  }, [prefetch]);
 
   const handleCreate = async () => {
     if (loading) return;
@@ -503,7 +507,7 @@ function StepPayment() {
       sessionStorage.setItem('cleanops_payment', JSON.stringify({ jobId: response.data.job.id, amount: response.data.job.price_amount }));
       toast.success('Job created successfully! Redirecting to payment...');
       reset();
-      router.push('/customer/payment');
+      navigate('/customer/payment');
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Failed to create job';
       toast.error(message);
@@ -599,7 +603,7 @@ function StepPayment() {
           <p className="text-sm text-amber-900 flex items-start gap-2">
             <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
             <span>
-              By proceeding, you authorize this payment. You'll have full control over fund release after the cleaner completes the job.
+              By proceeding, you authorize this payment. You&apos;ll have full control over fund release after the cleaner completes the job.
             </span>
           </p>
         </div>

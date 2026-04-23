@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
+import { useOptimizedNavigation } from '@/hooks/useOptimizedNavigation';
 
 // ---------------------------------------------------------------------------
 // SignupPage — refactored for instant redirect.
@@ -24,13 +24,17 @@ function dashboardForRole(role: 'customer' | 'employee') {
 }
 
 export default function SignupPage() {
-  const router = useRouter();
+  const { navigate, prefetch } = useOptimizedNavigation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<'customer' | 'employee'>('customer');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    prefetch('/login');
+  }, [prefetch]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -88,9 +92,9 @@ export default function SignupPage() {
 
       // ── Step 3: Redirect immediately ─────────────────────────────────────
       toast.success('Account created!');
-      router.push(dashboardForRole(role));
-    } catch (err: any) {
-      toast.error(err?.message || 'Sign up failed');
+      navigate(dashboardForRole(role));
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Sign up failed');
     } finally {
       setLoading(false);
     }
@@ -381,7 +385,7 @@ export default function SignupPage() {
       <div className="signup-shell">
         {/* Left panel */}
         <div className="signup-panel-left">
-          <a href="/" className="signup-brand">
+          <Link href="/homepage" className="signup-brand">
             <div className="signup-brand-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                 <path d="M3 21l7-7m0 0l7.5-7.5M10 14l2-2m5.5-5.5L20 3M10 14L6 10l8.5-8.5 4 4L10 14z"
@@ -389,7 +393,7 @@ export default function SignupPage() {
               </svg>
             </div>
             <span className="signup-brand-name">CleanOps</span>
-          </a>
+          </Link>
 
           <div className="signup-left-content">
             <p className="signup-eyebrow">Join CleanOps today</p>
@@ -398,7 +402,7 @@ export default function SignupPage() {
               <span>happy lives.</span>
             </h1>
             <p className="signup-body-text">
-              Whether you're booking a clean or offering your services, CleanOps connects the right people at the right time.
+              Whether you&apos;re booking a clean or offering your services, CleanOps connects the right people at the right time.
             </p>
             <div className="signup-benefits">
               <div className={`benefit-card ${role === 'customer' ? 'active-benefit' : ''}`}>
@@ -410,7 +414,7 @@ export default function SignupPage() {
                 </div>
                 <div className="benefit-text">
                   <p className="benefit-title">For customers</p>
-                  <p className="benefit-desc">Book vetted cleaners, track jobs live, and pay only when you're satisfied.</p>
+                  <p className="benefit-desc">Book vetted cleaners, track jobs live, and pay only when you&apos;re satisfied.</p>
                 </div>
               </div>
               <div className={`benefit-card ${role === 'employee' ? 'active-benefit' : ''}`}>

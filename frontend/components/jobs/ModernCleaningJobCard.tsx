@@ -1,16 +1,16 @@
 'use client';
 
+import Link from 'next/link';
 import { MapPin, Eye, MessageCircle, Zap, AlertCircle, PlayCircle, Clock, CheckCircle, XCircle, Flag, Trash2 } from 'lucide-react';
 import type { Job } from '@/types';
+import { useOptimizedNavigation } from '@/hooks/useOptimizedNavigation';
 
 interface ModernCleaningJobCardProps {
   job: Job;
-  onView: (id: string) => void;
   onCancel: (id: string) => Promise<void>;
   onReport?: (job: Job) => void;
   isCancelling: boolean;
   customerName?: string | null;
-  workerName?: string | null;
 }
 
 const STATUS_CONFIG = {
@@ -81,25 +81,26 @@ function formatDate(dateStr: string) {
 
 export function ModernCleaningJobCard({
   job,
-  onView,
   onCancel,
   onReport,
   isCancelling,
   customerName,
-  workerName,
 }: ModernCleaningJobCardProps) {
   const tasks = Array.isArray(job.tasks) ? job.tasks : [];
   const statusConfig = STATUS_CONFIG[job.status];
   const urgencyConfig = URGENCY_CONFIG[job.urgency];
   const StatusIcon = statusConfig.icon;
+  const { navigate, getIntentHandlers } = useOptimizedNavigation();
+  const detailHref = `/customer/jobs/${job.id}`;
+  const messageHref = `/customer/messages?job=${job.id}`;
 
   return (
-    <article className="flex flex-col rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 overflow-hidden">
+    <article className="flex flex-col h-full rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 overflow-hidden">
       
-      {/* Header with status */}
-      <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-100">
+      {/* Header with status - Fixed Height Area */}
+      <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-100 h-[72px]">
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-slate-900 line-clamp-2">
+          <h3 className="text-sm font-semibold text-slate-900 line-clamp-2 leading-tight">
             {job.location_address || 'Cleaning Service'}
           </h3>
           <p className="text-xs text-slate-500 mt-1">
@@ -115,8 +116,8 @@ export function ModernCleaningJobCard({
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex flex-col gap-4 p-4">
+      {/* Main content - Flex Grow */}
+      <div className="flex flex-col flex-1 gap-4 p-4">
         
         {/* Key metrics grid */}
         <div className="grid grid-cols-2 gap-3">
@@ -133,50 +134,56 @@ export function ModernCleaningJobCard({
           </div>
         </div>
 
-        {/* Location */}
-        {job.location_address && (
-          <div className="flex gap-2">
-            <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
-            <p className="text-sm text-slate-700 line-clamp-2">{job.location_address}</p>
-          </div>
-        )}
+        {/* Location - Fixed spacing/clamp */}
+        <div className="min-h-[40px]">
+          {job.location_address && (
+            <div className="flex gap-2">
+              <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
+              <p className="text-sm text-slate-700 line-clamp-2 leading-snug">{job.location_address}</p>
+            </div>
+          )}
+        </div>
 
         {/* People info */}
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
+          <div className="min-w-0">
             <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Posted by</p>
-            <p className="font-medium text-slate-900">{customerName || 'Unknown'}</p>
+            <p className="font-medium text-slate-900 truncate">{customerName || 'Unknown'}</p>
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Assigned to</p>
-            <p className="font-medium text-slate-900">{job.worker_name || 'Not assigned yet'}</p>
+            <p className="font-medium text-slate-900 truncate">{job.worker_name || 'Not assigned'}</p>
           </div>
         </div>
 
-        {/* Tasks */}
-        {tasks.length > 0 && (
-          <div>
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-2">Tasks</p>
-            <div className="flex flex-wrap gap-1">
-              {tasks.slice(0, 3).map((task, idx) => (
-                <span
-                  key={idx}
-                  className="px-2 py-1 text-xs font-medium text-slate-700 border border-slate-200 bg-slate-50 rounded-md"
-                >
-                  {typeof task === 'string' ? task : (task as any)?.name || (task as any)?.value || 'Task'}
-                </span>
-              ))}
-              {tasks.length > 3 && (
-                <span className="px-2 py-1 text-xs font-medium text-slate-600 border border-slate-200 bg-slate-50 rounded-md">
-                  +{tasks.length - 3}
-                </span>
-              )}
-            </div>
+        {/* Tasks - Fixed container height to ensure alignment */}
+        <div className="mt-auto pt-2">
+          <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-2">Tasks</p>
+          <div className="flex flex-wrap gap-1 min-h-[56px] content-start">
+            {tasks.length > 0 ? (
+              <>
+                {tasks.slice(0, 2).map((task: any, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2 py-1 text-xs font-medium text-slate-700 border border-slate-200 bg-slate-50 rounded-md truncate max-w-[120px]"
+                  >
+                    {typeof task === 'string' ? task : task?.name || task?.value || 'Task'}
+                  </span>
+                ))}
+                {tasks.length > 2 && (
+                  <span className="px-2 py-1 text-xs font-medium text-slate-600 border border-slate-200 bg-slate-50 rounded-md">
+                    +{tasks.length - 2}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-xs text-slate-400 italic">No specific tasks listed</span>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Footer with timestamp and actions */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+        {/* Footer with timestamp and actions - Pushed to bottom */}
+        <div className="flex items-center justify-between pt-4 mt-auto border-t border-slate-100">
           <p className="text-xs text-slate-500">{formatDate(job.created_at)}</p>
 
           <div className="flex gap-2">
@@ -186,10 +193,9 @@ export function ModernCleaningJobCard({
                 type="button"
                 onClick={() => onReport(job)}
                 className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-100 active:bg-amber-200"
-                title="Report issue to admin"
+                title="Report issue"
               >
-                <Flag className="h-4 w-4 mr-1" />
-                Report
+                <Flag className="h-4 w-4" />
               </button>
             )}
 
@@ -203,24 +209,27 @@ export function ModernCleaningJobCard({
                 }}
                 disabled={isCancelling}
                 className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 active:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Cancel job"
               >
-                <Trash2 className="h-4 w-4 mr-1" />
-                {isCancelling ? 'Cancelling...' : 'Cancel'}
+                <Trash2 className="h-4 w-4" />
               </button>
             )}
 
             {job.status === 'IN_PROGRESS' && job.worker_id && (
-              <a
-                href={`/customer/messages?job=${job.id}`}
+              <Link
+                href={messageHref}
+                prefetch
+                {...getIntentHandlers(messageHref)}
                 className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100"
               >
                 <MessageCircle className="h-4 w-4" />
-              </a>
+              </Link>
             )}
 
             <button
               type="button"
-              onClick={() => onView(job.id)}
+              onClick={() => navigate(detailHref)}
+              {...getIntentHandlers(detailHref)}
               className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100"
             >
               <Eye className="h-4 w-4 mr-1" />

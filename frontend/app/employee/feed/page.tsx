@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
@@ -12,7 +11,8 @@ import { useJobFeed } from '@/hooks/realtime/useJobFeed';
 import { api } from '@/lib/api';
 import type { Job, Profile } from '@/types';
 import toast from 'react-hot-toast';
-import { MapPin, RefreshCw, Briefcase } from 'lucide-react';
+import { RefreshCw, Briefcase } from 'lucide-react';
+import { useOptimizedNavigation } from '@/hooks/useOptimizedNavigation';
 
 
 
@@ -47,12 +47,12 @@ function EmptyState({ onRefresh, isRefreshing }: { onRefresh: () => void; isRefr
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function EmployeeFeedPage() {
-  const router = useRouter();
   const [applying, setApplying] = useState<string | null>(null);
   const [jobsList, setJobsList] = useState<Job[]>([]);
   const [userApplications, setUserApplications] = useState<string[]>([]); // Store job IDs the user applied to
+  const { warmupRoutes } = useOptimizedNavigation();
 
-  const { data: jobs, loading, refetch } = useAsyncData<Job[]>({
+  const { data: jobs, loading, refreshing, refetch } = useAsyncData<Job[]>({
     fetchFn: () => api.getJobs('OPEN'),
     defaultValue: [],
     errorMessage: 'Failed to load jobs',
@@ -67,11 +67,11 @@ export default function EmployeeFeedPage() {
   // Fetch applications for this employee to show "Applied" status
   const fetchApplications = useCallback(async () => {
     try {
-      const { data: apps } = await api.get('job_applications', { 
-        filters: { employee_id: profile?.id } 
+      const { data: apps } = await api.get('job_applications', {
+        filters: { employee_id: profile?.id }
       });
       if (apps) {
-        setUserApplications((apps as any[]).map(a => a.job_id));
+        setUserApplications((apps as Array<{ job_id: string }>).map((application) => application.job_id));
       }
     } catch (e) {
       console.error('Failed to fetch applications', e);
@@ -92,6 +92,15 @@ export default function EmployeeFeedPage() {
 
   useEffect(() => { setJobsList(jobs); }, [jobs]);
 
+  useEffect(() => {
+    return warmupRoutes(
+      jobsList.slice(0, 8).flatMap((job) => [
+        `/employee/jobs/${job.id}`,
+        ...(job.status === 'IN_PROGRESS' ? [`/employee/messages?job=${job.id}`] : []),
+      ])
+    );
+  }, [jobsList, warmupRoutes]);
+
   const handleApply = useCallback(async (id: string) => {
     if (applying) return;
     try {
@@ -106,10 +115,7 @@ export default function EmployeeFeedPage() {
     } finally {
       setApplying(null);
     }
-  }, [refetch]);
-
-  const handleView          = useCallback((id: string) => router.push(`/employee/jobs/${id}`), [router]);
-  const handleUpdateProfile = useCallback(() => router.push('/employee/dashboard'), [router]);
+  }, [applying, refetch]);
 
   const isInitialLoad    = loading && jobsList.length === 0;
 
@@ -132,18 +138,18 @@ export default function EmployeeFeedPage() {
                 <div className="flex items-center gap-3">
                   {!isInitialLoad && (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 ring-1 ring-inset ring-sky-200">
-                      <span className={`h-1.5 w-1.5 rounded-full ${loading ? 'animate-pulse bg-sky-400' : 'bg-sky-500'}`} aria-hidden="true" />
+                      <span className={`h-1.5 w-1.5 rounded-full ${refreshing ? 'animate-pulse bg-sky-400' : 'bg-sky-500'}`} aria-hidden="true" />
                       {jobsList.length} {jobsList.length === 1 ? 'job' : 'jobs'} available
                     </span>
                   )}
                   <button
                     type="button"
                     onClick={refetch}
-                    disabled={loading}
+                    disabled={loading || refreshing}
                     aria-label="Refresh jobs"
                     className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
                   >
-                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
+                    <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -152,9 +158,9 @@ export default function EmployeeFeedPage() {
               {isInitialLoad ? (
                 <FeedPageSkeleton />
               ) : jobsList.length === 0 ? (
-                <EmptyState onRefresh={refetch} isRefreshing={loading} />
+                <EmptyState onRefresh={refetch} isRefreshing={loading || refreshing} />
               ) : (
-                <div className={`transition-opacity duration-200 ${loading ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
+                <div className={`transition-opacity duration-200 ${refreshing ? 'opacity-95' : 'opacity-100'}`}>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {jobsList.map((job) => (
                       <EmployeeJobCard
@@ -163,7 +169,6 @@ export default function EmployeeFeedPage() {
                         showClaim
                         isClaiming={applying === job.id}
                         onClaim={handleApply}
-                        onView={handleView}
                         customerName={job.customer_profile?.full_name}
                         hasApplied={userApplications.includes(job.id)}
                       />

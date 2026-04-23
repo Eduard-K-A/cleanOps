@@ -18,12 +18,14 @@ import { JobsCreatedChart } from '@/components/dashboard/JobsCreatedChart';
 import { SpendingBreakdownChart } from '@/components/dashboard/SpendingBreakdownChart';
 import { TrendingUp, TrendingDown, Users, Briefcase, Clock, DollarSign } from 'lucide-react';
 import { AnalyticsSkeleton } from '@/components/ui/Skeleton';
+import { useAuth } from '@/lib/authContext';
 
 export default function AdminAnalyticsPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [periodDays, setPeriodDays] = useState<number>(30);
+  const { mounted, loading: authLoading, isLoggedIn, profile } = useAuth();
 
-  const { data: analytics, loading, error, refetch } = useAsyncData({
+  const { data: analytics } = useAsyncData({
     fetchFn: async () => {
       const [
         jobsData, 
@@ -53,13 +55,11 @@ export default function AdminAnalyticsPage() {
       };
     },
     defaultValue: null,
-    errorMessage: 'Failed to fully load analytics.'
+    errorMessage: 'Failed to fully load analytics.',
+    enabled: mounted && !authLoading && isLoggedIn && profile?.role === 'admin',
+    cacheKey: `admin-analytics:${periodDays}`,
+    cacheTTL: 2 * 60 * 1000,
   });
-
-  // Re-fetch when interval changes
-  React.useEffect(() => {
-    refetch();
-  }, [periodDays]);
 
   // Color mapping
   const STATUS_COLORS: Record<string, string> = {
