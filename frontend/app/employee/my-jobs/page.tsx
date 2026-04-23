@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { useState, useRef, useEffect } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
@@ -15,10 +15,10 @@ import { useAsyncData } from '@/hooks/useAsyncData';
 import { api } from '@/lib/api';
 import type { Job } from '@/types';
 import toast from 'react-hot-toast';
-import { PlayCircle, ClipboardCheck, X, Upload, ImageIcon } from 'lucide-react';
+import { PlayCircle, ClipboardCheck, X, ImageIcon } from 'lucide-react';
+import { useOptimizedNavigation } from '@/hooks/useOptimizedNavigation';
 
 export default function EmployeeMyJobsPage() {
-  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [markingDone, setMarkingDone] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -27,6 +27,7 @@ export default function EmployeeMyJobsPage() {
   const [uploadedFiles, setUploadedFiles] = useState<Array<{ url: string; path: string; name: string }>>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { navigate, warmupRoutes } = useOptimizedNavigation();
 
   // Fetch only IN_PROGRESS jobs (employee's active jobs)
   const { data: myJobs, loading, refetch } = useAsyncData<Job[]>({
@@ -34,6 +35,15 @@ export default function EmployeeMyJobsPage() {
     defaultValue: [],
     errorMessage: 'Failed to load your jobs',
   });
+
+  useEffect(() => {
+    return warmupRoutes(
+      myJobs.slice(0, 8).flatMap((job) => [
+        `/employee/jobs/${job.id}`,
+        `/employee/messages?job=${job.id}`,
+      ])
+    );
+  }, [myJobs, warmupRoutes]);
 
   function handleMarkDone(job: Job) {
     setSelectedJob(job);
@@ -83,7 +93,7 @@ export default function EmployeeMyJobsPage() {
         } else {
           toast.error(response.error || `Failed to upload ${file.name}`);
         }
-      } catch (error) {
+      } catch {
         toast.error(`Failed to upload ${file.name}`);
       } finally {
         setUploading(false);
@@ -110,7 +120,7 @@ export default function EmployeeMyJobsPage() {
       } else {
         toast.error('Failed to remove image');
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to remove image');
     } finally {
       setUploading(false);
@@ -205,7 +215,7 @@ export default function EmployeeMyJobsPage() {
                   <button
                     type="button"
                     className="inline-flex items-center justify-center rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
-                    onClick={() => router.push('/employee/feed')}
+                    onClick={() => navigate('/employee/feed')}
                   >
                     Browse Jobs Feed
                   </button>
@@ -217,21 +227,14 @@ export default function EmployeeMyJobsPage() {
                   )}
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {myJobs.map((job) => (
-                      <div key={job.id}>
-                        <EmployeeJobCard
-                          job={job}
-                          showClaim={false}
-                          onClaim={() => {}}
-                          onView={(id: string) => router.push(`/employee/jobs/${id}`)}
-                        />
-                        <Button
-                          className="mt-2 w-full"
-                          onClick={() => handleMarkDone(job)}
-                          disabled={!!markingDone}
-                        >
-                          {markingDone === job.id ? 'Processing…' : 'Mark as Done'}
-                        </Button>
-                      </div>
+                      <EmployeeJobCard
+                        key={job.id}
+                        job={job}
+                        showClaim={false}
+                        onClaim={() => {}}
+                        onMarkDone={handleMarkDone}
+                        isMarkingDone={markingDone === job.id}
+                      />
                     ))}
                   </div>
                 </div>
@@ -273,10 +276,12 @@ export default function EmployeeMyJobsPage() {
               <div className="grid grid-cols-3 gap-2 mb-3">
                 {uploadedFiles.map((file, index) => (
                   <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 group">
-                    <img
+                    <Image
                       src={file.url}
                       alt={`Proof ${index + 1}`}
-                      className="w-full h-full object-cover"
+                      fill
+                      sizes="(max-width: 768px) 33vw, 160px"
+                      className="object-cover"
                     />
                     <button
                       type="button"
