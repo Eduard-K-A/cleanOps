@@ -2,6 +2,17 @@ import { create } from 'zustand';
 import { createClient } from '@/lib/supabase/client';
 import { Notification } from '@/types';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { 
+  Bell, 
+  MessageSquare, 
+  DollarSign, 
+  Briefcase, 
+  AlertCircle,
+  CheckCircle2,
+  MapPin,
+  UserPlus
+} from 'lucide-react';
 
 interface NotificationState {
   notifications: Notification[];
@@ -13,6 +24,7 @@ interface NotificationState {
   fetchNotifications: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  dismissNotification: (id: string) => void;
   addNotification: (notification: Notification) => void;
   setNotifications: (notifications: Notification[]) => void;
   clearNotifications: () => void;
@@ -98,6 +110,16 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }
   },
 
+  dismissNotification: (id: string) => {
+    set((state) => {
+      const updatedNotifications = state.notifications.filter((n) => n.id !== id);
+      return {
+        notifications: updatedNotifications,
+        unreadCount: updatedNotifications.filter(n => !n.is_read).length,
+      };
+    });
+  },
+
   addNotification: (notification: Notification) => {
     set((state) => {
       // Check if it already exists to avoid duplicates (Supabase might send insert event twice in some rare cases)
@@ -107,12 +129,20 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       
       // Trigger toast for new notification
       if (!notification.is_read) {
+        const skipViewButton = [
+          'money_added', 
+          'payout_received', 
+          'payout_sent'
+        ].includes(notification.type);
+        
+        const iconData = getNotificationIcon(notification.type);
+
         toast(getNotificationTitle(notification), {
           description: getNotificationDescription(notification),
-          action: {
+          icon: <div className={cn("p-1 rounded-md", iconData.bg)}>{iconData.icon}</div>,
+          action: skipViewButton ? undefined : {
             label: 'View',
             onClick: () => {
-              // Navigation logic could go here
               get().markAsRead(notification.id);
             },
           },
@@ -138,10 +168,70 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 }));
 
-// Helper functions for Toast content
-function getNotificationTitle(notification: Notification): string {
+// Centralized Notification Content Helpers
+export function getNotificationIcon(type: string) {
+  switch (type) {
+    case 'money_added':
+    case 'payout_received':
+    case 'payout_sent':
+      return {
+        icon: <DollarSign className="w-5 h-5 text-emerald-600" />,
+        bg: 'bg-emerald-50',
+        border: 'border-emerald-100'
+      };
+    case 'job_claimed':
+    case 'APPLICATION_ACCEPTED':
+      return {
+        icon: <CheckCircle2 className="w-5 h-5 text-blue-600" />,
+        bg: 'bg-blue-50',
+        border: 'border-blue-100'
+      };
+    case 'job_completed':
+      return {
+        icon: <Briefcase className="w-5 h-5 text-indigo-600" />,
+        bg: 'bg-indigo-50',
+        border: 'border-indigo-100'
+      };
+    case 'MESSAGE_RECEIVED':
+      return {
+        icon: <MessageSquare className="w-5 h-5 text-purple-600" />,
+        bg: 'bg-purple-50',
+        border: 'border-purple-100'
+      };
+    case 'JOB_REPORTED':
+    case 'APPLICATION_REJECTED':
+      return {
+        icon: <AlertCircle className="w-5 h-5 text-rose-600" />,
+        bg: 'bg-rose-50',
+        border: 'border-rose-100'
+      };
+    case 'new_job_nearby':
+      return {
+        icon: <MapPin className="w-5 h-5 text-amber-600" />,
+        bg: 'bg-amber-50',
+        border: 'border-amber-100'
+      };
+    case 'APPLICATION_RECEIVED':
+      return {
+        icon: <UserPlus className="w-5 h-5 text-cyan-600" />,
+        bg: 'bg-cyan-50',
+        border: 'border-cyan-100'
+      };
+    default:
+      return {
+        icon: <Bell className="w-5 h-5 text-slate-400" />,
+        bg: 'bg-slate-50',
+        border: 'border-slate-100'
+      };
+  }
+}
+
+export function getNotificationTitle(notification: Notification): string {
+  const { payload } = notification;
+  const isNegative = payload && typeof payload.amount === 'number' && payload.amount < 0;
+
   switch (notification.type) {
-    case 'money_added': return 'Balance Updated';
+    case 'money_added': return isNegative ? 'Funds Withdrawn' : 'Balance Updated';
     case 'job_claimed': return 'Job Claimed';
     case 'job_completed': return 'Job Completed';
     case 'payout_received': return 'Payout Received';
@@ -156,10 +246,16 @@ function getNotificationTitle(notification: Notification): string {
   }
 }
 
-function getNotificationDescription(notification: Notification): string {
+export function getNotificationDescription(notification: Notification): string {
   const { payload } = notification;
+  const isNegative = payload && typeof payload.amount === 'number' && payload.amount < 0;
+  const displayAmount = isNegative ? Math.abs(payload.amount) : payload.amount;
+
   switch (notification.type) {
-    case 'money_added': return `$${payload.amount} has been added to your balance.`;
+    case 'money_added': 
+      return isNegative 
+        ? `$${displayAmount} has been withdrawn from your balance.`
+        : `$${displayAmount} has been added to your balance.`;
     case 'job_claimed': return `Your job has been claimed by a professional.`;
     case 'job_completed': return `Cleaning job has been marked as completed.`;
     case 'payout_received': return `You received a payout of $${payload.amount}.`;
