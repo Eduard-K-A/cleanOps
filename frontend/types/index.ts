@@ -109,7 +109,9 @@ export interface Notification {
     | 'new_job_nearby'
     | 'APPLICATION_RECEIVED'
     | 'APPLICATION_ACCEPTED'
-    | 'APPLICATION_REJECTED';
+    | 'APPLICATION_REJECTED'
+    | 'JOB_CREATED'
+    | 'JOB_CANCELLED';
   payload: Record<string, any>;
   is_read: boolean;
   created_at: string;
