@@ -63,18 +63,7 @@ export function TopAppBar({
 
       {/* Right section */}
       <div className="flex items-center gap-2">
-        {/* Search */}
-        {showSearch && (
-          <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg border">
-            <Search size={18} style={{ color: 'var(--md-on-surface-muted)' }} />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="bg-transparent border-none outline-none text-sm w-64"
-              style={{ color: 'var(--md-on-surface)' }}
-            />
-          </div>
-        )}
+     
 
         {/* Notifications */}
         {showNotifications && (

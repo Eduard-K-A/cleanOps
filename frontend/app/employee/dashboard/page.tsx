@@ -315,7 +315,7 @@ export default function EmployeeDashboardPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">${analytics.balance.toFixed(2)}</div>
-                    <p className="text-xs text-slate-500 mt-1">Ready to withdraw</p>
+                    <p className="text-xs text-slate-500 mt-1">Ready to withdraw (Mock)</p>
                   </CardContent>
                 </Card>
               </div>

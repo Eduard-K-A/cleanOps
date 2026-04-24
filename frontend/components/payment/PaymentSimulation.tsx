@@ -86,6 +86,18 @@ export function PaymentSimulation({ type, currentBalance, onSuccess, onCancel }:
     setStep('ENTRY_DETAILS');
   };
 
+  const MockupIndicator = () => (
+    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6 flex items-start gap-3">
+      <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+      <div>
+        <p className="text-xs font-bold text-amber-800 uppercase tracking-wider mb-0.5">Simulated System</p>
+        <p className="text-[11px] text-amber-700 leading-relaxed font-normal">
+          This is a mockup for demonstration purposes. No real money will be charged or transferred.
+        </p>
+      </div>
+    </div>
+  );
+
   const handleProcessTransaction = async () => {
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
       setErrorMessage('Please enter a valid amount greater than zero');
@@ -131,6 +143,7 @@ export function PaymentSimulation({ type, currentBalance, onSuccess, onCancel }:
     case 'SELECT_METHOD':
       return (
         <div className="space-y-4">
+          <MockupIndicator />
           <p className="text-sm text-slate-500 mb-4">
             Select your preferred {type === 'DEPOSIT' ? 'payment' : 'withdrawal'} method
           </p>
@@ -161,6 +174,7 @@ export function PaymentSimulation({ type, currentBalance, onSuccess, onCancel }:
     case 'ENTRY_DETAILS':
       return (
         <div className="space-y-6">
+          <MockupIndicator />
           <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
             <div className={`w-8 h-8 rounded-full ${selectedMethod?.color} flex items-center justify-center text-white text-xs`}>
               {selectedMethod?.icon}
@@ -213,6 +227,7 @@ export function PaymentSimulation({ type, currentBalance, onSuccess, onCancel }:
     case 'VERIFICATION':
       return (
         <div className="space-y-6 text-center">
+          <MockupIndicator />
           <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
             <Shield className="w-8 h-8 text-blue-600" />
           </div>
@@ -220,6 +235,9 @@ export function PaymentSimulation({ type, currentBalance, onSuccess, onCancel }:
             <h4 className="text-lg font-bold text-slate-800">Verification Required</h4>
             <p className="text-sm text-slate-500 mt-1">
               We've sent a 6-digit code to your registered mobile number for {selectedMethod?.name}.
+            </p>
+            <p className="text-[10px] text-blue-600 font-medium mt-2 bg-blue-50 py-1 px-2 rounded-full inline-block">
+              Hint: Enter any 6 digits to proceed
             </p>
           </div>
 

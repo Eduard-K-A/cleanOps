@@ -130,6 +130,16 @@ export async function createJob(jobData: {
       throw error
     }
 
+    // Notify the customer that the job is listed
+    await (supabase as any).from('notifications').insert({
+      user_id: user.id,
+      type: 'JOB_CREATED',
+      payload: { 
+        job_id: data.id,
+        location_address: jobData.address
+      }
+    });
+
     // Notify all admins about the new job
     const { data: admins } = await (supabase as any)
       .from('profiles')
@@ -347,12 +357,14 @@ export async function updateJobStatus(jobId: string, status: string, proofOfWork
 
   // Notify the other party
   const otherUserId = user.id === jobDataBefore.customer_id ? jobDataBefore.worker_id : jobDataBefore.customer_id
+  
   if (otherUserId) {
+    const isCancelled = status.toUpperCase() === 'CANCELLED';
     await (supabase as any)
       .from('notifications')
       .insert({
         user_id: otherUserId,
-        type: 'JOB_UPDATED',
+        type: isCancelled ? 'JOB_CANCELLED' : 'JOB_UPDATED',
         payload: {
           job_id: jobId,
           old_status: jobDataBefore.status,
@@ -453,6 +465,12 @@ export async function adminUpdateJobStatus(jobId: string, status: string) {
 
   await verifyAdmin(supabase, user.id)
 
+  const { data: jobBefore } = await (supabase as any)
+    .from('jobs')
+    .select('customer_id, worker_id, status')
+    .eq('id', jobId)
+    .single()
+
   const updateData: any = { status: status.toUpperCase() }
 
   const { error } = await (supabase as any)
@@ -461,6 +479,40 @@ export async function adminUpdateJobStatus(jobId: string, status: string) {
     .eq('id', jobId)
 
   if (error) throw error
+
+  // Notify parties
+  if (jobBefore) {
+    const isCancelled = status.toUpperCase() === 'CANCELLED';
+    const notifications = [];
+    
+    if (jobBefore.customer_id) {
+      notifications.push({
+        user_id: jobBefore.customer_id,
+        type: isCancelled ? 'JOB_CANCELLED' : 'JOB_UPDATED',
+        payload: { 
+          job_id: jobId, 
+          action: 'ADMIN_UPDATE', 
+          new_status: status.toUpperCase() 
+        }
+      });
+    }
+    
+    if (jobBefore.worker_id) {
+      notifications.push({
+        user_id: jobBefore.worker_id,
+        type: isCancelled ? 'JOB_CANCELLED' : 'JOB_UPDATED',
+        payload: { 
+          job_id: jobId, 
+          action: 'ADMIN_UPDATE', 
+          new_status: status.toUpperCase() 
+        }
+      });
+    }
+    
+    if (notifications.length > 0) {
+      await (supabase as any).from('notifications').insert(notifications);
+    }
+  }
 }
 
 export async function adminApproveJobCompletion(jobId: string) {

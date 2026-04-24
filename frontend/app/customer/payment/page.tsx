@@ -8,6 +8,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { approveJobCompletion } from '@/app/actions/jobs';
+import { AlertCircle } from 'lucide-react';
 
 function PaymentContent() {
   const [data, setData] = useState<{ jobId: string; amount: number } | null | 'loading'>('loading');
@@ -70,6 +71,15 @@ function PaymentContent() {
 
   return (
     <div className="mx-auto max-w-md px-4 py-8">
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 flex items-start gap-3 shadow-sm">
+        <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-bold text-amber-800 uppercase tracking-wider mb-1">Payment Simulation</p>
+          <p className="text-xs text-amber-700 leading-relaxed">
+            This checkout is a mockup for demonstration. No actual funds will be deducted from your card or bank account.
+          </p>
+        </div>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>Complete payment (mock)</CardTitle>
