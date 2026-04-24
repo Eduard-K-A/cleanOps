@@ -52,8 +52,20 @@ export async function getAllJobsAdmin(filters: {
   
   if (filters.search) {
     const searchTerm = `%${filters.search}%`;
-    // PostgREST type casting syntax: column::type.operator.value
-    query = query.or(`location_address.ilike.${searchTerm},id::text.ilike.${searchTerm}`);
+    // PostgREST type casting syntax: column::type.operator.value can be tricky
+    // Better to use a simpler OR or validate UUID if searching by ID
+    
+    // Check if it's potentially a UUID or partial UUID
+    const isPotentiallyUuid = /^[0-9a-fA-F-]+$/.test(filters.search);
+    
+    if (isPotentiallyUuid && filters.search.length >= 4) {
+      // If it looks like a UUID, search both address and ID
+      // We use .or with a template string. Note: searching ID with ilike requires the id to be cast to text
+      query = query.or(`location_address.ilike.${searchTerm},id.ilike.${searchTerm}`);
+    } else {
+      // Otherwise just search address
+      query = query.ilike('location_address', searchTerm);
+    }
   }
 
   // Sorting
@@ -93,13 +105,15 @@ export async function getAllUsersAdmin(filters: {
   search?: string;
   role?: string;
   sortBy?: 'newest' | 'oldest' | 'balance_high' | 'rating_high';
+  page?: number;
+  limit?: number;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');
   await verifyAdmin(supabase, user.id);
 
-  let query = (supabase as any).from('profiles').select('*');
+  let query = (supabase as any).from('profiles').select('*', { count: 'exact' });
 
   if (filters.role && filters.role.toUpperCase() !== 'ALL') {
     query = query.eq('role', filters.role.toLowerCase());
@@ -114,12 +128,18 @@ export async function getAllUsersAdmin(filters: {
   else if (filters.sortBy === 'rating_high') query = query.order('rating', { ascending: false });
   else query = query.order('created_at', { ascending: false }); // newest
 
-  const { data: profiles, error } = await query;
+  if (filters.page && filters.limit) {
+    const from = (filters.page - 1) * filters.limit;
+    const to = from + filters.limit - 1;
+    query = query.range(from, to);
+  }
+
+  const { data: profiles, count, error } = await query;
   if (error) throw error;
 
   // If we already have the email column in the database, we can skip the slow auth list
   if (profiles && profiles.length > 0 && 'email' in profiles[0] && profiles[0].email) {
-    return profiles;
+    return { users: profiles, total: count || 0 };
   }
 
   // Fallback: Use raw JS Supabase client to fetch auth.users if email column is missing or empty
@@ -142,10 +162,10 @@ export async function getAllUsersAdmin(filters: {
       };
     });
 
-    return usersWithEmail;
+    return { users: usersWithEmail, total: count || 0 };
   } catch (err) {
     console.error('Error in getAllUsersAdmin fallback:', err);
-    return profiles || [];
+    return { users: profiles || [], total: count || 0 };
   }
 }
 
