@@ -181,6 +181,7 @@ export function getNotificationIcon(type: string) {
       };
     case 'job_claimed':
     case 'APPLICATION_ACCEPTED':
+    case 'JOB_CREATED':
       return {
         icon: <CheckCircle2 className="w-5 h-5 text-blue-600" />,
         bg: 'bg-blue-50',
@@ -200,6 +201,7 @@ export function getNotificationIcon(type: string) {
       };
     case 'JOB_REPORTED':
     case 'APPLICATION_REJECTED':
+    case 'JOB_CANCELLED':
       return {
         icon: <AlertCircle className="w-5 h-5 text-rose-600" />,
         bg: 'bg-rose-50',
@@ -242,6 +244,8 @@ export function getNotificationTitle(notification: Notification): string {
     case 'APPLICATION_RECEIVED': return 'New Application';
     case 'APPLICATION_ACCEPTED': return 'Application Approved';
     case 'APPLICATION_REJECTED': return 'Application Declined';
+    case 'JOB_CREATED': return 'Booking Listed';
+    case 'JOB_CANCELLED': return 'Booking Cancelled';
     default: return 'New Notification';
   }
 }
@@ -266,6 +270,8 @@ export function getNotificationDescription(notification: Notification): string {
     case 'APPLICATION_RECEIVED': return `A professional has applied to your job.`;
     case 'APPLICATION_ACCEPTED': return `Your application for ${payload.location_address || 'a cleaning job'} was approved!`;
     case 'APPLICATION_REJECTED': return `Your application for a job was not selected.`;
+    case 'JOB_CREATED': return `Your cleaning job has been successfully listed.`;
+    case 'JOB_CANCELLED': return `The cleaning job has been cancelled.`;
     default: return 'You have a new update in CleanOps.';
   }
 }
