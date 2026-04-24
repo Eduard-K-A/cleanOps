@@ -110,7 +110,7 @@ export default function ReviewQueuePage() {
           <AdminFilterBar
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
-            searchPlaceholder="Search location or ID..."
+            searchPlaceholder="Search location..."
           >
             <div className="flex items-center gap-3">
                <button 
@@ -196,7 +196,7 @@ export default function ReviewQueuePage() {
                           onClick={() => setActionModal({ type: 'APPROVE', jobId: job.id })}
                           className="w-full bg-green-600 hover:bg-green-700 text-white shadow-sm"
                         >
-                          Approve
+                          Force Complete
                         </Button>
                       </div>
                     </div>
