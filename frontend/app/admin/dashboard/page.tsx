@@ -14,24 +14,39 @@ import { useAuth } from '@/lib/authContext';
 export default function AdminDashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { mounted, loading: authLoading, isLoggedIn, profile } = useAuth();
+  const [usersPage, setUsersPage] = useState(1);
+  const USERS_PER_PAGE = 10;
 
-  // Fetch KPI data for 30d window
-  const { data: dashboard, loading } = useAsyncData({
+  // Fetch KPI data and Recent Jobs
+  const { data: stats, loading: statsLoading } = useAsyncData({
     fetchFn: async () => {
-      const [kpi, jobsRes, usersRes] = await Promise.all([
+      const [kpi, jobsRes] = await Promise.all([
         getKpiTrend(30),
         getAllJobsAdmin({ status: 'ALL', limit: 5 }),
-        getAllUsersAdmin({ role: 'ALL' })
       ]);
-      return { success: true, data: { kpi, jobs: jobsRes.data?.jobs || [], users: usersRes } };
+      return { success: true, data: { kpi, jobs: jobsRes.data?.jobs || [] } };
     },
     defaultValue: null,
     enabled: mounted && !authLoading && isLoggedIn && profile?.role === 'admin',
-    cacheKey: 'admin-dashboard',
+    cacheKey: 'admin-dashboard-stats',
     cacheTTL: 2 * 60 * 1000,
   });
 
-  if (!dashboard && loading) {
+  // Fetch Users separately with pagination
+  const { data: usersData, loading: usersLoading } = useAsyncData({
+    fetchFn: async () => {
+      const res = await getAllUsersAdmin({ role: 'ALL', page: usersPage, limit: USERS_PER_PAGE });
+      return { success: true, data: res };
+    },
+    defaultValue: { users: [], total: 0 },
+    enabled: mounted && !authLoading && isLoggedIn && profile?.role === 'admin',
+    cacheKey: `admin-dashboard-users-${usersPage}`,
+    cacheTTL: 2 * 60 * 1000,
+  });
+
+  const loading = statsLoading || (usersLoading && usersPage === 1);
+
+  if (!stats && loading) {
     return (
       <ProtectedRoute requiredRole="admin">
         <div className="flex h-screen overflow-hidden bg-slate-50">
@@ -50,9 +65,11 @@ export default function AdminDashboardPage() {
   }
 
   // Ensure robust fallback rendering
-  const kpi = dashboard?.kpi;
-  const recentJobs = dashboard?.jobs || [];
-  const recentUsers = dashboard?.users || [];
+  const kpi = stats?.kpi;
+  const recentJobs = stats?.jobs || [];
+  const recentUsers = usersData?.users || [];
+  const totalUsers = usersData?.total || 0;
+  const totalPages = Math.ceil(totalUsers / USERS_PER_PAGE);
 
   return (
     <ProtectedRoute requiredRole="admin">
@@ -134,8 +151,13 @@ export default function AdminDashboardPage() {
                       View directory <ArrowRight className="w-4 h-4" />
                     </Link>
                   </div>
-                  <div className="divide-y divide-slate-100">
-                    {recentUsers.length === 0 ? (
+                  <div className="flex-1 divide-y divide-slate-100 relative min-h-[400px]">
+                    {usersLoading && (
+                      <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10">
+                        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                    {recentUsers.length === 0 && !usersLoading ? (
                       <p className="text-sm text-slate-500 text-center p-6">No recent users found.</p>
                     ) : (
                       recentUsers.map((user: any) => (
@@ -163,6 +185,29 @@ export default function AdminDashboardPage() {
                       ))
                     )}
                   </div>
+                  
+                  {/* PAGINATION CONTROLS */}
+                  {totalPages > 1 && (
+                    <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-b-xl">
+                      <button
+                        onClick={() => setUsersPage(p => Math.max(1, p - 1))}
+                        disabled={usersPage === 1 || usersLoading}
+                        className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-white border border-slate-200 rounded disabled:opacity-50 transition-colors"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-xs font-medium text-slate-500">
+                        Page {usersPage} of {totalPages}
+                      </span>
+                      <button
+                        onClick={() => setUsersPage(p => Math.min(totalPages, p + 1))}
+                        disabled={usersPage === totalPages || usersLoading}
+                        className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-white border border-slate-200 rounded disabled:opacity-50 transition-colors"
+                      >
+                        Next Page
+                      </button>
+                    </div>
+                  )}
                 </div>
 
               </div>
