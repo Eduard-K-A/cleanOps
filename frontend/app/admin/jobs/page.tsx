@@ -163,8 +163,8 @@ function AdminJobsContent() {
     'PENDING_REVIEW': 'bg-purple-100 text-purple-800'
   };
 
-  const totalValue = data.jobs.reduce((sum, j) => sum + (Number(j.price_amount) || 0), 0);
-  const totalPages = Math.ceil(data.total / 20);
+  const totalValue = (data?.jobs || []).reduce((sum, j) => sum + (Number(j.price_amount) || 0), 0);
+  const totalPages = Math.ceil((data?.total || 0) / 20);
 
   return (
     <ProtectedRoute requiredRole="admin">
@@ -221,35 +221,43 @@ function AdminJobsContent() {
             <div className="max-w-7xl mx-auto py-6">
               
               {/* Table */}
-              <div className="bg-white rounded-xl shadow-[var(--md-elevation-1)] border border-slate-200">
+              <div className="bg-white rounded-xl shadow-[var(--md-elevation-1)] border border-slate-200 overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+                  <table className="w-full text-left border-collapse table-fixed">
                     <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
                       <tr>
                         <th className="p-4 w-12"></th>
-                        <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Job ID</th>
-                        <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
-                        <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Worker</th>
-                        <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                        <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Urgency</th>
-                        <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Price</th>
-                        <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Age</th>
-                        <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                        <th className="p-4 w-28 text-xs font-semibold text-slate-500 uppercase tracking-wider">Job ID</th>
+                        <th className="p-4 w-44 text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
+                        <th className="p-4 w-44 text-xs font-semibold text-slate-500 uppercase tracking-wider">Worker</th>
+                        <th className="p-4 w-36 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                        <th className="p-4 w-28 text-xs font-semibold text-slate-500 uppercase tracking-wider">Urgency</th>
+                        <th className="p-4 w-28 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Price</th>
+                        <th className="p-4 w-32 text-xs font-semibold text-slate-500 uppercase tracking-wider">Age</th>
+                        <th className="p-4 w-48 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {loading ? (
                         Array.from({ length: 5 }).map((_, i) => (
-                          <tr key={`loading-${i}`}>
-                            <td colSpan={9} className="p-4"><Skeleton className="h-10 w-full rounded" /></td>
+                          <tr key={`loading-${i}`} className="animate-pulse">
+                            <td className="p-4"><Skeleton className="h-4 w-4 rounded" /></td>
+                            <td className="p-4"><Skeleton className="h-4 w-16 rounded" /></td>
+                            <td className="p-4"><Skeleton className="h-4 w-32 rounded" /></td>
+                            <td className="p-4"><Skeleton className="h-4 w-32 rounded" /></td>
+                            <td className="p-4"><Skeleton className="h-4 w-24 rounded" /></td>
+                            <td className="p-4"><Skeleton className="h-4 w-16 rounded" /></td>
+                            <td className="p-4"><Skeleton className="h-4 w-16 rounded ml-auto" /></td>
+                            <td className="p-4"><Skeleton className="h-4 w-24 rounded" /></td>
+                            <td className="p-4"><Skeleton className="h-8 w-32 rounded ml-auto" /></td>
                           </tr>
                         ))
-                      ) : data.jobs.length === 0 ? (
+                      ) : (data?.jobs || []).length === 0 ? (
                         <tr>
                           <td colSpan={9} className="p-8 text-center text-slate-500">No jobs found matching filters.</td>
                         </tr>
                       ) : (
-                        data.jobs.map((job) => (
+                        (data?.jobs || []).map((job) => (
                           <React.Fragment key={job.id}>
                             <tr className="hover:bg-slate-50 transition-colors">
                               <td className="p-4">
@@ -258,36 +266,36 @@ function AdminJobsContent() {
                                 </button>
                               </td>
                               <td className="p-4">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono text-sm text-slate-700 bg-slate-100 px-2 py-0.5 rounded">{job.id.slice(0, 8)}</span>
-                                  <button onClick={() => copyToClipboard(job.id)} className="text-slate-400 hover:text-blue-500 transition-colors" title="Copy Full ID">
+                                <div className="flex items-center gap-2 overflow-hidden">
+                                  <span className="font-mono text-xs text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">{job.id.slice(0, 8)}</span>
+                                  <button onClick={() => copyToClipboard(job.id)} className="text-slate-400 hover:text-blue-500 transition-colors shrink-0" title="Copy Full ID">
                                     <Copy className="w-3 h-3" />
                                   </button>
                                 </div>
                               </td>
-                              <td className="p-4 text-sm font-medium text-slate-900">{job.customer?.full_name || 'Unknown'}</td>
-                              <td className="p-4 text-sm text-slate-600 font-medium">
+                              <td className="p-4 text-sm font-medium text-slate-900 truncate" title={job.customer?.full_name}>{job.customer?.full_name || 'Unknown'}</td>
+                              <td className="p-4 text-sm text-slate-600 font-medium truncate" title={job.worker?.full_name}>
                                 {job.worker ? job.worker.full_name : <span className="text-slate-400 italic">Unassigned</span>}
                               </td>
                               <td className="p-4">
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${statusColors[job.status] || 'bg-slate-100 text-slate-800'}`}>
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${statusColors[job.status] || 'bg-slate-100 text-slate-800'}`}>
                                   {job.status.replace('_', ' ')}
                                 </span>
                               </td>
                               <td className="p-4">
-                                <Badge variant="outline" className={`text-[10px] uppercase font-bold tracking-wider ${
+                                <Badge variant="outline" className={`text-[10px] uppercase font-bold tracking-wider whitespace-nowrap ${
                                   job.urgency === 'HIGH' ? 'border-red-200 text-red-600 bg-red-50' :
                                   job.urgency === 'LOW' ? 'border-green-200 text-green-600 bg-green-50' : 'border-slate-200 text-slate-600 bg-slate-50'
                                 }`}>
                                   {job.urgency}
                                 </Badge>
                               </td>
-                              <td className="p-4 text-sm font-semibold text-slate-700">${Number(job.price_amount).toFixed(2)}</td>
-                              <td className="p-4 text-sm text-slate-500 whitespace-nowrap">
+                              <td className="p-4 text-sm font-semibold text-slate-700 text-right">${Number(job.price_amount).toFixed(2)}</td>
+                              <td className="p-4 text-sm text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis">
                                 {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
                               </td>
                               <td className="p-4 text-right">
-                                <div className="flex items-center justify-end gap-2">
+                                <div className="flex items-center justify-end gap-2 flex-wrap">
                                   {job.status === 'IN_PROGRESS' && (
                                     <Button 
                                       variant="outline" 
