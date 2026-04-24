@@ -12,10 +12,22 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Search, ChevronDown, ChevronRight, Star } from 'lucide-react';
+import { Star, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { AdminFilterBar } from '@/components/admin/AdminFilterBar';
 import { useAuth } from '@/lib/authContext';
+import { Profile, Job } from '@/types';
+
+interface UserWithEmail extends Profile {
+  email?: string;
+}
+
+interface UserActivity {
+  customerJobs: Job[];
+  workerJobs: Job[];
+  totalSpent: number;
+  totalEarned: number;
+}
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -39,27 +51,41 @@ export default function AdminUsersPage() {
 
   // UI state
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [userActivityCache, setUserActivityCache] = useState<Record<string, any>>({});
+  const [userActivityCache, setUserActivityCache] = useState<Record<string, UserActivity>>({});
   
-  const [balanceModalUser, setBalanceModalUser] = useState<any>(null);
+  const [balanceModalUser, setBalanceModalUser] = useState<UserWithEmail | null>(null);
   const [balanceAmount, setBalanceAmount] = useState<string>('');
   const [isSubmittingBalance, setIsSubmittingBalance] = useState(false);
 
-  const { data: users, loading, refetch } = useAsyncData<any[]>({
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
+
+  const { data: usersData, loading, refetch } = useAsyncData<{ users: UserWithEmail[], total: number }>({
     fetchFn: async () => {
       const response = await getAllUsersAdmin({
         search: debouncedSearch,
         role: roleFilter,
-        sortBy
+        sortBy,
+        page,
+        limit: ITEMS_PER_PAGE
       });
-      return { success: true, data: response };
+      return { success: true, data: response as { users: UserWithEmail[], total: number } };
     },
-    defaultValue: [],
+    defaultValue: { users: [], total: 0 },
     errorMessage: 'Failed to load users',
     enabled: mounted && !authLoading && isLoggedIn && profile?.role === 'admin',
-    cacheKey: `admin-users:${JSON.stringify({ search: debouncedSearch, role: roleFilter, sortBy })}`,
+    cacheKey: `admin-users:${JSON.stringify({ search: debouncedSearch, role: roleFilter, sortBy, page })}`,
     cacheTTL: 2 * 60 * 1000,
   });
+
+  const users = usersData?.users || [];
+  const totalUsers = usersData?.total || 0;
+  const totalPages = Math.ceil(totalUsers / ITEMS_PER_PAGE);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, roleFilter, sortBy]);
 
   const toggleRow = async (userId: string) => {
     const newExpanded = new Set(expandedRows);
@@ -71,8 +97,8 @@ export default function AdminUsersPage() {
       if (!userActivityCache[userId]) {
         try {
           const activity = await getUserActivity(userId);
-          setUserActivityCache(prev => ({ ...prev, [userId]: activity }));
-        } catch (e) {
+          setUserActivityCache(prev => ({ ...prev, [userId]: activity as UserActivity }));
+        } catch {
           toast.error("Failed to load user activity");
         }
       }
@@ -86,7 +112,7 @@ export default function AdminUsersPage() {
       invalidateAsyncDataCache(/^admin-(users|dashboard|analytics)/);
       toast.success(`Role updated to ${newRole}`);
       await refetch();
-    } catch (e) {
+    } catch {
       toast.error('Failed to update role');
     }
   };
@@ -108,7 +134,7 @@ export default function AdminUsersPage() {
       setBalanceModalUser(null);
       setBalanceAmount('');
       await refetch();
-    } catch (e) {
+    } catch {
       toast.error('Failed to add balance');
     } finally {
       setIsSubmittingBalance(false);
@@ -162,7 +188,7 @@ export default function AdminUsersPage() {
               <select 
                 className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={sortBy}
-                onChange={e => setSortBy(e.target.value as any)}
+                onChange={e => setSortBy(e.target.value as 'newest' | 'oldest' | 'balance_high' | 'rating_high')}
               >
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
@@ -234,15 +260,14 @@ export default function AdminUsersPage() {
                                 </td>
                                 <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
                                   <div className="flex items-center justify-end gap-2">
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm" 
-                                      className="h-8 text-xs font-medium border-blue-200 text-blue-700 hover:bg-blue-50"
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-8 px-2 text-[10px] font-bold uppercase tracking-wider text-green-700 border-green-200 hover:bg-green-50"
                                       onClick={() => setBalanceModalUser(user)}
                                     >
-                                      Add Balance
+                                      Deposit 
                                     </Button>
-                                    
                                     <select
                                       className="h-8 px-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                                       value={user.role}
@@ -272,7 +297,7 @@ export default function AdminUsersPage() {
                                             <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Customer Activity</h4>
                                             <div className="bg-white p-3 rounded border border-slate-200 text-sm space-y-1">
                                               <p><strong>Jobs Requested:</strong> {userActivityCache[user.id].customerJobs.length}</p>
-                                              <p><strong>Active Jobs:</strong> {userActivityCache[user.id].customerJobs.filter((j:any) => ['OPEN', 'IN_PROGRESS'].includes(j.status)).length}</p>
+                                              <p><strong>Active Jobs:</strong> {userActivityCache[user.id].customerJobs.filter((j: Job) => ['OPEN', 'IN_PROGRESS'].includes(j.status)).length}</p>
                                               <p><strong>Total Spent:</strong> ${Number(userActivityCache[user.id].totalSpent).toFixed(2)}</p>
                                               <Button 
                                                 variant="link" 
@@ -288,7 +313,7 @@ export default function AdminUsersPage() {
                                               <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Worker Activity</h4>
                                               <div className="bg-white p-3 rounded border border-slate-200 text-sm space-y-1">
                                                 <p><strong>Jobs Worked:</strong> {userActivityCache[user.id].workerJobs.length}</p>
-                                                <p><strong>Active Jobs:</strong> {userActivityCache[user.id].workerJobs.filter((j:any) => ['OPEN', 'IN_PROGRESS'].includes(j.status)).length}</p>
+                                                <p><strong>Active Jobs:</strong> {userActivityCache[user.id].workerJobs.filter((j: Job) => ['OPEN', 'IN_PROGRESS'].includes(j.status)).length}</p>
                                                 <p><strong>Total Earned:</strong> ${Number(userActivityCache[user.id].totalEarned).toFixed(2)}</p>
                                                 <Button 
                                                   variant="link" 
@@ -313,6 +338,57 @@ export default function AdminUsersPage() {
                     </tbody>
                   </table>
                 </div>
+                
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="p-4 border-t border-slate-200 flex items-center justify-between bg-slate-50 rounded-b-xl">
+                    <div className="text-sm text-slate-500">
+                      Showing <span className="font-semibold text-slate-700">{(page - 1) * ITEMS_PER_PAGE + 1}</span> to <span className="font-semibold text-slate-700">{Math.min(page * ITEMS_PER_PAGE, totalUsers)}</span> of <span className="font-semibold text-slate-700">{totalUsers}</span> users
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1 || loading}
+                      >
+                        Previous
+                      </Button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          // Simple pagination window logic
+                          let pageNum = page;
+                          if (totalPages <= 5) pageNum = i + 1;
+                          else if (page <= 3) pageNum = i + 1;
+                          else if (page >= totalPages - 2) pageNum = totalPages - 4 + i;
+                          else pageNum = page - 2 + i;
+
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setPage(pageNum)}
+                              className={`w-8 h-8 rounded text-sm font-medium transition-colors ${
+                                page === pageNum 
+                                  ? 'bg-blue-600 text-white' 
+                                  : 'text-slate-600 hover:bg-slate-100'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages || loading}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
             </div>
@@ -323,9 +399,15 @@ export default function AdminUsersPage() {
       <Modal
         isOpen={balanceModalUser !== null}
         onClose={() => { setBalanceModalUser(null); setBalanceAmount(''); }}
-        title="Add Promotional Balance"
+        title="Add Promotional Balance (Mockup)"
       >
         <div className="space-y-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+            <p className="text-[11px] text-amber-700 leading-tight">
+              <strong>Admin Simulation:</strong> This tool instantly updates the database balance for testing. No actual banking transaction is initiated.
+            </p>
+          </div>
           <p className="text-sm text-slate-600 flex items-center justify-between">
             <span>Target User: <strong>{balanceModalUser?.full_name}</strong></span>
             <span>Current Balance: <strong>${balanceModalUser?.money_balance?.toFixed(2)}</strong></span>
