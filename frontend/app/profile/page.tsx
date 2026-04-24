@@ -311,11 +311,14 @@ export default function ProfilePage() {
                       </div>
                       <div className="space-y-3">
                         <Button variant="outline" className="w-full border-blue-600 text-blue-600 hover:bg-blue-50" onClick={() => handleStartSimulation('DEPOSIT')}>
-                          Add Money
+                          Add Money (Mockup)
                         </Button>
                         <Button variant="outline" className="w-full" onClick={() => handleStartSimulation('WITHDRAWAL')}>
-                          Withdraw
+                          Withdraw (Mockup)
                         </Button>
+                        <p className="text-[10px] text-center text-slate-400 mt-2 italic">
+                          * Financial transactions are simulated for this prototype.
+                        </p>
                       </div>
                     </div>
                   </section>

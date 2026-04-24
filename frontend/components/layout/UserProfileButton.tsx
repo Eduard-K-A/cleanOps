@@ -141,7 +141,7 @@ function BalanceSection({ balance, onAction }: BalanceSectionProps) {
           className="flex items-center justify-center gap-1.5 h-9 border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300"
         >
           <ArrowDownLeft className="h-3.5 w-3.5" />
-          Deposit
+          Deposit 
         </Button>
         <Button
           type="button"
