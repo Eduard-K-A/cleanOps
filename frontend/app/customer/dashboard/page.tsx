@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/authContext'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { getCustomerJobs, updateJobStatus } from '@/app/actions/jobs'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { JobStatus } from '@/types'
+import { JobStatus, Job } from '@/types'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 
@@ -41,7 +41,7 @@ function CustomerDashboardContent() {
     cacheKey: `customer-jobs-${profile?.id}`
   })
 
-  const activeJobs = jobs.filter(job => 
+  const activeJobs = jobs.filter((job: Job) => 
     ['OPEN', 'IN_PROGRESS', 'PENDING_REVIEW'].includes(job.status)
   )
 
@@ -69,7 +69,7 @@ function CustomerDashboardContent() {
             </div>
           ) : activeJobs.length > 0 ? (
             <ul className="mt-3 p-0 list-none flex flex-col gap-2.5">
-              {activeJobs.map((job) => (
+              {activeJobs.map((job: Job) => (
                 <li key={job.id} className="bg-slate-50 border border-slate-100 p-3 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 group hover:border-slate-200 transition-colors">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
