@@ -1,6 +1,7 @@
 'use server'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { validatePassword } from '@/lib/passwordValidation'
 
 export async function signUp(formData: {
   email: string
@@ -8,6 +9,14 @@ export async function signUp(formData: {
   fullName: string
   role: 'customer' | 'employee'
 }) {
+  // Validate password on the server side
+  const passwordValidation = validatePassword(formData.password)
+  if (!passwordValidation.isValid) {
+    throw new Error(
+      `Password validation failed: ${passwordValidation.errors.join(', ')}`
+    )
+  }
+
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signUp({
     email: formData.email,
