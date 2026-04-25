@@ -365,8 +365,12 @@ npm run type-check
 # Lint code
 npm run lint
 
-# Format code
-npm run format
+# Run tests with Vitest
+npm test
+# Run single test file
+npm test -- path/to/test.ts
+# Run tests in watch mode
+npm test -- --watch
 ```
 
 ### Building for Production
@@ -395,11 +399,36 @@ supabase db reset
 supabase db push
 ```
 
-## Migration from Express Backend
+## Current Project Status
 
-This project was migrated from an Express.js + Socket.io backend to a Supabase-only architecture:
+### Recent Updates (Latest)
 
-**Changes:**
+**Logout Race Condition Fix** - Fixed an issue where pending admin requests would fail with "Unauthorized" errors when users logged out from admin pages. All 12 admin server actions now return safe empty defaults instead of throwing errors when the session is cleared mid-request. [See LOGOUT_FIX.md for details.](./LOGOUT_FIX.md)
+
+**Admin Dashboard & Analytics** - Fully dynamic admin portal with:
+- Real-time platform metrics (active users, job volume, revenue)
+- Advanced analytics and KPI tracking
+- User directory with pagination and filtering
+- Review queue for reported jobs and disputes
+- Platform configuration management
+
+**Dynamic Customer Dashboard** - Customers now see personalized metrics and recent job activity with caching and optimization.
+
+**Enhanced Authentication**:
+- Server-side password validation with strength indicators
+- Improved login page layout
+- Secure signup with password requirements
+
+**Payment System** - Mock money escrow system with:
+- Simulation indicators for test transactions
+- Job creation notifications (JOB_CREATED, JOB_CANCELLED)
+- Transaction history and balance tracking
+
+### Migration from Express Backend
+
+This project was successfully migrated from an Express.js + Socket.io backend to a Supabase-only architecture:
+
+**What Changed:**
 - ❌ Removed: Express API server
 - ❌ Removed: Socket.io for real-time
 - ❌ Removed: node-cron for background jobs
@@ -407,13 +436,17 @@ This project was migrated from an Express.js + Socket.io backend to a Supabase-o
 - ✅ Added: Supabase Realtime subscriptions
 - ✅ Added: Database triggers for automation
 - ✅ Added: Advanced API client optimization layer
+- ✅ Added: Admin dashboard with analytics
+- ✅ Added: Dynamic data fetching with multi-layer caching
 
-**Benefits:**
+**Architecture Benefits:**
 - Simplified deployment (no separate backend server)
 - Better security with RLS policies
-- Lower latency with edge functions
+- Lower latency with edge functions and server actions
 - Real-time updates out of the box
 - Easier scaling with Supabase
+- Reduced operational complexity
+- Improved performance with client-side optimization
 
 ## Contributing
 
@@ -421,8 +454,19 @@ This project was migrated from an Express.js + Socket.io backend to a Supabase-o
 2. Make changes and test locally
 3. Ensure TypeScript types are correct: `npm run type-check`
 4. Lint code: `npm run lint`
-5. Commit with clear messages
-6. Push and create a pull request
+5. Test: `npm test`
+6. Commit with clear messages
+7. Push and create a pull request
+
+### For Copilot Sessions
+
+See [`.github/copilot-instructions.md`](./.github/copilot-instructions.md) for detailed architecture, conventions, and common task patterns specific to this codebase. It includes:
+- Build, test, and lint commands
+- Server Actions patterns and conventions
+- Custom hook patterns (useAsyncData, optimistic mutations, real-time)
+- State management with Zustand
+- Role-based access control patterns
+- Database and performance optimization details
 
 ## License
 
