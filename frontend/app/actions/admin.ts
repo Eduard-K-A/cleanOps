@@ -30,7 +30,9 @@ export async function getAllJobsAdmin(filters: {
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  
+  // Return empty results if no user (can happen during logout)
+  if (!user) return { success: true, data: { jobs: [], total: 0 } };
   
   await verifyAdmin(supabase, user.id);
 
@@ -100,6 +102,7 @@ export async function getAllJobsAdmin(filters: {
 
 /**
  * Task 6: Get All Users merged with Auth email
+ * Returns empty results if user is not authenticated (e.g., during logout)
  */
 export async function getAllUsersAdmin(filters: {
   search?: string;
@@ -110,7 +113,12 @@ export async function getAllUsersAdmin(filters: {
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  
+  // Return empty results if no user (can happen during logout)
+  if (!user) {
+    return { users: [], total: 0 };
+  }
+
   await verifyAdmin(supabase, user.id);
 
   let query = (supabase as any).from('profiles').select('*', { count: 'exact' });
@@ -172,7 +180,9 @@ export async function getAllUsersAdmin(filters: {
 export async function updateUserRole(userId: string, targetRole: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  
+  // Return early if no user (can happen during logout)
+  if (!user) return;
   await verifyAdmin(supabase, user.id);
 
   const { error } = await (supabase as any)
@@ -204,7 +214,9 @@ export async function updateUserRole(userId: string, targetRole: string) {
 export async function getUserActivity(userId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  
+  // Return empty activity if no user (can happen during logout)
+  if (!user) return { customerJobs: [], workerJobs: [], totalSpent: 0, totalEarned: 0 };
   await verifyAdmin(supabase, user.id);
 
   const { data: asCustomer } = await (supabase as any).from('jobs').select('*').eq('customer_id', userId);
@@ -227,7 +239,9 @@ export async function getUserActivity(userId: string) {
 export async function adminAddMoney(userId: string, amount: number) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  
+  // Return early if no user (can happen during logout)
+  if (!user) return;
   await verifyAdmin(supabase, user.id);
 
   // amount is in dollars
@@ -244,7 +258,9 @@ export async function adminAddMoney(userId: string, amount: number) {
 export async function getJobsByDay(days: number) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  
+  // Return empty data if no user (can happen during logout)
+  if (!user) return [];
   await verifyAdmin(supabase, user.id);
 
   const startDate = new Date();
@@ -280,7 +296,9 @@ export async function getJobsByDay(days: number) {
 export async function getRevenueByWeek(weeks: number) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  
+  // Return empty data if no user (can happen during logout)
+  if (!user) return [];
   await verifyAdmin(supabase, user.id);
 
   const startDate = new Date();
@@ -310,7 +328,9 @@ export async function getRevenueByWeek(weeks: number) {
 export async function getJobStatusBreakdown() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  
+  // Return empty data if no user (can happen during logout)
+  if (!user) return [];
   await verifyAdmin(supabase, user.id);
 
   const { data, error } = await (supabase as any).from('jobs').select('status');
@@ -327,7 +347,9 @@ export async function getJobStatusBreakdown() {
 export async function getTopEmployees(limit: number) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  
+  // Return empty data if no user (can happen during logout)
+  if (!user) return [];
   await verifyAdmin(supabase, user.id);
 
   const { data: employees } = await (supabase as any).from('profiles').select('id, full_name, role').eq('role', 'employee');
@@ -347,7 +369,9 @@ export async function getTopEmployees(limit: number) {
 export async function getTopCustomers(limit: number) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  
+  // Return empty data if no user (can happen during logout)
+  if (!user) return [];
   await verifyAdmin(supabase, user.id);
 
   const { data: customers } = await (supabase as any).from('profiles').select('id, full_name, role').eq('role', 'customer');
@@ -367,7 +391,9 @@ export async function getTopCustomers(limit: number) {
 export async function getKpiTrend(days: number) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  
+  // Return empty KPI data if no user (can happen during logout)
+  if (!user) return { current: { totalJobs: 0, totalRevenue: 0, activeEmployees: 0, pendingReviews: 0 }, previous: { totalJobs: 0, totalRevenue: 0, activeEmployees: 0, pendingReviews: 0 } };
   await verifyAdmin(supabase, user.id);
 
   const now = new Date();
@@ -405,7 +431,9 @@ export async function getKpiTrend(days: number) {
 export async function getPlatformConfig() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  
+  // Return empty config if no user (can happen during logout)
+  if (!user) return {};
   await verifyAdmin(supabase, user.id);
 
   const { data, error } = await (supabase as any).from('platform_config').select('*');
@@ -420,7 +448,9 @@ export async function getPlatformConfig() {
 export async function upsertPlatformConfig(key: string, value: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
+  
+  // Return early if no user (can happen during logout)
+  if (!user) return;
   await verifyAdmin(supabase, user.id);
 
   const { error } = await (supabase as any).from('platform_config').upsert({
