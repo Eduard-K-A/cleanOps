@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
 import { useOptimizedNavigation } from '@/hooks/useOptimizedNavigation';
+import { validatePassword, getPasswordStrengthLabel, getPasswordStrengthColor } from '@/lib/passwordValidation';
 
 // ---------------------------------------------------------------------------
 // SignupPage — refactored for instant redirect.
@@ -31,10 +32,21 @@ export default function SignupPage() {
   const [role, setRole] = useState<'customer' | 'employee'>('customer');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
+  const [passwordValidation, setPasswordValidation] = useState(
+    validatePassword('')
+  );
 
   useEffect(() => {
     prefetch('/login');
   }, [prefetch]);
+
+  // Real-time password validation
+  useEffect(() => {
+    const validation = validatePassword(password);
+    setPasswordValidation(validation);
+    setPasswordErrors(validation.errors);
+  }, [password]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,8 +58,10 @@ export default function SignupPage() {
       toast.error('Email, password, and full name are required');
       return;
     }
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+
+    // Validate password before submission
+    if (!passwordValidation.isValid) {
+      toast.error(passwordValidation.errors[0] || 'Password does not meet security requirements');
       return;
     }
 
@@ -523,8 +537,10 @@ export default function SignupPage() {
                   <input
                     id="password" className="signup-input"
                     type={showPassword ? 'text' : 'password'}
-                    autoComplete="new-password" placeholder="Min. 6 characters"
-                    value={password} onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password" 
+                    placeholder="Create a strong password"
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)}
                   />
                   <span
                     className="signup-input-icon clickable"
@@ -545,26 +561,72 @@ export default function SignupPage() {
                   </span>
                 </div>
 
-                {password.length > 0 && (() => {
-                  const len = password.length;
-                  const strength = len < 6 ? 'weak' : len < 10 ? 'fair' : 'strong';
-                  const fills = strength === 'weak' ? 1 : strength === 'fair' ? 2 : 3;
-                  return (
+                {password.length > 0 && (
+                  <>
+                    {/* Password Strength Indicator */}
                     <div className="pw-strength">
                       <div className="pw-bars">
-                        {[0, 1, 2].map(i => (
-                          <div key={i} className={`pw-bar ${i < fills ? `fill-${strength}` : ''}`} />
+                        {[0, 1, 2, 3].map(i => (
+                          <div 
+                            key={i} 
+                            className={`pw-bar ${
+                              i < Math.ceil(passwordValidation.score / 25) 
+                                ? `fill-${passwordValidation.strength}` 
+                                : ''
+                            }`} 
+                          />
                         ))}
                       </div>
-                      <span className={`pw-label ${strength}`}>
-                        {strength.charAt(0).toUpperCase() + strength.slice(1)}
+                      <span 
+                        className={`pw-label ${passwordValidation.strength}`}
+                        style={{ color: getPasswordStrengthColor(passwordValidation.strength) }}
+                      >
+                        {getPasswordStrengthLabel(passwordValidation.strength)}
                       </span>
                     </div>
-                  );
-                })()}
+
+                    {/* Password Validation Errors */}
+                    {passwordErrors.length > 0 && (
+                      <div 
+                        style={{
+                          marginTop: '8px',
+                          padding: '10px 12px',
+                          backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                          border: '1px solid rgba(239, 68, 68, 0.2)',
+                          borderRadius: 'var(--r-md)',
+                        }}
+                      >
+                        <p style={{
+                          margin: '0 0 6px 0',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#ef4444',
+                        }}>
+                          Password requirements:
+                        </p>
+                        <ul style={{
+                          margin: '0',
+                          paddingLeft: '18px',
+                          fontSize: '12px',
+                          color: '#ef4444',
+                        }}>
+                          {passwordErrors.map((error, idx) => (
+                            <li key={idx} style={{ marginBottom: idx < passwordErrors.length - 1 ? '3px' : '0' }}>
+                              {error}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
-              <button type="submit" className="signup-submit" disabled={loading}>
+              <button 
+                type="submit" 
+                className="signup-submit" 
+                disabled={loading || !passwordValidation.isValid || !email.trim() || !fullName.trim()}
+              >
                 {loading ? (
                   <><div className="signup-spinner" />Creating account…</>
                 ) : (
