@@ -45,14 +45,23 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (loading) return;
-    if (!email.trim() || !password) {
-      toast.error('Email and password required');
+    const normalizedEmail = email.trim().toLowerCase();
+    
+    if (!normalizedEmail || !password) {
+      toast.error('Email and password are required');
       return;
     }
+
+    // Basic validation: password length for login attempts
+    if (password.length < 8) {
+      toast.error('Invalid email or password');
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+        email: normalizedEmail,
         password,
       });
 
