@@ -43,7 +43,6 @@ function MetricCard({
         borderTop: `4px solid ${topBorderColor}`
       }}
     >
-      {/* Icon */}
       <div
         className="w-12 h-12 rounded-lg flex items-center justify-center mb-4"
         style={{ 
@@ -54,9 +53,7 @@ function MetricCard({
         {icon}
       </div>
 
-      {/* Content */}
       <div className="space-y-2">
-        {/* Label */}
         <p 
           className="text-xs font-medium uppercase tracking-wider"
           style={{ color: 'var(--md-on-surface-muted)' }}
@@ -64,7 +61,6 @@ function MetricCard({
           {title}
         </p>
 
-        {/* Value */}
         <div className="flex items-baseline gap-2">
           <p 
             className="text-3xl font-bold"
@@ -77,7 +73,6 @@ function MetricCard({
             {value}
           </p>
 
-          {/* Trend indicator */}
           {trend && (
             <div className="flex items-center gap-1">
               {trend.isUp ? (
@@ -97,8 +92,7 @@ function MetricCard({
           )}
         </div>
 
-        {/* Progress ring for active jobs */}
-        {progress && (
+        {progress && progress.total > 0 && (
           <div className="flex items-center gap-3 mt-3">
             <div className="relative w-12 h-12">
               <svg className="w-12 h-12 transform -rotate-90">
@@ -144,58 +138,50 @@ function MetricCard({
   );
 }
 
-export function AnalyticsMetricCards() {
+interface AnalyticsMetricCardsProps {
+  totalJobs?: number;
+  totalSpent?: string;
+  activeJobs?: number;
+  avgPrice?: string;
+}
+
+export function AnalyticsMetricCards({ 
+  totalJobs = 0, 
+  totalSpent = '$0', 
+  activeJobs = 0, 
+  avgPrice = '$0' 
+}: AnalyticsMetricCardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {/* Total Jobs Created */}
       <MetricCard
         title="Total Jobs Created"
-        value={284}
+        value={totalJobs}
         icon={<Briefcase size={24} />}
-        trend={{
-          value: 12.5,
-          isUp: true
-        }}
         topBorderColor="var(--md-primary-500)"
       />
 
-      {/* Total Spent */}
       <MetricCard
         title="Total Spent"
-        value="$12,450"
+        value={totalSpent}
         icon={<DollarSign size={24} />}
-        trend={{
-          value: 8.2,
-          isUp: true
-        }}
         topBorderColor="var(--md-success)"
       />
 
-      {/* Active Jobs */}
       <MetricCard
         title="Active Jobs"
-        value={47}
+        value={activeJobs}
         icon={<CheckCircle size={24} />}
         progress={{
-          current: 47,
-          total: 284
-        }}
-        trend={{
-          value: 3.1,
-          isUp: false
+          current: activeJobs,
+          total: totalJobs
         }}
         topBorderColor="var(--md-warning)"
       />
 
-      {/* Avg. Time to Fill */}
       <MetricCard
-        title="Avg. Time to Fill"
-        value="2.4 days"
+        title="Avg. Job Price"
+        value={avgPrice}
         icon={<Clock size={24} />}
-        trend={{
-          value: 15.3,
-          isUp: false
-        }}
         topBorderColor="var(--md-info)"
       />
     </div>
