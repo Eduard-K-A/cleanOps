@@ -93,7 +93,7 @@ const adminItems: NavigationConfigItem[] = [
   },
   {
     id: 'review-queue',
-    label: 'Review Queue',
+    label: 'Dispute Queue',
     href: '/admin/review-queue',
   },
   {

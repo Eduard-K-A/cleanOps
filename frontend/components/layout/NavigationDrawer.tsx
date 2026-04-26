@@ -108,24 +108,24 @@ export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOp
 
     // Initial count
     supabaseClient
-      .from('jobs')
+      .from('job_reports')
       .select('id', { count: 'exact', head: true })
-      .eq('status', 'PENDING_REVIEW')
+      .eq('status', 'PENDING')
       .then(({ count }) => setReviewQueueCount(count ?? 0));
 
     // Realtime subscription
     const channel = supabaseClient
-      .channel('admin-review-queue-badge')
+      .channel('admin-dispute-queue-badge')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'jobs',
-        filter: 'status=eq.PENDING_REVIEW'
+        table: 'job_reports',
+        filter: 'status=eq.PENDING'
       }, async () => {
         const { count } = await supabaseClient
-          .from('jobs')
+          .from('job_reports')
           .select('id', { count: 'exact', head: true })
-          .eq('status', 'PENDING_REVIEW');
+          .eq('status', 'PENDING');
         setReviewQueueCount(count ?? 0);
       })
       .subscribe();

@@ -67,26 +67,25 @@ export default function LoginPage() {
 
       if (error) {
         toast.error(error.message ?? 'Sign in failed');
+        setLoading(false);
         return;
       }
 
-      // ── INSTANT REDIRECT ────────────────────────────────────────────────
-      // The JWT returned by Supabase contains user_metadata (set at sign-up).
-      // We don't need a DB round-trip to know where to send the user.
-      // ────────────────────────────────────────────────────────────────────
+      // ── ADMIN ONLY ENFORCEMENT ──────────────────────────────────────────
       const role = data.session?.user?.user_metadata?.role as string | undefined;
-      toast.success('Signed in!');
-      navigate(dashboardForRole(role));
-    } catch (err: unknown) {
-      // AbortError is a harmless Supabase SDK internal cleanup signal.
-      // The sign-in still succeeded — redirect anyway.
-      if (err instanceof Error && err.name === 'AbortError') {
-        toast.success('Signed in!');
-        navigate('/dashboard'); // safe fallback; authContext will correct role
+      
+      if (role !== 'admin') {
+        // Log them out immediately
+        await supabase.auth.signOut();
+        toast.error('Use the mobile app for customer/employee accounts.');
+        setLoading(false);
         return;
       }
+
+      toast.success('Admin access granted!');
+      navigate('/admin/dashboard');
+    } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Sign in failed');
-    } finally {
       setLoading(false);
     }
   }
@@ -107,25 +106,14 @@ export default function LoginPage() {
           flex-direction: column;
           justify-content: space-between;
           padding: var(--md-space-12) 48px;
-          background: linear-gradient(135deg, var(--blue-800) 0%, var(--blue-600) 60%, var(--blue-400) 100%);
+          background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
           overflow: hidden;
         }
         .login-panel-left::before {
           content: '';
           position: absolute;
           inset: 0;
-          background: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='30' cy='30' r='28' fill='none' stroke='rgba(255,255,255,0.05)' stroke-width='1'/%3E%3C/svg%3E") repeat;
-          pointer-events: none;
-        }
-        .login-panel-left::after {
-          content: '';
-          position: absolute;
-          bottom: -140px;
-          right: -100px;
-          width: 440px;
-          height: 440px;
-          border-radius: 50%;
-          background: rgba(255,255,255,0.04);
+          background: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='30' cy='30' r='28' fill='none' stroke='rgba(255,255,255,0.03)' stroke-width='1'/%3E%3C/svg%3E") repeat;
           pointer-events: none;
         }
         .left-brand {
@@ -139,8 +127,8 @@ export default function LoginPage() {
         .left-brand-icon {
           width: 38px; height: 38px;
           border-radius: 10px;
-          background: rgba(255,255,255,0.18);
-          border: 1.5px solid rgba(255,255,255,0.28);
+          background: rgba(255,255,255,0.1);
+          border: 1.5px solid rgba(255,255,255,0.2);
           display: flex; align-items: center; justify-content: center;
           backdrop-filter: blur(4px);
         }
@@ -156,7 +144,7 @@ export default function LoginPage() {
         }
         .left-eyebrow {
           font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
-          text-transform: uppercase; color: rgba(255,255,255,0.6);
+          text-transform: uppercase; color: rgba(255,255,255,0.5);
           margin-bottom: var(--md-space-4);
         }
         .left-headline {
@@ -166,36 +154,12 @@ export default function LoginPage() {
           color: #fff; letter-spacing: -0.5px;
           margin: 0 0 var(--md-space-6);
         }
-        .left-headline span { opacity: 0.7; font-weight: 300; }
         .left-body-text {
-          font-size: 14px; color: rgba(255,255,255,0.65);
+          font-size: 14px; color: rgba(255,255,255,0.6);
           line-height: 1.7; max-width: 340px;
           margin-bottom: var(--md-space-10);
         }
-        .left-stats { display: flex; align-items: center; gap: var(--md-space-6); }
-        .left-stat { display: flex; flex-direction: column; gap: 2px; }
-        .left-stat-num {
-          font-family: var(--md-font-display);
-          font-size: 22px; font-weight: 700; color: #fff; line-height: 1;
-        }
-        .left-stat-label { font-size: 11px; color: rgba(255,255,255,0.55); letter-spacing: 0.04em; }
-        .left-stat-divider { width: 1px; height: 34px; background: rgba(255,255,255,0.15); }
-        .left-footer { display: flex; align-items: center; gap: var(--md-space-3); position: relative; z-index: 1; }
-        .left-avatars { display: flex; }
-        .left-avatar {
-          width: 30px; height: 30px; border-radius: 50%;
-          border: 2px solid var(--blue-700);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 10px; font-weight: 700; color: #fff;
-          margin-left: -6px; background: var(--blue-500);
-        }
-        .left-avatar:first-child { margin-left: 0; }
-        .left-avatar-b { background: var(--blue-400); }
-        .left-avatar-c { background: rgba(255,255,255,0.2); }
-        .left-footer-text { font-size: 12px; color: rgba(255,255,255,0.55); }
-        .left-footer-text strong { color: rgba(255,255,255,0.85); font-weight: 600; }
-
-        /* Right form panel */
+        
         .login-panel-right {
           display: flex; flex-direction: column;
           align-items: center; justify-content: center;
@@ -215,18 +179,8 @@ export default function LoginPage() {
           letter-spacing: -0.3px; line-height: 1.15;
         }
         .login-form-sub { font-size: var(--md-text-body-md); color: var(--text-3); margin: 0; }
-        .login-form-sub a {
-          color: var(--blue-600); text-decoration: none; font-weight: 600;
-          transition: color var(--md-duration-short) var(--md-motion-standard);
-        }
-        .login-form-sub a:hover { color: var(--blue-700); text-decoration: underline; }
 
         .login-field { margin-bottom: var(--md-space-4); }
-        .login-field-row {
-          display: flex; align-items: center;
-          justify-content: space-between;
-          margin-bottom: var(--md-space-2);
-        }
         .login-label {
           display: block;
           font-size: 11px; font-weight: 600; color: var(--text-2);
@@ -241,13 +195,8 @@ export default function LoginPage() {
           border-radius: var(--r-md);
           color: var(--text-1); font-family: var(--font); font-size: 14px;
           padding: 0 46px 0 14px; outline: none;
-          transition: border-color var(--md-duration-short) var(--md-motion-standard),
-                      box-shadow var(--md-duration-short) var(--md-motion-standard),
-                      background var(--md-duration-short) var(--md-motion-standard);
           box-sizing: border-box;
         }
-        .login-input::placeholder { color: var(--text-3); }
-        .login-input:hover { border-color: var(--blue-200); }
         .login-input:focus {
           border-color: var(--blue-400); background: var(--surface);
           box-shadow: 0 0 0 3px rgba(33,150,243,0.12);
@@ -256,40 +205,22 @@ export default function LoginPage() {
           position: absolute; right: 13px; top: 50%;
           transform: translateY(-50%);
           color: var(--text-3); display: flex; align-items: center;
-          pointer-events: none;
         }
-        .login-input-icon.clickable {
-          pointer-events: auto; cursor: pointer;
-          transition: color var(--md-duration-short) var(--md-motion-standard);
-        }
-        .login-input-icon.clickable:hover { color: var(--blue-600); }
-        .login-forgot {
-          font-size: 12px; color: var(--text-3);
-          text-decoration: none; font-weight: 500;
-          transition: color var(--md-duration-short) var(--md-motion-standard);
-        }
-        .login-forgot:hover { color: var(--blue-600); }
 
         .login-submit {
           width: 100%; height: 46px;
-          background: var(--blue-600); border: none;
+          background: #0f172a; border: none;
           border-radius: var(--r-md);
           font-family: var(--font); font-size: 14px; font-weight: 700; color: #fff;
-          cursor: pointer; margin-top: var(--md-space-2);
-          box-shadow: 0 4px 14px rgba(25,118,210,0.35);
-          transition: background var(--md-duration-short) var(--md-motion-standard),
-                      box-shadow var(--md-duration-short) var(--md-motion-standard),
-                      transform var(--md-duration-short) var(--md-motion-emphasized);
+          cursor: pointer; margin-top: var(--md-space-4);
+          transition: background 0.2s;
           display: flex; align-items: center; justify-content: center;
-          gap: 8px; letter-spacing: -0.01em;
+          gap: 8px;
         }
-        .login-submit:hover:not(:disabled) {
-          background: var(--blue-700);
-          box-shadow: 0 6px 20px rgba(25,118,210,0.4);
-          transform: translateY(-1px);
-        }
-        .login-submit:active:not(:disabled) { transform: scale(0.99); }
+        .login-submit:hover:not(:disabled) { background: #1e293b; }
         .login-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        @keyframes login-spin { to { transform: rotate(360deg); } }
         .login-spinner {
           width: 16px; height: 16px;
           border: 2px solid rgba(255,255,255,0.3);
@@ -297,38 +228,6 @@ export default function LoginPage() {
           border-radius: 50%;
           animation: login-spin 0.65s linear infinite;
         }
-        @keyframes login-spin { to { transform: rotate(360deg); } }
-
-        .login-divider {
-          display: flex; align-items: center;
-          gap: var(--md-space-3); margin: var(--md-space-5) 0;
-        }
-        .login-divider-line { flex: 1; height: 1px; background: var(--divider); }
-        .login-divider-text { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--text-3); }
-
-        .login-oauth {
-          width: 100%; height: 46px;
-          background: var(--surface); border: 1.5px solid var(--divider);
-          border-radius: var(--r-md);
-          font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--text-2);
-          cursor: pointer;
-          display: flex; align-items: center; justify-content: center; gap: 10px;
-          box-shadow: var(--e1);
-          transition: border-color var(--md-duration-short) var(--md-motion-standard),
-                      box-shadow var(--md-duration-short) var(--md-motion-standard),
-                      color var(--md-duration-short);
-        }
-        .login-oauth:hover { border-color: var(--blue-200); box-shadow: var(--e2); color: var(--text-1); }
-
-        .login-signup-nudge {
-          margin-top: var(--md-space-6); text-align: center;
-          font-size: 13px; color: var(--text-3);
-        }
-        .login-signup-nudge a {
-          color: var(--blue-600); text-decoration: none; font-weight: 600;
-          transition: color var(--md-duration-short);
-        }
-        .login-signup-nudge a:hover { color: var(--blue-700); text-decoration: underline; }
 
         @media (max-width: 768px) {
           .login-shell { grid-template-columns: 1fr; }
@@ -338,7 +237,6 @@ export default function LoginPage() {
       `}</style>
 
       <div className="login-shell">
-        {/* Left panel */}
         <div className="login-panel-left">
           <Link href="/homepage" className="left-brand">
             <div className="left-brand-icon">
@@ -351,63 +249,35 @@ export default function LoginPage() {
           </Link>
 
           <div className="left-content">
-            <p className="left-eyebrow">Professional cleaning</p>
+            <p className="left-eyebrow">Administration Portal</p>
             <h1 className="left-headline">
-              Your space,<br />
-              <span>spotless</span> every time.
+              Management &<br />
+              <span>Oversight</span>
             </h1>
             <p className="left-body-text">
-              Book vetted cleaners, track jobs in real time, and approve work before you pay — all from one dashboard.
+              Secure access for CleanOps administrators to manage operations, resolve disputes, and oversee platform growth.
             </p>
-            <div className="left-stats">
-              <div className="left-stat">
-                <span className="left-stat-num">4.9★</span>
-                <span className="left-stat-label">Avg. rating</span>
-              </div>
-              <div className="left-stat-divider" />
-              <div className="left-stat">
-                <span className="left-stat-num">2k+</span>
-                <span className="left-stat-label">Jobs done</span>
-              </div>
-              <div className="left-stat-divider" />
-              <div className="left-stat">
-                <span className="left-stat-num">98%</span>
-                <span className="left-stat-label">Satisfaction</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="left-footer">
-            <div className="left-avatars">
-              <div className="left-avatar">JR</div>
-              <div className="left-avatar left-avatar-b">ML</div>
-              <div className="left-avatar left-avatar-c">AK</div>
-            </div>
-            <p className="left-footer-text">Trusted by <strong>2,000+</strong> households</p>
           </div>
         </div>
 
-        {/* Right form panel */}
         <div className="login-panel-right">
           <div className="login-form-wrap">
             <div className="login-form-header">
-              <h2 className="login-form-title">Welcome back</h2>
+              <h2 className="login-form-title">Admin Login</h2>
               <p className="login-form-sub">
-                No account yet?{' '}
-                <Link href="/signup">Create one free</Link>
+                Enterprise management console
               </p>
             </div>
 
             <form onSubmit={handleSubmit}>
               <div className="login-field">
-                <label className="login-label" htmlFor="email">Email</label>
+                <label className="login-label" htmlFor="email">Admin Email</label>
                 <div className="login-input-wrap">
                   <input
                     id="email"
                     className="login-input"
                     type="email"
-                    autoComplete="email"
-                    placeholder="you@example.com"
+                    placeholder="admin@cleanops.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
@@ -421,20 +291,12 @@ export default function LoginPage() {
               </div>
 
               <div className="login-field">
-                <div className="login-field-row">
-                  <label className="login-label" htmlFor="password" style={{ marginBottom: 0 }}>
-                    Password
-                  </label>
-                  <Link href="/forgot-password" className="login-forgot">
-                    Forgot password?
-                  </Link>
-                </div>
+                <label className="login-label" htmlFor="password">Password</label>
                 <div className="login-input-wrap">
                   <input
                     id="password"
                     className="login-input"
                     type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -442,18 +304,16 @@ export default function LoginPage() {
                   <span
                     className="login-input-icon clickable"
                     onClick={() => setShowPassword(!showPassword)}
-                    role="button"
-                    aria-label="Toggle password visibility"
+                    style={{ pointerEvents: 'auto', cursor: 'pointer' }}
                   >
                     {showPassword ? (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor" strokeWidth="1.6"/>
-                        <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6"/>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                        <circle cx="12" cy="12" r="3" />
                       </svg>
                     ) : (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24M1 1l22 22"
-                          stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                        <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24M1 1l22 22" strokeLinecap="round"/>
                       </svg>
                     )}
                   </span>
@@ -461,38 +321,9 @@ export default function LoginPage() {
               </div>
 
               <button type="submit" className="login-submit" disabled={loading}>
-                {loading ? (
-                  <><div className="login-spinner" />Signing in…</>
-                ) : (
-                  <>
-                    Sign in
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </>
-                )}
+                {loading ? <div className="login-spinner" /> : 'Enter Portal'}
               </button>
             </form>
-
-            <div className="login-divider">
-              <div className="login-divider-line" />
-              <span className="login-divider-text">OR</span>
-              <div className="login-divider-line" />
-            </div>
-
-            <button type="button" className="login-oauth">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M15.68 8.18c0-.57-.05-1.11-.14-1.64H8v3.1h4.31a3.68 3.68 0 01-1.6 2.42v2h2.59c1.52-1.4 2.4-3.46 2.4-5.88z" fill="#4285F4"/>
-                <path d="M8 16c2.16 0 3.97-.72 5.3-1.94l-2.59-2a4.8 4.8 0 01-7.15-2.52H.96v2.07A8 8 0 008 16z" fill="#34A853"/>
-                <path d="M3.56 9.54A4.8 4.8 0 013.32 8c0-.53.09-1.05.24-1.54V4.39H.96A8 8 0 000 8c0 1.29.31 2.51.96 3.61l2.6-2.07z" fill="#FBBC05"/>
-                <path d="M8 3.18c1.22 0 2.31.42 3.17 1.24l2.37-2.37A8 8 0 00.96 4.39l2.6 2.07A4.77 4.77 0 018 3.18z" fill="#EA4335"/>
-              </svg>
-              Continue with Google
-            </button>
-
-            <p className="login-signup-nudge">
-              Don&apos;t have an account? <Link href="/signup">Sign up free</Link>
-            </p>
           </div>
         </div>
       </div>

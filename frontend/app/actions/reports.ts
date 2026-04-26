@@ -106,7 +106,7 @@ export async function getJobReports(jobId?: string) {
     .from('job_reports')
     .select(`
       *,
-      job:jobs(id, status, location_address),
+      job:jobs(id, status, location_address, price_amount, tasks, worker_id, created_at, updated_at),
       reporter:profiles!reporter_id(id, full_name)
     `)
     .order('created_at', { ascending: false })
