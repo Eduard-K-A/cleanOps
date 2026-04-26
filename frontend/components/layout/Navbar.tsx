@@ -140,31 +140,35 @@ export default function Navbar() {
           <span className="pub-nav-brand-name">CleanOps</span>
         </Link>
 
-        {/* Nav links */}
-        <nav className="pub-nav-links">
-          {links.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`pub-nav-link${pathname === href ? ' active' : ''}`}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
+        {/* Nav links - only show if logged in */}
+        {mounted && isLoggedIn && (
+          <nav className="pub-nav-links">
+            {links.map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className={`pub-nav-link${pathname === href ? ' active' : ''}`}
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+        )}
 
         <div className="pub-nav-spacer" />
 
         {/* Right action */}
-        {mounted && isLoggedIn ? (
-          <UserProfileButton />
-        ) : (
-          <Link href="/login" className="pub-nav-signin">
-            Sign in
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </Link>
+        {mounted && (
+          isLoggedIn ? (
+            <UserProfileButton />
+          ) : (
+            <Link href="/login" className="pub-nav-signin">
+              Sign in
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </Link>
+          )
         )}
       </header>
 
