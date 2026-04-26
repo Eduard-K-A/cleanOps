@@ -13,6 +13,7 @@ import { Sun, Cloud, CloudRain } from 'lucide-react';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { getCustomerJobs } from '@/app/actions/jobs';
 import { Job } from '@/types';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -101,71 +102,73 @@ export default function Dashboard() {
   }, [jobs]);
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ fontFamily: 'var(--md-font-body)' }}>
-      <NavigationDrawer isMobileOpen={isMobileMenuOpen} setIsMobileOpen={setIsMobileMenuOpen} />
+    <ProtectedRoute requiredRole="customer">
+      <div className="flex h-screen overflow-hidden" style={{ fontFamily: 'var(--md-font-body)' }}>
+        <NavigationDrawer isMobileOpen={isMobileMenuOpen} setIsMobileOpen={setIsMobileMenuOpen} />
 
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
+        {isMobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
 
-      <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
-        <TopAppBar 
-          onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          title="Dashboard"
-          showSearch={false}
-        />
+        <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
+          <TopAppBar 
+            onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            title="Dashboard"
+            showSearch={false}
+          />
 
-        <main 
-          className="flex-1 overflow-auto p-6"
-          style={{ 
-            backgroundColor: 'var(--md-background)',
-            padding: 'var(--md-space-6)'
-          }}
-        >
-          <div className="max-w-7xl mx-auto space-y-6">
-            <div className="bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 rounded-2xl p-8 shadow-lg text-white overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20" />
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full -ml-16 -mb-16" />
-              
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-2">
-                  <greeting.icon className="w-8 h-8" />
-                  <span className="text-lg font-semibold text-blue-100">{greeting.text}</span>
+          <main 
+            className="flex-1 overflow-auto p-6"
+            style={{ 
+              backgroundColor: 'var(--md-background)',
+              padding: 'var(--md-space-6)'
+            }}
+          >
+            <div className="max-w-7xl mx-auto space-y-6">
+              <div className="bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 rounded-2xl p-8 shadow-lg text-white overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20" />
+                <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full -ml-16 -mb-16" />
+                
+                <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-2">
+                    <greeting.icon className="w-8 h-8" />
+                    <span className="text-lg font-semibold text-blue-100">{greeting.text}</span>
+                  </div>
+                  <h1 className="text-5xl md:text-7xl font-bold mb-2 leading-tight">
+                    Welcome back,{' '}
+                    <span className="text-blue-200 block md:inline text-6xl md:text-8xl font-extrabold">
+                      {firstWord}
+                    </span>
+                    !
+                  </h1>
+                  <p className="text-blue-100 text-lg">
+                    {currentDate ? `Today is ${currentDate}` : 'Loading date...'}
+                  </p>
                 </div>
-                <h1 className="text-5xl md:text-7xl font-bold mb-2 leading-tight">
-                  Welcome back,{' '}
-                  <span className="text-blue-200 block md:inline text-6xl md:text-8xl font-extrabold">
-                    {firstWord}
-                  </span>
-                  !
-                </h1>
-                <p className="text-blue-100 text-lg">
-                  {currentDate ? `Today is ${currentDate}` : 'Loading date...'}
-                </p>
               </div>
+
+              <AnalyticsMetricCards 
+                totalJobs={metrics.totalJobs}
+                totalSpent={metrics.totalSpent}
+                activeJobs={metrics.activeJobs}
+                avgPrice={metrics.avgPrice}
+              />
+
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <JobsCreatedChart data={chartData} />
+                <SpendingBreakdownChart data={chartData.map(d => ({ week: d.month, revenue: d.revenue }))} />
+              </div>
+
+              <QuickStatsRow jobs={jobs} />
+
+              <RecentActivityFeed jobs={jobs.slice(0, 10)} />
             </div>
-
-            <AnalyticsMetricCards 
-              totalJobs={metrics.totalJobs}
-              totalSpent={metrics.totalSpent}
-              activeJobs={metrics.activeJobs}
-              avgPrice={metrics.avgPrice}
-            />
-
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <JobsCreatedChart data={chartData} />
-              <SpendingBreakdownChart data={chartData.map(d => ({ week: d.month, revenue: d.revenue }))} />
-            </div>
-
-            <QuickStatsRow jobs={jobs} />
-
-            <RecentActivityFeed jobs={jobs.slice(0, 10)} />
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }
