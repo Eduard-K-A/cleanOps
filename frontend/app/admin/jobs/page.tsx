@@ -222,19 +222,19 @@ function AdminJobsContent() {
               
               {/* Table */}
               <div className="bg-white rounded-xl shadow-[var(--md-elevation-1)] border border-slate-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse table-fixed">
+                <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+                  <table className="min-w-[1100px] w-full text-left border-collapse table-fixed">
                     <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
                       <tr>
-                        <th className="p-4 w-12"></th>
-                        <th className="p-4 w-28 text-xs font-semibold text-slate-500 uppercase tracking-wider">Job ID</th>
-                        <th className="p-4 w-44 text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
-                        <th className="p-4 w-44 text-xs font-semibold text-slate-500 uppercase tracking-wider">Worker</th>
-                        <th className="p-4 w-36 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                        <th className="p-4 w-28 text-xs font-semibold text-slate-500 uppercase tracking-wider">Urgency</th>
-                        <th className="p-4 w-28 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Price</th>
-                        <th className="p-4 w-32 text-xs font-semibold text-slate-500 uppercase tracking-wider">Age</th>
-                        <th className="p-4 w-48 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                        <th className="p-4 w-[48px]"></th>
+                        <th className="p-4 w-[120px] text-xs font-semibold text-slate-500 uppercase tracking-wider">Job ID</th>
+                        <th className="p-4 w-[170px] text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
+                        <th className="p-4 w-[170px] text-xs font-semibold text-slate-500 uppercase tracking-wider">Worker</th>
+                        <th className="p-4 w-[150px] text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                        <th className="p-4 w-[120px] text-xs font-semibold text-slate-500 uppercase tracking-wider">Urgency</th>
+                        <th className="p-4 w-[110px] text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Price</th>
+                        <th className="p-4 w-[130px] text-xs font-semibold text-slate-500 uppercase tracking-wider">Age</th>
+                        <th className="p-4 w-[180px] text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">

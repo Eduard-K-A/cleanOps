@@ -260,14 +260,6 @@ export default function AdminUsersPage() {
                                 </td>
                                 <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
                                   <div className="flex items-center justify-end gap-2">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-8 px-2 text-[10px] font-bold uppercase tracking-wider text-green-700 border-green-200 hover:bg-green-50"
-                                      onClick={() => setBalanceModalUser(user)}
-                                    >
-                                      Deposit 
-                                    </Button>
                                     <select
                                       className="h-8 px-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                                       value={user.role}
