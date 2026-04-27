@@ -49,6 +49,16 @@ export default function EmployeeDashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { navigate, warmupRoutes } = useOptimizedNavigation();
 
+  // Fetch platform configuration for dynamic fee
+  const { data: config } = useAsyncData<Record<string, string>>({
+    fetchFn: () => import('@/app/actions/admin').then(m => m.getPlatformConfigPublic()),
+    defaultValue: { platform_fee_pct: '15' },
+    errorMessage: 'Failed to load platform settings',
+  });
+
+  const platformFeePct = parseInt(config['platform_fee_pct'] || '15');
+  const workerShare = (100 - platformFeePct) / 100;
+
   const { data: myJobs, loading } = useAsyncData<Job[]>({
     fetchFn: () => api.getEmployeeJobs(),
     defaultValue: [],
@@ -71,8 +81,8 @@ export default function EmployeeDashboardPage() {
 
   // Calculate comprehensive analytics
   const analytics = useMemo(() => {
-    // Total earnings: 85% of completed job prices
-    const totalEarnings = completedJobs.reduce((sum, job) => sum + Math.round(job.price_amount * 0.85), 0);
+    // Total earnings: dynamic worker share of completed job prices
+    const totalEarnings = completedJobs.reduce((sum, job) => sum + (job.price_amount * workerShare), 0);
     
     // Average job price
     const avgJobPrice = allJobs.length > 0 
@@ -89,7 +99,7 @@ export default function EmployeeDashboardPage() {
     
     // Average earnings per job
     const avgEarningsPerJob = completedJobs.length > 0 
-      ? Math.round(totalEarnings / completedJobs.length) 
+      ? totalEarnings / completedJobs.length 
       : 0;
 
     // Generate earnings trend data (mock)
@@ -122,7 +132,7 @@ export default function EmployeeDashboardPage() {
       jobStatusBreakdown,
       balance: profile?.money_balance || 0
     };
-  }, [completedJobs, activeJobs, pendingReviewJobs, allJobs, profile?.money_balance]);
+  }, [completedJobs, activeJobs, pendingReviewJobs, allJobs, profile?.money_balance, workerShare]);
 
   return (
     <ProtectedRoute requiredRole="employee" redirectTo="/customer/dashboard">
@@ -173,7 +183,7 @@ export default function EmployeeDashboardPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-3xl font-bold text-emerald-900">${analytics.totalEarnings.toFixed(2)}</div>
-                    <p className="text-xs text-emerald-700 mt-1">85% of job prices (after 15% platform fee)</p>
+                    <p className="text-xs text-emerald-700 mt-1">{(100 - platformFeePct)}% of job prices (after {platformFeePct}% platform fee)</p>
                   </CardContent>
                 </Card>
 
@@ -305,7 +315,7 @@ export default function EmployeeDashboardPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">${analytics.avgEarningsPerJob.toFixed(2)}</div>
-                    <p className="text-xs text-slate-500 mt-1">Your 85% share per job</p>
+                    <p className="text-xs text-slate-500 mt-1">Your {(100 - platformFeePct)}% share per job</p>
                   </CardContent>
                 </Card>
 
