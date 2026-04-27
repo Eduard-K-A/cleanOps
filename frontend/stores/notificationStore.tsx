@@ -262,8 +262,8 @@ export function getNotificationDescription(notification: Notification): string {
         : `$${displayAmount} has been added to your balance.`;
     case 'job_claimed': return `Your job has been claimed by a professional.`;
     case 'job_completed': return `Cleaning job has been marked as completed.`;
-    case 'payout_received': return `You received a payout of $${payload.amount}.`;
-    case 'payout_sent': return `Payment of $${payload.amount} has been released.`;
+    case 'payout_received': return `You received a payout of $${payload.amount} (after $${payload.platform_fee || 0} platform fee).`;
+    case 'payout_sent': return `Payment of $${payload.amount} has been released to the professional. Platform fee: $${payload.platform_fee || 0}.`;
     case 'MESSAGE_RECEIVED': return `You have a new message regarding a job.`;
     case 'JOB_REPORTED': return `A new issue has been reported: ${payload.reason}`;
     case 'new_job_nearby': return `A new cleaning job is available in your area!`;

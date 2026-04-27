@@ -20,7 +20,7 @@ export default function AdminSettingsPage() {
 
   // Form States Form
   const [fee, setFee] = useState(15);
-  const [maxJobs, setMaxJobs] = useState(2);
+  const [maxJobs, setMaxJobs] = useState(4);
   const [maintenance, setMaintenance] = useState(false);
 
   const { refetch } = useAsyncData({
@@ -146,7 +146,7 @@ export default function AdminSettingsPage() {
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-2">Max Active Jobs Per Customer</label>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">Max Active Bookings Per Customer</label>
                       <div className="flex items-center gap-1">
                         <button onClick={() => setMaxJobs(Math.max(1, maxJobs - 1))} className="w-10 h-10 border border-slate-300 rounded flex items-center justify-center bg-slate-50 hover:bg-slate-100 font-medium text-slate-600 focus:outline-none">-</button>
                         <input 

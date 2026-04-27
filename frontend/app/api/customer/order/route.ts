@@ -35,6 +35,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { getPlatformConfigInternal } = await import('@/app/actions/admin');
+    const config = await getPlatformConfigInternal();
+    const feePct = parseInt(config['platform_fee_pct'] || '15');
+
     const jobData = {
       title: `Cleaning Job - ${body.tasks.map(t => t.name).join(', ')}`,
       tasks: body.tasks.map(t => t.name),
@@ -42,7 +46,7 @@ export async function POST(request: NextRequest) {
       address: body.address,
       distance: body.distance,
       price: body.price_amount,
-      platformFee: Math.round(body.price_amount * 0.15),
+      platformFee: Math.round(body.price_amount * (feePct / 100)),
     };
 
     console.log('Calling createJob with data:', jobData);
