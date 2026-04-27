@@ -357,9 +357,13 @@ export async function getTopEmployees(limit: number) {
 
   if (!employees || !jobs) return [];
 
+  const config = await getPlatformConfigInternal();
+  const feePct = parseInt(config['platform_fee_pct'] || '15');
+  const workerShare = (100 - feePct) / 100;
+
   const stats = (employees as any[]).map((emp) => {
     const wJobs = (jobs as any[]).filter((j) => j.worker_id === emp.id);
-    const totalEarned = wJobs.reduce((sum, j) => sum + (Number(j.price_amount || 0) * 0.85), 0);
+    const totalEarned = wJobs.reduce((sum, j) => sum + (Number(j.price_amount || 0) * workerShare), 0);
     return { id: emp.id, full_name: emp.full_name, completedJobs: wJobs.length, totalEarned };
   });
 
@@ -428,6 +432,42 @@ export async function getKpiTrend(days: number) {
   };
 }
 
+/**
+ * Internal version of getPlatformConfig that doesn't require admin verification.
+ * To be used only by other server actions.
+ */
+export async function getPlatformConfigInternal() {
+  const supabase = await createClient();
+  const { data, error } = await (supabase as any).from('platform_config').select('*');
+  if (error) {
+    console.error('Error fetching platform config:', error);
+    return {};
+  }
+  
+  return (data || []).reduce((acc: Record<string, string>, row: any) => {
+    acc[row.key] = row.value;
+    return acc;
+  }, {});
+}
+
+/**
+ * Public version of getPlatformConfig that only returns safe keys.
+ */
+export async function getPlatformConfigPublic() {
+  const config = await getPlatformConfigInternal();
+  // Only expose safe keys
+  const safeKeys = ['platform_fee_pct', 'maintenance_mode', 'max_active_jobs'];
+  const publicConfig: Record<string, string> = {};
+  
+  safeKeys.forEach(key => {
+    if (config[key] !== undefined) {
+      publicConfig[key] = config[key];
+    }
+  });
+  
+  return publicConfig;
+}
+
 export async function getPlatformConfig() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -436,13 +476,7 @@ export async function getPlatformConfig() {
   if (!user) return {};
   await verifyAdmin(supabase, user.id);
 
-  const { data, error } = await (supabase as any).from('platform_config').select('*');
-  if (error) throw error;
-  
-  return (data || []).reduce((acc: Record<string, string>, row: any) => {
-    acc[row.key] = row.value;
-    return acc;
-  }, {});
+  return getPlatformConfigInternal();
 }
 
 export async function upsertPlatformConfig(key: string, value: string) {

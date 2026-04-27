@@ -1,7 +1,7 @@
 'use server'
 import { createClient } from '@/lib/supabase/server'
 import { JobStatus } from '@/types'
-import { verifyAdmin } from '@/app/actions/admin'
+import { verifyAdmin, getPlatformConfigInternal } from '@/app/actions/admin'
 
 async function releaseEscrowAndCompleteJob(supabase: any, jobId: string) {
   const { data: job, error: jobError } = await (supabase as any)
@@ -24,7 +24,10 @@ async function releaseEscrowAndCompleteJob(supabase: any, jobId: string) {
     throw new Error('Cancelled jobs cannot be completed')
   }
 
-  const platformFee = Math.round(Number(job.price_amount) * 0.15)
+  // Fetch dynamic platform fee
+  const config = await getPlatformConfigInternal();
+  const feePct = parseInt(config['platform_fee_pct'] || '15');
+  const platformFee = Math.round(Number(job.price_amount) * (feePct / 100));
 
   const { error: escrowError } = await (supabase as any).rpc('release_escrow', {
     p_job_id: jobId,
