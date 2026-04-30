@@ -16,10 +16,10 @@ export async function submitJobReport(data: ReportData) {
     throw new Error('Unauthorized')
   }
 
-  // Verify the user is the customer who owns the job
+  // Verify the user is involved in the job
   const { data: job, error: jobError } = await (supabase as any)
     .from('jobs')
-    .select('customer_id, status')
+    .select('customer_id, worker_id, status')
     .eq('id', data.jobId)
     .single()
 
@@ -27,31 +27,38 @@ export async function submitJobReport(data: ReportData) {
     throw new Error('Job not found')
   }
 
-  if (job.customer_id !== user.id) {
-    throw new Error('You can only report jobs that you created')
+  const isCustomer = job.customer_id === user.id;
+  const isWorker = job.worker_id === user.id;
+
+  if (!isCustomer && !isWorker) {
+    throw new Error('You can only report jobs you are involved in')
   }
 
-  // Only allow reports for IN_PROGRESS or PENDING_REVIEW jobs
-  if (job.status !== 'IN_PROGRESS' && job.status !== 'PENDING_REVIEW') {
-    throw new Error('Can only report jobs that are in progress or pending review')
+  // Only allow reports for certain job states
+  if (job.status === 'CANCELLED' || job.status === 'COMPLETED') {
+    // We might still allow reports for completed jobs to handle disputes after the fact
   }
 
-  // Create the report
-  const { error: reportError } = await (supabase as any)
-    .from('job_reports')
+  // Determine who is being reported
+  const reportedId = isCustomer ? job.worker_id : job.customer_id;
+
+  // Create the dispute
+  const { error: disputeError } = await (supabase as any)
+    .from('disputes')
     .insert([
       {
         job_id: data.jobId,
         reporter_id: user.id,
+        reported_id: reportedId,
         reason: data.reason,
-        details: data.details || null,
-        status: 'PENDING', // PENDING, INVESTIGATING, RESOLVED, DISMISSED
+        description: data.details || '',
+        status: 'OPEN', // OPEN, RESOLVED, DISMISSED
       },
     ])
 
-  if (reportError) {
-    console.error('Report submission error:', reportError)
-    throw new Error('Failed to submit report')
+  if (disputeError) {
+    console.error('Dispute submission error:', disputeError)
+    throw new Error('Failed to submit dispute')
   }
 
   // Create notifications for all admins
@@ -78,7 +85,6 @@ export async function submitJobReport(data: ReportData) {
 
     if (notificationError) {
       console.error('Admin notification error:', notificationError)
-      // Don't throw here - the report was still created
     }
   }
 
@@ -103,11 +109,12 @@ export async function getJobReports(jobId?: string) {
   const isAdmin = profile?.role === 'admin'
 
   let query = (supabase as any)
-    .from('job_reports')
+    .from('disputes')
     .select(`
       *,
       job:jobs(id, status, location_address, price_amount, tasks, worker_id, created_at, updated_at),
-      reporter:profiles!reporter_id(id, full_name)
+      reporter:profiles!reporter_id(id, full_name),
+      reported:profiles!reported_id(id, full_name)
     `)
     .order('created_at', { ascending: false })
 
@@ -123,14 +130,14 @@ export async function getJobReports(jobId?: string) {
   const { data, error } = await query
 
   if (error) {
-    console.error('Error fetching reports:', error)
-    throw new Error('Failed to fetch reports')
+    console.error('Error fetching disputes:', error)
+    throw new Error('Failed to fetch disputes')
   }
 
   return data || []
 }
 
-export async function updateReportStatus(reportId: string, status: 'PENDING' | 'INVESTIGATING' | 'RESOLVED' | 'DISMISSED') {
+export async function updateReportStatus(reportId: string, status: 'OPEN' | 'RESOLVED' | 'DISMISSED') {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
@@ -150,16 +157,16 @@ export async function updateReportStatus(reportId: string, status: 'PENDING' | '
   }
 
   const { error } = await (supabase as any)
-    .from('job_reports')
+    .from('disputes')
     .update({ 
       status,
-      updated_at: new Date().toISOString(),
+      // updated_at is handled by DB ideally, but we can set it if needed (not in schema)
     })
     .eq('id', reportId)
 
   if (error) {
-    console.error('Error updating report status:', error)
-    throw new Error('Failed to update report status')
+    console.error('Error updating dispute status:', error)
+    throw new Error('Failed to update dispute status')
   }
 
   return { success: true }

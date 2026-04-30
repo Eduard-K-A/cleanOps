@@ -132,10 +132,11 @@ export default function AdminAnalyticsPage() {
               </div>
 
               {/* KPI STATS ROW */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
                 {[
                   { label: 'Total Jobs', val: analytics.kpi.current.totalJobs, prev: analytics.kpi.previous.totalJobs, icon: <Briefcase className="w-5 h-5 text-blue-500" /> },
-                  { label: 'Total Revenue', val: `$${analytics.kpi.current.totalRevenue.toFixed(2)}`, prev: analytics.kpi.previous.totalRevenue, icon: <DollarSign className="w-5 h-5 text-green-500" />, isCurrency: true },
+                  { label: 'Total Revenue', val: `$${analytics.kpi.current.totalRevenue.toFixed(2)}`, prev: analytics.kpi.previous.totalRevenue, icon: <DollarSign className="w-5 h-5 text-blue-500" />, isCurrency: true },
+                  { label: 'Platform Earnings', val: `$${analytics.kpi.current.platformRevenue.toFixed(2)}`, prev: analytics.kpi.previous.platformRevenue, icon: <TrendingUp className="w-5 h-5 text-emerald-500" />, isCurrency: true },
                   { label: 'Active Employees', val: analytics.kpi.current.activeEmployees, prev: analytics.kpi.previous.activeEmployees, icon: <Users className="w-5 h-5 text-purple-500" /> },
                   { label: 'Pending Reviews', val: analytics.kpi.current.pendingReviews, prev: analytics.kpi.previous.pendingReviews, icon: <Clock className="w-5 h-5 text-orange-500" /> }
                 ].map((stat, i) => {
@@ -144,18 +145,17 @@ export default function AdminAnalyticsPage() {
                     stat.prev
                   );
                   return (
-                    <div key={i} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div key={i} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
                       <div className="flex items-center justify-between mb-4">
                         <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">{stat.icon}</div>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-slate-500 mb-1">{stat.label}</p>
-                        <h4 className="text-2xl font-bold text-slate-900">{stat.val}</h4>
+                        <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">{stat.label}</p>
+                        <h4 className="text-xl font-bold text-slate-900">{stat.val}</h4>
                       </div>
                       <div className="mt-4 flex items-center gap-1">
-                        {trend.isUp ? <TrendingUp className={`w-4 h-4 ${trend.color}`} /> : <TrendingDown className={`w-4 h-4 ${trend.color}`} />}
-                        <span className={`text-xs font-semibold ${trend.color}`}>{trend.percent}</span>
-                        <span className="text-xs text-slate-400 ml-1">vs {periodDays}d ago</span>
+                        {trend.isUp ? <TrendingUp className={`w-3.5 h-3.5 ${trend.color}`} /> : <TrendingDown className={`w-3.5 h-3.5 ${trend.color}`} />}
+                        <span className={`text-xs font-bold ${trend.color}`}>{trend.percent}</span>
                       </div>
                     </div>
                   );
@@ -228,8 +228,9 @@ export default function AdminAnalyticsPage() {
                             <p className="text-xs text-slate-500">{emp.completedJobs} jobs completed</p>
                           </div>
                         </div>
-                        <div className="text-right text-sm font-bold text-green-600">
-                          ${emp.totalEarned.toFixed(2)}
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-green-600">${emp.totalEarned.toFixed(2)}</p>
+                          <p className="text-[10px] text-slate-400 font-medium tracking-tight">Cut: ${emp.platformCut.toFixed(2)}</p>
                         </div>
                       </div>
                     ))}

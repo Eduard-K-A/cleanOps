@@ -97,7 +97,17 @@ export async function getAllJobsAdmin(filters: {
     throw error;
   }
 
-  return { success: true, data: { jobs: data || [], total: count || 0 } };
+  // Attach platform cut to each job
+  const config = await getPlatformConfigInternal();
+  const feePct = parseInt(config['platform_fee_pct'] || '15');
+  const platformShare = feePct / 100;
+
+  const jobsWithCut = (data || []).map((job: any) => ({
+    ...job,
+    platform_cut: Number(job.price_amount || 0) * platformShare
+  }));
+
+  return { success: true, data: { jobs: jobsWithCut, total: count || 0 } };
 }
 
 /**
@@ -360,11 +370,14 @@ export async function getTopEmployees(limit: number) {
   const config = await getPlatformConfigInternal();
   const feePct = parseInt(config['platform_fee_pct'] || '15');
   const workerShare = (100 - feePct) / 100;
+  const platformShare = feePct / 100;
 
   const stats = (employees as any[]).map((emp) => {
     const wJobs = (jobs as any[]).filter((j) => j.worker_id === emp.id);
-    const totalEarned = wJobs.reduce((sum, j) => sum + (Number(j.price_amount || 0) * workerShare), 0);
-    return { id: emp.id, full_name: emp.full_name, completedJobs: wJobs.length, totalEarned };
+    const grossTotal = wJobs.reduce((sum, j) => sum + Number(j.price_amount || 0), 0);
+    const totalEarned = grossTotal * workerShare;
+    const platformCut = grossTotal * platformShare;
+    return { id: emp.id, full_name: emp.full_name, completedJobs: wJobs.length, totalEarned, platformCut };
   });
 
   return stats.sort((a, b) => b.totalEarned - a.totalEarned).slice(0, limit);
@@ -397,8 +410,12 @@ export async function getKpiTrend(days: number) {
   const { data: { user } } = await supabase.auth.getUser();
   
   // Return empty KPI data if no user (can happen during logout)
-  if (!user) return { current: { totalJobs: 0, totalRevenue: 0, activeEmployees: 0, pendingReviews: 0 }, previous: { totalJobs: 0, totalRevenue: 0, activeEmployees: 0, pendingReviews: 0 } };
+  if (!user) return { current: { totalJobs: 0, totalRevenue: 0, platformRevenue: 0, activeEmployees: 0, pendingReviews: 0 }, previous: { totalJobs: 0, totalRevenue: 0, platformRevenue: 0, activeEmployees: 0, pendingReviews: 0 } };
   await verifyAdmin(supabase, user.id);
+
+  const config = await getPlatformConfigInternal();
+  const feePct = parseInt(config['platform_fee_pct'] || '15');
+  const platformShare = feePct / 100;
 
   const now = new Date();
   
@@ -414,18 +431,21 @@ export async function getKpiTrend(days: number) {
   const { count: currentEmployees } = await (supabase as any).from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'employee');
 
   const calcRev = (arr: { status: string; price_amount: number }[]) => arr.filter(j => j.status === 'COMPLETED').reduce((sum, j) => sum + (Number(j.price_amount) || 0), 0);
+  const calcPlatformRev = (arr: { status: string; price_amount: number }[]) => arr.filter(j => j.status === 'COMPLETED').reduce((sum, j) => sum + (Number(j.price_amount) * platformShare), 0);
   const calcPen = (arr: { status: string }[]) => arr.filter(j => j.status === 'PENDING_REVIEW').length;
 
   return {
     current: {
       totalJobs: (currentJobs || []).length,
       totalRevenue: calcRev((currentJobs || []) as any),
+      platformRevenue: calcPlatformRev((currentJobs || []) as any),
       activeEmployees: currentEmployees || 0,
       pendingReviews: calcPen((currentJobs || []) as any)
     },
     previous: {
       totalJobs: (previousJobs || []).length,
       totalRevenue: calcRev((previousJobs || []) as any),
+      platformRevenue: calcPlatformRev((previousJobs || []) as any),
       activeEmployees: currentEmployees || 0, // Mocked previous employee count logic
       pendingReviews: calcPen((previousJobs || []) as any)
     }

@@ -290,7 +290,12 @@ function AdminJobsContent() {
                                   {job.urgency}
                                 </Badge>
                               </td>
-                              <td className="p-4 text-sm font-semibold text-slate-700 text-right">${Number(job.price_amount).toFixed(2)}</td>
+                              <td className="p-4 text-right">
+                                <div className="text-sm font-semibold text-slate-700">${Number(job.price_amount).toFixed(2)}</div>
+                                {job.status === 'COMPLETED' && job.platform_cut && (
+                                  <div className="text-[10px] text-emerald-600 font-medium tracking-tight">Cut: ${Number(job.platform_cut).toFixed(2)}</div>
+                                )}
+                              </td>
                               <td className="p-4 text-sm text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis">
                                 {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
                               </td>
