@@ -108,9 +108,9 @@ export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOp
 
     // Initial count
     supabaseClient
-      .from('job_reports')
+      .from('disputes')
       .select('id', { count: 'exact', head: true })
-      .eq('status', 'PENDING')
+      .eq('status', 'OPEN')
       .then(({ count }) => setReviewQueueCount(count ?? 0));
 
     // Realtime subscription
@@ -119,13 +119,13 @@ export function NavigationDrawer({ isMobileOpen, setIsMobileOpen }: { isMobileOp
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'job_reports',
-        filter: 'status=eq.PENDING'
+        table: 'disputes',
+        filter: 'status=eq.OPEN'
       }, async () => {
         const { count } = await supabaseClient
-          .from('job_reports')
+          .from('disputes')
           .select('id', { count: 'exact', head: true })
-          .eq('status', 'PENDING');
+          .eq('status', 'OPEN');
         setReviewQueueCount(count ?? 0);
       })
       .subscribe();

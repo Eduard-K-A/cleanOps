@@ -59,7 +59,7 @@ export default function ReviewQueuePage() {
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'job_reports'
+        table: 'disputes'
       }, () => {
         refetch();
       })
@@ -78,19 +78,19 @@ export default function ReviewQueuePage() {
         if (actionModal.reportId) {
           await updateReportStatus(actionModal.reportId, 'RESOLVED');
         }
-        toast.success(`Job approved and report marked as resolved.`);
+        toast.success(`Job approved and dispute marked as resolved.`);
       } else if (actionModal.type === 'CANCEL' && actionModal.jobId) {
         await adminUpdateJobStatus(actionModal.jobId, 'CANCELLED');
         if (actionModal.reportId) {
           await updateReportStatus(actionModal.reportId, 'RESOLVED');
         }
-        toast.success(`Job cancelled and report marked as resolved.`);
+        toast.success(`Job cancelled and dispute marked as resolved.`);
       } else if (actionModal.type === 'RESOLVE' && actionModal.reportId) {
         await updateReportStatus(actionModal.reportId, 'RESOLVED');
-        toast.success(`Report marked as resolved.`);
+        toast.success(`Dispute marked as resolved.`);
       } else if (actionModal.type === 'DISMISS' && actionModal.reportId) {
         await updateReportStatus(actionModal.reportId, 'DISMISSED');
-        toast.success(`Report dismissed.`);
+        toast.success(`Dispute dismissed.`);
       }
 
       invalidateAsyncDataCache(/^admin-(jobs|dashboard|analytics|review-queue)/);
@@ -106,8 +106,7 @@ export default function ReviewQueuePage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'PENDING': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'INVESTIGATING': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'OPEN': return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'RESOLVED': return 'bg-green-100 text-green-800 border-green-200';
       case 'DISMISSED': return 'bg-slate-100 text-slate-800 border-slate-200';
       default: return 'bg-slate-100 text-slate-800 border-slate-200';
@@ -120,12 +119,12 @@ export default function ReviewQueuePage() {
         <NavigationDrawer isMobileOpen={isMobileMenuOpen} setIsMobileOpen={setIsMobileMenuOpen} />
         
         <div className="flex-1 flex flex-col overflow-hidden">
-          <TopAppBar onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} title="Reported Issues" />
+          <TopAppBar onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} title="Dispute Queue" />
 
           <AdminFilterBar
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
-            searchPlaceholder="Search reports..."
+            searchPlaceholder="Search disputes..."
           >
             <div className="flex items-center gap-3">
                <button 
@@ -147,7 +146,7 @@ export default function ReviewQueuePage() {
                   Dispute Queue
                 </h2>
                 <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                  {reports?.filter((r: any) => r.status === 'PENDING').length || 0} New Reports
+                  {reports?.filter((r: any) => r.status === 'OPEN').length || 0} New Disputes
                 </Badge>
               </div>
 
@@ -156,9 +155,9 @@ export default function ReviewQueuePage() {
               ) : filteredReports.length === 0 ? (
                 <div className="flex flex-col items-center justify-center bg-white border border-slate-200 rounded-xl p-16 text-center shadow-sm">
                   <CheckCircle2 className="w-16 h-16 text-slate-200 mb-4" />
-                  <h3 className="text-lg font-bold text-slate-800 mb-2">No Reports Found</h3>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">No Disputes Found</h3>
                   <p className="text-slate-500 max-w-sm mx-auto">
-                    There are no reported job issues at the moment. All customers seem happy!
+                    There are no active disputes at the moment.
                   </p>
                 </div>
               ) : (
@@ -185,8 +184,12 @@ export default function ReviewQueuePage() {
                             <span className="line-clamp-2 leading-relaxed">{report.job?.location_address || 'Address not listed'}</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-slate-600">
-                            <User className="w-4 h-4 text-slate-400" />
-                            <span>Reporter: {report.reporter?.full_name || 'Unknown'}</span>
+                            <User className="w-4 h-4 text-blue-400" />
+                            <span>From: {report.reporter?.full_name || 'Unknown'}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <AlertCircle className="w-4 h-4 text-red-400" />
+                            <span>Against: {report.reported?.full_name || 'N/A'}</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-slate-600">
                             <Badge variant="secondary" className="bg-slate-100 text-slate-700 font-mono text-[10px]">
@@ -195,10 +198,10 @@ export default function ReviewQueuePage() {
                           </div>
                         </div>
 
-                        {report.details && (
+                        {report.description && (
                           <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
                             <p className="text-xs text-slate-600 line-clamp-2">
-                              "{report.details}"
+                              "{report.description}"
                             </p>
                           </div>
                         )}
@@ -230,7 +233,7 @@ export default function ReviewQueuePage() {
           title={
             <div className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-red-500" />
-              <span>Report Details</span>
+              <span>Dispute Details</span>
             </div>
           }
         >
@@ -246,6 +249,19 @@ export default function ReviewQueuePage() {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-slate-500 uppercase font-bold mb-2">Reporter</p>
+                <p className="text-sm font-medium text-slate-800">{selectedReport.reporter?.full_name || 'Unknown'}</p>
+                <p className="text-[10px] text-slate-500 font-mono truncate">{selectedReport.reporter_id}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 uppercase font-bold mb-2">Reported Party</p>
+                <p className="text-sm font-medium text-red-600">{selectedReport.reported?.full_name || 'N/A'}</p>
+                <p className="text-[10px] text-slate-500 font-mono truncate">{selectedReport.reported_id || 'None'}</p>
+              </div>
+            </div>
+
             <div>
               <p className="text-xs text-slate-500 uppercase font-bold mb-2">Issue Type</p>
               <p className="text-base font-semibold text-slate-800 capitalize">{selectedReport.reason.replace(/_/g, ' ')}</p>
@@ -254,7 +270,7 @@ export default function ReviewQueuePage() {
             <div>
               <p className="text-xs text-slate-500 uppercase font-bold mb-2">Description</p>
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 italic text-slate-700 leading-relaxed">
-                {selectedReport.details || 'No additional details provided.'}
+                {selectedReport.description || 'No additional details provided.'}
               </div>
             </div>
 
@@ -271,14 +287,14 @@ export default function ReviewQueuePage() {
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-slate-50">
                    <span className="text-sm font-bold text-slate-800">${Number(selectedReport.job?.price_amount).toFixed(2)}</span>
-                   <span className="text-xs text-slate-500">Worker ID: {selectedReport.job?.worker_id?.slice(0, 8) || 'N/A'}</span>
+                   <span className="text-xs text-slate-500">Job ID: {selectedReport.job_id.slice(0, 8)}</span>
                 </div>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-2 justify-end pt-4 border-t border-slate-100">
               <Button variant="outline" onClick={() => setActionModal({ type: 'DISMISS', reportId: selectedReport.id })}>
-                Dismiss Report
+                Dismiss Dispute
               </Button>
               <Button 
                 variant="outline" 
@@ -306,19 +322,19 @@ export default function ReviewQueuePage() {
         >
           <div className="p-4 space-y-4 text-sm text-slate-600">
             {actionModal.type === 'APPROVE' ? (
-              <p>Are you sure you want to approve this job? The report will be marked as resolved and funds will be released to the worker.</p>
+              <p>Are you sure you want to approve this job? The dispute will be marked as resolved and funds will be released to the worker.</p>
             ) : actionModal.type === 'CANCEL' ? (
               <div className="space-y-3">
                 <div className="bg-red-50 text-red-800 p-3 rounded flex gap-3 border border-red-200">
                   <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-600" />
-                  <p>Canceling this job will resolve the report, but <strong>you must manually reverse the Stripe/payment charges</strong> back to the customer.</p>
+                  <p>Canceling this job will resolve the dispute, but <strong>you must manually reverse the Stripe/payment charges</strong> back to the customer.</p>
                 </div>
                 <p>Confirm job cancellation?</p>
               </div>
             ) : actionModal.type === 'DISMISS' ? (
-              <p>Dismissing this report means no action will be taken. The job status will remain unchanged.</p>
+              <p>Dismissing this dispute means no action will be taken. The job status will remain unchanged.</p>
             ) : (
-              <p>Are you sure you want to mark this report as resolved?</p>
+              <p>Are you sure you want to mark this dispute as resolved?</p>
             )}
             
             <div className="flex gap-3 justify-end pt-4">
