@@ -6,7 +6,7 @@ import { verifyAdmin, getPlatformConfigInternal } from '@/app/actions/admin'
 async function releaseEscrowAndCompleteJob(supabase: any, jobId: string) {
   const { data: job, error: jobError } = await (supabase as any)
     .from('jobs')
-    .select('id, customer_id, worker_id, price_amount, status')
+    .select('id, customer_id, worker_id, price_amount, fee_amount, status')
     .eq('id', jobId)
     .single()
 
@@ -24,10 +24,8 @@ async function releaseEscrowAndCompleteJob(supabase: any, jobId: string) {
     throw new Error('Cancelled jobs cannot be completed')
   }
 
-  // Fetch dynamic platform fee
-  const config = await getPlatformConfigInternal();
-  const feePct = parseInt(config['platform_fee_pct'] || '15');
-  const platformFee = Math.round(Number(job.price_amount) * (feePct / 100));
+  // Use the fee_amount stored on the job (locked in at creation)
+  const platformFee = Number(job.fee_amount || 0);
 
   const { error: escrowError } = await (supabase as any).rpc('release_escrow', {
     p_job_id: jobId,
@@ -58,7 +56,7 @@ export async function createJob(jobData: {
   address: string
   distance: number
   price: number
-  platformFee: number
+  platformFee?: number // Optional now, we calculate it server-side
 }) {
   console.log('createJob server action called with:', jobData);
   
@@ -71,10 +69,26 @@ export async function createJob(jobData: {
 
   try {
     console.log('Starting job creation process...');
-    console.log('Using user address:', jobData.address, 'with distance:', jobData.distance);
 
-    // Hold escrow first - check balance
-    console.log('Checking user balance...');
+    // 1. Fetch platform configuration
+    const config = await getPlatformConfigInternal();
+    const maxActive = parseInt(config['max_active_jobs'] || '4');
+    const feePct = parseInt(config['platform_fee_pct'] || '15');
+
+    // 2. Check active jobs limit
+    const { count: activeCount, error: countError } = await (supabase as any)
+      .from('jobs')
+      .select('id', { count: 'exact', head: true })
+      .eq('customer_id', user.id)
+      .in('status', ['OPEN', 'IN_PROGRESS']);
+
+    if (countError) throw new Error('Failed to verify active job limit');
+
+    if (activeCount !== null && activeCount >= maxActive) {
+      throw new Error(`BOOKING_LIMIT_REACHED:${maxActive}`);
+    }
+
+    // 3. Check user balance
     const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('money_balance, full_name')
@@ -86,15 +100,14 @@ export async function createJob(jobData: {
       throw new Error('Failed to fetch profile')
     }
     
-    // Ensure price is a number and round it to avoid integer syntax errors in DB
     const jobPrice = Math.round(Number(jobData.price));
-    console.log('User balance:', profile.money_balance, 'Job price (rounded):', jobPrice)
+    const feeAmount = Math.round(jobPrice * (feePct / 100));
     
     if (profile.money_balance < jobPrice) {
       throw new Error(`Insufficient balance. Required: $${jobPrice.toFixed(2)}, Available: $${profile.money_balance.toFixed(2)}`)
     }
 
-    // Deduct from balance using dollars directly
+    // 4. Deduct balance
     const { error: updateError } = await (supabase as any)
       .from('profiles')
       .update({ 
@@ -109,18 +122,19 @@ export async function createJob(jobData: {
 
     const customerName = (profile as any).full_name;
 
-    // Create the job with dollars directly
-    console.log('Creating job in database...');
+    // 5. Create the job with locked-in fee data
     const { data, error } = await (supabase as any)
       .from('jobs')
       .insert([
         {
           customer_id: user.id,
           customer_name: customerName,
-          urgency: jobData.urgency, // Already uppercase (LOW, NORMAL, HIGH)
+          urgency: jobData.urgency,
           location_address: jobData.address,
           distance: jobData.distance,
           price_amount: jobPrice,
+          fee_pct: feePct,
+          fee_amount: feeAmount,
           status: 'OPEN',
           tasks: jobData.tasks,
         },
@@ -130,6 +144,8 @@ export async function createJob(jobData: {
 
     if (error) {
       console.error('Create job error:', error)
+      // Rollback balance if DB trigger fails (extra safety)
+      await (supabase as any).from('profiles').update({ money_balance: profile.money_balance }).eq('id', user.id);
       throw error
     }
 

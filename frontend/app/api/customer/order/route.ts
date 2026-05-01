@@ -59,9 +59,23 @@ export async function POST(request: NextRequest) {
         job: job, 
         transactionId: (job as any)?.id || ''
       } 
-    });  } catch (error: any) {
+    });  
+  } catch (error: any) {
     console.error('API route error:', error);
     console.error('Error message:', error.message);
+    
+    if (error.message && error.message.startsWith('BOOKING_LIMIT_REACHED:')) {
+      const limit = error.message.split(':')[1];
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `You've reached your limit of ${limit} active bookings. Please complete your current jobs before booking more.`, 
+          code: 400 
+        },
+        { status: 400 }
+      );
+    }
+
     console.error('Error stack:', error.stack);
     return NextResponse.json(
       { 

@@ -1,7 +1,17 @@
 -- Update check_active_jobs_limit to use dynamic limit from platform_config
 -- Also sets the default value in platform_config to 4
 
-UPDATE public.platform_config SET value = '4' WHERE key = 'max_active_jobs';
+-- Make it safe if this runs when it's still a key-value store
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'platform_config' AND column_name = 'key'
+  ) THEN
+    UPDATE public.platform_config SET value = '4' WHERE key = 'max_active_jobs';
+  END IF;
+END $$;
+
 
 CREATE OR REPLACE FUNCTION check_active_jobs_limit()
 RETURNS TRIGGER AS $$
@@ -10,9 +20,15 @@ DECLARE
   max_limit INTEGER;
 BEGIN
   -- Fetch max_active_jobs from platform_config, default to 4 if not set
-  SELECT COALESCE(value::INTEGER, 4) INTO max_limit 
-  FROM public.platform_config 
-  WHERE key = 'max_active_jobs';
+  -- It handles both the key-value approach or the singleton approach depending on what schema exists when called.
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'platform_config' AND column_name = 'max_active_jobs'
+  ) THEN
+    SELECT COALESCE(max_active_jobs, 4) INTO max_limit FROM public.platform_config WHERE id = 1;
+  ELSE
+    SELECT COALESCE((SELECT value::INTEGER FROM public.platform_config WHERE key = 'max_active_jobs'), 4) INTO max_limit;
+  END IF;
 
   IF NEW.status NOT IN ('OPEN', 'IN_PROGRESS') THEN
     RETURN NEW;

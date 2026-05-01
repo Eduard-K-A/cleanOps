@@ -246,6 +246,30 @@ export async function getUserActivity(userId: string) {
   };
 }
 
+export async function suspendUserAction(userId: string, durationDays: number | 'permanent') {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) throw new Error("Unauthorized");
+  await verifyAdmin(supabase, user.id);
+
+  const { createClient: createRawClient } = await import('@supabase/supabase-js');
+  const supabaseAdmin = createRawClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  if (durationDays === 'permanent') {
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      ban_duration: `${durationDays * 24}h`
+    });
+    if (error) throw error;
+  }
+}
+
 export async function adminAddMoney(userId: string, amount: number) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -458,16 +482,24 @@ export async function getKpiTrend(days: number) {
  */
 export async function getPlatformConfigInternal() {
   const supabase = await createClient();
-  const { data, error } = await (supabase as any).from('platform_config').select('*');
-  if (error) {
+  const { data, error } = await (supabase as any)
+    .from('platform_config')
+    .select('*')
+    .eq('id', 1)
+    .single();
+    
+  if (error && error.code !== 'PGRST116') {
     console.error('Error fetching platform config:', error);
     return {};
   }
   
-  return (data || []).reduce((acc: Record<string, string>, row: any) => {
-    acc[row.key] = row.value;
-    return acc;
-  }, {});
+  if (!data) return {};
+
+  return {
+    platform_fee_pct: String(data.platform_fee_pct),
+    max_active_jobs: String(data.max_active_jobs),
+    maintenance_mode: String(data.maintenance_mode)
+  };
 }
 
 /**
@@ -507,12 +539,21 @@ export async function upsertPlatformConfig(key: string, value: string) {
   if (!user) return;
   await verifyAdmin(supabase, user.id);
 
-  const { error } = await (supabase as any).from('platform_config').upsert({
-    key,
-    value,
+  // Convert string value back to the appropriate type for the column
+  let updateData: Record<string, any> = {
     updated_by: user.id,
     updated_at: new Date().toISOString()
-  }, { onConflict: 'key' });
+  };
+
+  if (key === 'platform_fee_pct') {
+    updateData.platform_fee_pct = parseInt(value);
+  } else if (key === 'max_active_jobs') {
+    updateData.max_active_jobs = parseInt(value);
+  } else if (key === 'maintenance_mode') {
+    updateData.maintenance_mode = value === 'true';
+  }
+
+  const { error } = await (supabase as any).from('platform_config').update(updateData).eq('id', 1);
 
   if (error) throw error;
 }

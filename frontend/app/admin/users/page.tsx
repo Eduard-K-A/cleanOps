@@ -6,7 +6,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { NavigationDrawer } from '@/components/layout/NavigationDrawer';
 import { TopAppBar } from '@/components/layout/TopAppBar';
 import { invalidateAsyncDataCache, useAsyncData } from '@/hooks/useAsyncData';
-import { getAllUsersAdmin, updateUserRole, getUserActivity, adminAddMoney } from '@/app/actions/admin';
+import { getAllUsersAdmin, updateUserRole, getUserActivity, adminAddMoney, suspendUserAction } from '@/app/actions/admin';
 import toast from 'react-hot-toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -56,6 +56,12 @@ export default function AdminUsersPage() {
   const [balanceModalUser, setBalanceModalUser] = useState<UserWithEmail | null>(null);
   const [balanceAmount, setBalanceAmount] = useState<string>('');
   const [isSubmittingBalance, setIsSubmittingBalance] = useState(false);
+
+  // Suspend state
+  const [suspendModalUser, setSuspendModalUser] = useState<UserWithEmail | null>(null);
+  const [suspendDuration, setSuspendDuration] = useState<string>('1');
+  const [customDays, setCustomDays] = useState<string>('');
+  const [isSubmittingSuspend, setIsSubmittingSuspend] = useState(false);
 
   const [page, setPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
@@ -138,6 +144,29 @@ export default function AdminUsersPage() {
       toast.error('Failed to add balance');
     } finally {
       setIsSubmittingBalance(false);
+    }
+  };
+
+  const handleSuspend = async () => {
+    if (!suspendModalUser) return;
+    setIsSubmittingSuspend(true);
+    try {
+      let duration: number | 'permanent' = 1;
+      if (suspendDuration === '1') duration = 1;
+      else if (suspendDuration === '7') duration = 7;
+      else if (suspendDuration === 'custom') duration = parseInt(customDays) || 1;
+      else if (suspendDuration === 'permanent') duration = 'permanent';
+
+      await suspendUserAction(suspendModalUser.id, duration);
+      toast.success(duration === 'permanent' ? 'Account permanently deleted' : `Account suspended for ${duration} days`);
+      setSuspendModalUser(null);
+      setSuspendDuration('1');
+      setCustomDays('');
+      await refetch();
+    } catch {
+      toast.error('Failed to apply suspension/deletion');
+    } finally {
+      setIsSubmittingSuspend(false);
     }
   };
 
@@ -260,19 +289,14 @@ export default function AdminUsersPage() {
                                 </td>
                                 <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
                                   <div className="flex items-center justify-end gap-2">
-                                    <select
-                                      className="h-8 px-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                      value={user.role}
-                                      onChange={(e) => {
-                                        if(window.confirm(`Change ${user.full_name}'s role to ${e.target.value}?`)) {
-                                          handleChangeRole(user.id, e.target.value);
-                                        }
-                                      }}
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      onClick={() => setSuspendModalUser(user)}
+                                      className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
                                     >
-                                      <option value="customer">Customer</option>
-                                      <option value="employee">Employee</option>
-                                      <option value="admin">Admin</option>
-                                    </select>
+                                      Suspend
+                                    </Button>
                                   </div>
                                 </td>
                               </tr>
@@ -423,6 +447,67 @@ export default function AdminUsersPage() {
             </Button>
             <Button variant="default" onClick={handleAddBalance} loading={isSubmittingBalance}>
               Add Funds
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={suspendModalUser !== null}
+        onClose={() => { setSuspendModalUser(null); setSuspendDuration('1'); setCustomDays(''); }}
+        title={`Suspend or Delete: ${suspendModalUser?.full_name || 'User'}`}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Choose a suspension duration or permanently delete the account.
+          </p>
+          <div className="space-y-3">
+            <label className="flex items-center gap-2">
+              <input type="radio" name="suspend" value="1" checked={suspendDuration === '1'} onChange={(e) => setSuspendDuration(e.target.value)} />
+              <span className="text-sm font-medium text-slate-700">1 Day</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="radio" name="suspend" value="7" checked={suspendDuration === '7'} onChange={(e) => setSuspendDuration(e.target.value)} />
+              <span className="text-sm font-medium text-slate-700">7 Days</span>
+            </label>
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2">
+                <input type="radio" name="suspend" value="custom" checked={suspendDuration === 'custom'} onChange={(e) => setSuspendDuration(e.target.value)} />
+                <span className="text-sm font-medium text-slate-700">Custom (Days)</span>
+              </label>
+              {suspendDuration === 'custom' && (
+                <div className="ml-6">
+                  <input 
+                    type="number" 
+                    min="1" 
+                    value={customDays} 
+                    onChange={(e) => setCustomDays(e.target.value)} 
+                    placeholder="Enter number of days" 
+                    className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500" 
+                  />
+                </div>
+              )}
+            </div>
+            
+            <div className="pt-3 border-t border-slate-200 mt-2">
+              <label className="flex items-center gap-2 text-red-600 font-medium">
+                <input type="radio" name="suspend" value="permanent" checked={suspendDuration === 'permanent'} onChange={(e) => setSuspendDuration(e.target.value)} />
+                <span className="text-sm">Permanent Deletion</span>
+              </label>
+            </div>
+          </div>
+          
+          <div className="pt-4 border-t border-slate-100 flex justify-end gap-3 mt-4">
+            <Button variant="outline" onClick={() => { setSuspendModalUser(null); setSuspendDuration('1'); setCustomDays(''); }} disabled={isSubmittingSuspend}>
+              Cancel
+            </Button>
+            <Button 
+              variant={suspendDuration === 'permanent' ? 'destructive' : 'default'} 
+              onClick={handleSuspend} 
+              loading={isSubmittingSuspend}
+              className={suspendDuration === 'permanent' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'}
+            >
+              {suspendDuration === 'permanent' ? 'Delete Account' : 'Confirm'}
             </Button>
           </div>
         </div>
