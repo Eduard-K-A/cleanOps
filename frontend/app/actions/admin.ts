@@ -506,7 +506,7 @@ export async function getPlatformConfigInternal() {
  * Public version of getPlatformConfig that only returns safe keys.
  */
 export async function getPlatformConfigPublic() {
-  const config = await getPlatformConfigInternal();
+  const config = await getPlatformConfigInternal() as Record<string, string | undefined>;
   // Only expose safe keys
   const safeKeys = ['platform_fee_pct', 'maintenance_mode', 'max_active_jobs'];
   const publicConfig: Record<string, string> = {};
