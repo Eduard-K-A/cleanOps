@@ -289,14 +289,16 @@ export default function AdminUsersPage() {
                                 </td>
                                 <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
                                   <div className="flex items-center justify-end gap-2">
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm" 
-                                      onClick={() => setSuspendModalUser(user)}
-                                      className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                                    >
-                                      Suspend
-                                    </Button>
+                                    {user.role !== 'admin' && (
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setSuspendModalUser(user)}
+                                        className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                                      >
+                                        Suspend
+                                      </Button>
+                                    )}
                                   </div>
                                 </td>
                               </tr>
